@@ -465,13 +465,13 @@
         const MAP_HEIGHT = 1200;
         const ZOOM_SCALE = 0.65;
 
-        // Player Object
+        // Player Object (Ukuran Karakter Diperbesar dari 50x70 ke 65x90)
         const player = {
             x: 1000,
             y: 600,
             speed: 5.5,
-            width: 50,
-            height: 70,
+            width: 65,  // <--- Ukuran Karakter Diperbesar (dari 50 ke 65)
+            height: 90, // <--- Ukuran Karakter Diperbesar (dari 70 ke 90)
             direction: 'idle',
             targetX: null,
             targetY: null,
@@ -720,13 +720,13 @@
             if (canvasF) {
                 const ctxF = canvasF.getContext('2d');
                 ctxF.clearRect(0, 0, canvasF.width, canvasF.height);
-                drawCharacterSprite(ctxF, 35, 35, 50, 70, 'female', 'idle', 0);
+                drawCharacterSprite(ctxF, 28, 30, 65, 90, 'female', 'idle', 0);
             }
 
             if (canvasM) {
                 const ctxM = canvasM.getContext('2d');
                 ctxM.clearRect(0, 0, canvasM.width, canvasM.height);
-                drawCharacterSprite(ctxM, 35, 35, 50, 70, 'male', 'idle', 0);
+                drawCharacterSprite(ctxM, 28, 30, 65, 90, 'male', 'idle', 0);
             }
         }
 
