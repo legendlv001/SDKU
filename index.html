@@ -565,10 +565,10 @@
                         colIndex = Math.floor(walkStep * 0.25) % COLS;
                     }
 
-                    // MARGIN POTONG SANGAT PRESISI UNTUK MENCEGAH TAMPILNYA FRAME LAIN
-                    // Memotong 12% dari lebar frame dan 6% dari tinggi frame sebagai margin aman
-                    const cropMarginX = frameWidth * 0.12;
-                    const cropMarginY = frameHeight * 0.06;
+                    // POTONG DI DALAM BATAS FRAME AGAR KARAKTER DI SEBELAHNYA TIDAK IKUT TAMPIL
+                    // Margin horizontal diperbesar; bagian transparan pada aset menjaga latar tetap bersih.
+                    const cropMarginX = frameWidth * 0.18;
+                    const cropMarginY = frameHeight * 0.04;
 
                     const srcX = (colIndex * frameWidth) + cropMarginX;
                     const srcY = (rowIndex * frameHeight) + cropMarginY;
