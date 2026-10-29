@@ -463,15 +463,15 @@
         // MAP DIMENSIONS & ZOOM FACTOR
         const MAP_WIDTH = 2000;
         const MAP_HEIGHT = 1200;
-        const ZOOM_SCALE = 0.65;
+        const ZOOM_SCALE = 0.95; // <--- Kamera diperdekat (Zoom lebih besar dari 0.65 ke 0.95)
 
-        // Player Object (Ukuran Karakter Diperbesar dari 50x70 ke 65x90)
+        // Player Object (Ukuran Karakter 65x90)
         const player = {
             x: 1000,
             y: 600,
             speed: 5.5,
-            width: 65,  // <--- Ukuran Karakter Diperbesar (dari 50 ke 65)
-            height: 90, // <--- Ukuran Karakter Diperbesar (dari 70 ke 90)
+            width: 65,
+            height: 90,
             direction: 'idle',
             targetX: null,
             targetY: null,
@@ -511,10 +511,10 @@
                 const frameWidth = imgAsset.width / 5;
                 const frameHeight = imgAsset.height;
 
-                // Shadow
-                c.fillStyle = 'rgba(0,0,0,0.2)';
+                // Shadow pas di telapak kaki (mencegah terlihat melayang)
+                c.fillStyle = 'rgba(0,0,0,0.25)';
                 c.beginPath();
-                c.ellipse(x + width / 2, y + height - 2, width * 0.4, 5, 0, 0, Math.PI * 2);
+                c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
                 c.fill();
 
                 // Draw cropped frame from 5-frame horizontal spritesheet
@@ -528,10 +528,10 @@
                 return;
             }
 
-            // Shadow
-            c.fillStyle = 'rgba(0,0,0,0.2)';
+            // Fallback Vector Drawing - Shadow Pas di Kaki
+            c.fillStyle = 'rgba(0,0,0,0.25)';
             c.beginPath();
-            c.ellipse(x + width / 2, y + height - 4, width * 0.4, 6, 0, 0, Math.PI * 2);
+            c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
             c.fill();
 
             const isFemale = (gender === 'female');
@@ -565,30 +565,30 @@
                     c.beginPath();
                     c.moveTo(x + width * 0.25, charY + height * 0.45);
                     c.lineTo(x + width * 0.75, charY + height * 0.45);
-                    c.lineTo(x + width * 0.85, charY + height * 0.82);
-                    c.lineTo(x + width * 0.15, charY + height * 0.82);
+                    c.lineTo(x + width * 0.85, charY + height * 0.88);
+                    c.lineTo(x + width * 0.15, charY + height * 0.88);
                     c.closePath();
                     c.fill();
 
                     // Shoes
                     c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.25 - legSwing * 0.5, charY + height * 0.82, 10, 10);
-                    c.fillRect(x + width * 0.55 + legSwing * 0.5, charY + height * 0.82, 10, 10);
+                    c.fillRect(x + width * 0.25 - legSwing * 0.5, charY + height * 0.88, 11, 10);
+                    c.fillRect(x + width * 0.55 + legSwing * 0.5, charY + height * 0.88, 11, 10);
                 } else {
                     // Front / Side View
                     c.fillStyle = '#b91c1c';
                     c.beginPath();
                     c.moveTo(x + width * 0.25, charY + height * 0.45);
                     c.lineTo(x + width * 0.75, charY + height * 0.45);
-                    c.lineTo(x + width * 0.85 + (dir === 'right' ? 4 : 0), charY + height * 0.82);
-                    c.lineTo(x + width * 0.15 - (dir === 'left' ? 4 : 0), charY + height * 0.82);
+                    c.lineTo(x + width * 0.85 + (dir === 'right' ? 4 : 0), charY + height * 0.88);
+                    c.lineTo(x + width * 0.15 - (dir === 'left' ? 4 : 0), charY + height * 0.88);
                     c.closePath();
                     c.fill();
 
                     // Shoes Red & White
                     c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.82, 11, 10);
-                    c.fillRect(x + width * 0.55 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.82, 11, 10);
+                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 11, 10);
+                    c.fillRect(x + width * 0.55 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 11, 10);
 
                     // White Shirt
                     c.fillStyle = '#ffffff';
@@ -650,21 +650,21 @@
                     c.fill();
 
                     c.fillStyle = '#b91c1c';
-                    c.fillRect(x + width * 0.25, charY + height * 0.52, width * 0.22, height * 0.32);
-                    c.fillRect(x + width * 0.53, charY + height * 0.52, width * 0.22, height * 0.32);
+                    c.fillRect(x + width * 0.25, charY + height * 0.52, width * 0.22, height * 0.36);
+                    c.fillRect(x + width * 0.53, charY + height * 0.52, width * 0.22, height * 0.36);
 
                     c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.23 - legSwing * 0.4, charY + height * 0.84, 12, 9);
-                    c.fillRect(x + width * 0.53 + legSwing * 0.4, charY + height * 0.84, 12, 9);
+                    c.fillRect(x + width * 0.23 - legSwing * 0.4, charY + height * 0.88, 12, 9);
+                    c.fillRect(x + width * 0.53 + legSwing * 0.4, charY + height * 0.88, 12, 9);
                 } else {
                     // Front / Side View
                     c.fillStyle = '#b91c1c';
-                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.32);
-                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.32);
+                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.36);
+                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.36);
 
                     c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.23 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.84, 12, 9);
-                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.84, 12, 9);
+                    c.fillRect(x + width * 0.23 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 12, 9);
+                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 12, 9);
 
                     c.fillStyle = '#ffffff';
                     c.fillRect(x + width * 0.24, charY + 22, width * 0.52, height * 0.32);
@@ -1304,7 +1304,7 @@
 
             // Draw Character Name Badge Above Head
             const nameCenterX = player.x - cameraX;
-            const nameY = screenY - 8;
+            const nameY = screenY - 12; // Posisi badge nama dinaikkan agar pas di atas kepala
 
             ctx.save();
             ctx.font = 'bold 12px Fredoka';
@@ -1330,7 +1330,7 @@
             // Speech Bubble
             if (playerSpeechBubble && Date.now() < playerSpeechBubble.timer) {
                 const bubbleX = player.x - cameraX;
-                const bubbleY = nameY - 22;
+                const bubbleY = nameY - 24;
 
                 ctx.font = 'bold 13px Fredoka';
                 const textWidth = ctx.measureText(playerSpeechBubble.text).width;
