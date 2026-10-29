@@ -19,120 +19,65 @@
         body {
             background-color: #0f172a;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Responsive Landscape Container (Fits HP, Tablet, Laptop smoothly) */
+        .game-viewport {
+            width: 100vw;
+            height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background-color: #020617;
+        }
+
+        @media (min-aspect-ratio: 16/9) {
+            .game-viewport {
+                width: calc(100vh * (16 / 9));
+                height: 100vh;
+            }
+        }
+
+        @media (max-aspect-ratio: 16/9) {
+            .game-viewport {
+                width: 100vw;
+                height: calc(100vw * (9 / 16));
+            }
         }
 
         .d-pad-btn {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(8px);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.6);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 12px;
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             transition: all 0.1s ease;
         }
 
         .d-pad-btn:active {
-            background: rgba(255, 255, 255, 0.5);
-            transform: scale(0.92);
-        }
-
-        /* Custom Scrollbar for Chat */
-        #chatMessages::-webkit-scrollbar {
-            width: 4px;
-        }
-        #chatMessages::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.05);
-        }
-        #chatMessages::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,0.2);
-            border-radius: 4px;
-        }
-
-        /* Animation for Chat badge */
-        @keyframes pulse-badge {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.25); }
-        }
-        .animate-badge {
-            animation: pulse-badge 0.6s ease-in-out infinite;
-        }
-
-        /* Pulsing & Blinking Animation for Action Button */
-        @keyframes action-blink {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8);
-            }
-            50% {
-                transform: scale(1.15);
-                box-shadow: 0 0 18px 8px rgba(250, 204, 21, 0.6);
-            }
-        }
-
-        .btn-action-highlight {
-            animation: action-blink 0.8s ease-in-out infinite !important;
-            background-color: #facc15 !important;
-            border-color: #ffffff !important;
-        }
-    </style>
-</head>
-<body class="flex flex-col items-center justify-center h-screen w-screen text-slate-800">
-
-    <!-- SCREEN 1: SELEKSI KARAKTER -->
-    <div id="characterSelectScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-sky-600 via-indigo-700 to-purple-800 p-4 text-white overflow-y-auto">
-        <div class="text-center mb-4 animate-bounce">
-            <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg">Petualangan Anak SD</h1>
-            <p class="text-sm md:text-base text-sky-100 mt-1 font-medium">Pilih & Buat Karakter Utama Kamu!</p>
-        </div>
-
-        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20 mb-6 flex flex-col sm:flex-row items-center gap-3 max-w-sm w-full shadow-lg">
-            <label for="customNameInput" class="text-xs font-bold text-yellow-300 whitespace-nowrap">
-                <i class="fas fa-user-pen mr-1"></i> Nama Karakter:
-            </label>
-            <input type="text" id="customNameInput" placeholder="Ketik nama kamu..." maxlength="15" class="w-full px-3 py-1.5 text-xs rounded-xl bg-slate-900/60 border border-slate-400 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400 text-center sm:text-left font-bold">
-        </div>
-
-        <div class="flex flex-row gap-6 max-w-4xl w-full justify-center items-center">
-            <!-- Siswa Perempuan (Aisyah) -->
-            <div onclick="selectCharacter('female')" class="group cursor-pointer bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-3xl p-5 border-2 border-white/30 transition-all duration-300 hover:scale-105 flex flex-col items-center w-56 md:w-64 shadow-2xl">
-                <div class="w-36 h-44 bg-sky-100/20 rounded-2xl flex items-center justify-center mb-3 p-2 relative overflow-hidden group-hover:border-2 border-yellow-300 transition-all">
-                    <canvas id="previewFemale" width="120" height="150"></canvas>
-                </div>
-                <h2 class="text-xl font-bold text-yellow-300 mb-1">Aisyah</h2>
-                <span class="bg-pink-500/80 text-[10px] px-3 py-0.5 rounded-full uppercase font-bold tracking-wider mb-2">Siswi Hijab</span>
-                <p class="text-xs text-center text-slate-200 line-clamp-2">Gadis pintar, rapi, ramah, dan rajin membaca buku.</p>
-                <button class="mt-3 w-full py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold text-sm rounded-xl shadow-lg transition-colors">Pilih Aisyah</button>
-            </div>
-
-            <!-- Siswa Laki-Laki (Ali) -->
-            <div onclick="selectCharacter('male')" class="group cursor-pointer bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-3xl p-5 border-2 border-white/30 transition-all duration-300 hover:scale-105 flex flex-col items-center w-56 md:w-64 shadow-2xl">
-                <div class="w-36 h-44 bg-sky-100/20 rounded-2xl flex items-center justify-center mb-3 p-2 relative overflow-hidden group-hover:border-2 border-yellow-300 transition-all">
-                    <canvas id="previewMale" width="120" height="150"></canvas>
-                </div>
-                <h2 class="text-xl font-bold text-yellow-300 mb-1">Ali</h2>
-                <span class="bg-blue-500/80 text-[10px] px-3 py-0.5 rounded-full uppercase font-bold tracking-wider mb-2">Siswa Peci</span>
-                <p class="text-xs text-center text-slate-200 line-clamp-2">Anak aktif, pemberani, disiplin, dan suka olahraga.</p>
-                <button class="mt-3 w-full py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm rounded-xl shadow-lg transition-colors">Pilih Ali</button>
-            </div>
-        </div>
-
-        <div class="mt-6 text-xs text-sky-200 flex items-center gap-2">
-            <i class="fas fa-gamepad text-base"></i>
-            <span>Gunakan D-Pad layar, sentuh layar, atau Keyboard (WASD / Panah) untuk bergerak</span>
-        </div>
-    </div>
-
-    <!-- MAIN GAME CANVAS & UI (LANDSCAPE VIEW) -->
-    <div id="gameContainer" class="relative w-full h-full max-w-[1280px] max-h-[720px] bg-slate-900 overflow-hidden md:rounded-2xl shadow-2xl flex flex-col hidden">
+    <!-- MAIN GAME CANVAS & UI (LANDSCAPE VIEW - ALL DEVICES) -->
+    <div id="gameContainer" class="game-viewport shadow-2xl md:rounded-2xl hidden">
         <!-- Top Navigation Bar -->
-        <div class="bg-slate-800/90 backdrop-blur-md text-white px-4 py-2 flex items-center justify-between border-b border-slate-700 z-10">
+        <div class="bg-slate-800/90 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 flex items-center justify-between border-b border-slate-700 z-10">
             <!-- Profile Avatar Clickable to Edit Character & Name -->
-            <div onclick="openEditCharacterModal()" class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition group bg-slate-700/50 px-3 py-1 rounded-xl border border-slate-600/60" title="Klik untuk Edit Nama & Karakter">
-                <div class="w-9 h-9 rounded-full bg-yellow-400 text-slate-900 font-bold flex items-center justify-center shadow-md text-base group-hover:scale-105 transition-transform" id="avatarBadge">
+            <div onclick="openEditCharacterModal()" class="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition group bg-slate-700/50 px-2.5 py-1 rounded-xl border border-slate-600/60" title="Klik untuk Edit Nama & Karakter">
+                <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-yellow-400 text-slate-900 font-bold flex items-center justify-center shadow-md text-xs md:text-base group-hover:scale-105 transition-transform" id="avatarBadge">
                     👧
                 </div>
                 <div>
@@ -149,30 +94,30 @@
             <canvas id="gameCanvas" class="block w-full h-full"></canvas>
 
             <!-- ON-SCREEN D-PAD CONTROLLER (POJOK KIRI BAWAH) -->
-            <div class="absolute bottom-4 left-4 z-30 flex flex-col items-center gap-1">
+            <div class="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-30 flex flex-col items-center gap-1 scale-90 sm:scale-100 origin-bottom-left">
                 <div>
-                    <button id="btnUp" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-up"></i></button>
+                    <button id="btnUp" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-up"></i></button>
                 </div>
                 <div class="flex gap-1">
-                    <button id="btnLeft" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-left"></i></button>
-                    <button id="btnDown" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-down"></i></button>
-                    <button id="btnRight" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-right"></i></button>
+                    <button id="btnLeft" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-left"></i></button>
+                    <button id="btnDown" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-down"></i></button>
+                    <button id="btnRight" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
 
-            <!-- ACTION BUTTON (DI SAMPING D-PAD / INTERAKSI) -->
-            <div class="absolute bottom-4 left-44 z-30">
-                <button id="btnInteract" onclick="triggerInteraction()" class="w-14 h-14 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer">
-                    <i class="fas fa-hand-pointer text-base"></i>
+            <!-- ACTION BUTTON (SAMPING D-PAD) -->
+            <div class="absolute bottom-2 left-36 sm:bottom-4 sm:left-44 z-30 scale-90 sm:scale-100 origin-bottom-left">
+                <button id="btnInteract" onclick="triggerInteraction()" class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-[10px] sm:text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer">
+                    <i class="fas fa-hand-pointer text-xs sm:text-base"></i>
                     <span>AKSI</span>
                 </button>
             </div>
 
             <!-- CHAT SYSTEM (POJOK KANAN BAWAH) -->
-            <div class="absolute bottom-4 right-4 z-40 flex flex-col items-end">
+            <div class="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 z-40 flex flex-col items-end">
                 <!-- POPUP CHAT BOX -->
-                <div id="chatBoxPopup" class="mb-3 w-72 md:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300" onmouseenter="pauseChatTimer()" onmouseleave="resetChatTimer()">
-                    <div class="bg-indigo-600 text-white px-4 py-2.5 flex items-center justify-between">
+                <div id="chatBoxPopup" class="mb-2 sm:mb-3 w-64 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300" onmouseenter="pauseChatTimer()" onmouseleave="resetChatTimer()">
+                    <div class="bg-indigo-600 text-white px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-comments text-yellow-300"></i>
                             <span class="font-bold text-xs">Obrolan Sekolah</span>
@@ -183,24 +128,24 @@
                     </div>
                     
                     <!-- Chat Messages List -->
-                    <div id="chatMessages" class="p-3 h-48 overflow-y-auto flex flex-col gap-2 text-xs">
+                    <div id="chatMessages" class="p-2 sm:p-3 h-36 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs">
                         <!-- Message items go here dynamically -->
                     </div>
 
                     <!-- Chat Input Area -->
                     <div class="p-2 bg-slate-100 border-t flex gap-1">
-                        <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onfocus="pauseChatTimer()" oninput="pauseChatTimer()" onblur="resetChatTimer()" onkeydown="if(event.key==='Enter') sendChatMessage()">
-                        <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold">
+                        <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onfocus="pauseChatTimer()" oninput="pauseChatTimer()" onblur="resetChatTimer()" onkeydown="if(event.key==='Enter') sendChatMessage()">
+                        <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
                 </div>
 
                 <!-- FLOATING CHAT BUTTON ICON -->
-                <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95">
+                <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base sm:text-xl transition-all hover:scale-105 active:scale-95">
                     <i class="fas fa-comment-dots"></i>
                     <!-- Notification Counter Badge -->
-                    <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
+                    <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-extrabold w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
                 </button>
             </div>
         </div>
@@ -460,10 +405,21 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // MAP DIMENSIONS & ZOOM FACTOR
+        // MAP DIMENSIONS
         const MAP_WIDTH = 2000;
         const MAP_HEIGHT = 1200;
-        const ZOOM_SCALE = 0.95; // <--- Kamera diperdekat (Zoom lebih besar dari 0.65 ke 0.95)
+
+        // ADAPTIVE ZOOM SCALE BASED ON DEVICE WIDTH (HP, TABLET, LAPTOP)
+        function getAdaptiveZoom() {
+            const screenW = window.innerWidth;
+            if (screenW < 640) {
+                return 0.70; // HP / Mobile: Zoom sedikit lebih jauh agar bangunan & area luas terlihat pas
+            } else if (screenW < 1024) {
+                return 0.82; // Tablet: Zoom sedang
+            } else {
+                return 0.95; // Laptop / Desktop: Zoom dekat & jelas
+            }
+        }
 
         // Player Object (Ukuran Karakter 65x90)
         const player = {
@@ -731,12 +687,12 @@
         }
 
         // DRAW SCHOOL MAP & BUILDINGS
-        function drawMap(cameraX, cameraY) {
+        function drawMap(cameraX, cameraY, zoomScale) {
             ctx.save();
-            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+            ctx.scale(zoomScale, zoomScale);
 
             // Checkered Grass Tile Pattern - Blended tones
-            const tileSize = 80; // Size of each checkered square
+            const tileSize = 80;
             const cols = Math.ceil(MAP_WIDTH / tileSize);
             const rows = Math.ceil(MAP_HEIGHT / tileSize);
 
@@ -976,9 +932,9 @@
         }
 
         // DRAW TREE WITH SUPPORT FOR CUSTOM ASSETS (`assets/tree.png`)
-        function drawTree(tree, cameraX, cameraY) {
+        function drawTree(tree, cameraX, cameraY, zoomScale) {
             ctx.save();
-            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+            ctx.scale(zoomScale, zoomScale);
 
             const tx = tree.x - cameraX;
             const ty = tree.y - cameraY;
@@ -1285,9 +1241,12 @@
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
 
-            // Camera Setup
-            const viewWidth = canvas.width / ZOOM_SCALE;
-            const viewHeight = canvas.height / ZOOM_SCALE;
+            // Get Adaptive Zoom for current device
+            const currentZoomScale = getAdaptiveZoom();
+
+            // Camera Setup based on device zoom
+            const viewWidth = canvas.width / currentZoomScale;
+            const viewHeight = canvas.height / currentZoomScale;
 
             let cameraX = player.x - viewWidth / 2;
             let cameraY = player.y - viewHeight / 2;
@@ -1297,18 +1256,18 @@
 
             // Clear & Draw
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawMap(cameraX, cameraY);
+            drawMap(cameraX, cameraY, currentZoomScale);
 
             // Draw Trees behind the player
             trees.forEach(tree => {
                 if (tree.y <= player.y) {
-                    drawTree(tree, cameraX, cameraY);
+                    drawTree(tree, cameraX, cameraY, currentZoomScale);
                 }
             });
 
             // Render Player
             ctx.save();
-            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+            ctx.scale(currentZoomScale, currentZoomScale);
             const screenX = player.x - cameraX - player.width / 2;
             const screenY = player.y - cameraY - player.height / 2;
             drawCharacterSprite(ctx, screenX, screenY, player.width, player.height, selectedGender, player.direction, walkTimer);
@@ -1386,7 +1345,7 @@
             // Draw Trees in front of player
             trees.forEach(tree => {
                 if (tree.y > player.y) {
-                    drawTree(tree, cameraX, cameraY);
+                    drawTree(tree, cameraX, cameraY, currentZoomScale);
                 }
             });
 
@@ -1432,8 +1391,9 @@
                 const clickClientX = e.clientX - rect.left;
                 const clickClientY = e.clientY - rect.top;
 
-                const viewWidth = canvas.width / ZOOM_SCALE;
-                const viewHeight = canvas.height / ZOOM_SCALE;
+                const currentZoom = getAdaptiveZoom();
+                const viewWidth = canvas.width / currentZoom;
+                const viewHeight = canvas.height / currentZoom;
 
                 let cameraX = player.x - viewWidth / 2;
                 let cameraY = player.y - viewHeight / 2;
@@ -1441,8 +1401,8 @@
                 cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
                 cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
 
-                const worldX = (clickClientX / ZOOM_SCALE) + cameraX;
-                const worldY = (clickClientY / ZOOM_SCALE) + cameraY;
+                const worldX = (clickClientX / currentZoom) + cameraX;
+                const worldY = (clickClientY / currentZoom) + cameraY;
 
                 player.targetX = Math.max(30, Math.min(MAP_WIDTH - 30, worldX));
                 player.targetY = Math.max(40, Math.min(MAP_HEIGHT - 40, worldY));
