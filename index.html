@@ -71,7 +71,71 @@
         }
 
         .d-pad-btn:active {
-    <!-- MAIN GAME CANVAS & UI (LANDSCAPE VIEW - ALL DEVICES) -->
+            transform: scale(0.92);
+            background: rgba(250, 204, 21, 0.8);
+            border-color: #facc15;
+        }
+
+        .btn-action-highlight {
+            animation: pulse-ring 1.5s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(250, 204, 21, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+
+        @keyframes badge-bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .animate-badge {
+            animation: badge-bounce 0.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SCREEN 1: CHARACTER SELECTION SCREEN -->
+    <div id="characterSelectScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
+        <div class="bg-slate-900 border-2 border-yellow-400/80 rounded-3xl p-6 md:p-8 max-w-lg w-full text-center shadow-2xl text-white">
+            <h1 class="text-2xl md:text-3xl font-extrabold text-yellow-400 mb-2">Pilih Karakter Murid SD</h1>
+            <p class="text-xs md:text-sm text-slate-300 mb-6">Masukkan nama kamu dan pilih karakter anak sekolah yang ingin kamu mainkan!</p>
+            
+            <!-- Input Nama -->
+            <div class="mb-6 text-left">
+                <label class="block text-xs font-bold text-slate-300 mb-2">Nama Karakter Kamu:</label>
+                <input type="text" id="customNameInput" placeholder="Contoh: Budi" maxlength="15" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
+            </div>
+
+            <!-- Kartu Pilihan Karakter -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- Siswi Hijab -->
+                <div onclick="selectCharacter('female')" class="cursor-pointer border-2 border-slate-700 hover:border-pink-400 rounded-2xl p-4 bg-slate-800/80 hover:bg-slate-800 transition flex flex-col items-center group">
+                    <div class="w-24 h-28 flex items-center justify-center mb-2">
+                        <canvas id="previewFemale" width="120" height="120"></canvas>
+                    </div>
+                    <span class="font-bold text-pink-300 text-sm group-hover:scale-105 transition-transform">🧕 Aisyah</span>
+                    <span class="text-[10px] text-slate-400">Siswi SD Hijab</span>
+                </div>
+
+                <!-- Siswa Peci -->
+                <div onclick="selectCharacter('male')" class="cursor-pointer border-2 border-slate-700 hover:border-blue-400 rounded-2xl p-4 bg-slate-800/80 hover:bg-slate-800 transition flex flex-col items-center group">
+                    <div class="w-24 h-28 flex items-center justify-center mb-2">
+                        <canvas id="previewMale" width="120" height="120"></canvas>
+                    </div>
+                    <span class="font-bold text-blue-300 text-sm group-hover:scale-105 transition-transform">👦 Ali</span>
+                    <span class="text-[10px] text-slate-400">Siswa SD Peci</span>
+                </div>
+            </div>
+
+            <p class="text-[11px] text-slate-400 italic">Tekan salah satu karakter di atas untuk memulai permainan!</p>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: MAIN GAME CANVAS & UI (LANDSCAPE VIEW - ALL DEVICES) -->
     <div id="gameContainer" class="game-viewport shadow-2xl md:rounded-2xl hidden">
         <!-- Top Navigation Bar -->
         <div class="bg-slate-800/90 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 flex items-center justify-between border-b border-slate-700 z-10">
@@ -455,8 +519,6 @@
 
             // Check if custom avatar PNG spritesheet image is loaded
             if (isLoaded) {
-                // Determine spritesheet frame index based on direction
-                // 0: Diam, 1: Berjalan ke Atas, 2: Berjalan ke Bawah, 3: Berjalan ke Kiri, 4: Berjalan ke Kanan
                 let frameIndex = 0;
                 if (dir === 'up') frameIndex = 1;
                 else if (dir === 'down') frameIndex = 2;
@@ -499,7 +561,6 @@
             if (isFemale) {
                 // AISYAH (FEMALE HIJAB)
                 if (dir === 'up') {
-                    // Back View
                     c.fillStyle = '#ffffff';
                     c.beginPath();
                     c.roundRect(x + width * 0.15, charY + 2, width * 0.7, height * 0.42, 14);
@@ -508,7 +569,6 @@
                     c.lineWidth = 1.5;
                     c.stroke();
 
-                    // Backpack Red
                     c.fillStyle = '#dc2626';
                     c.beginPath();
                     c.roundRect(x + width * 0.28, charY + height * 0.25, width * 0.44, height * 0.28, 8);
@@ -516,7 +576,6 @@
                     c.fillStyle = '#ffffff';
                     c.fillRect(x + width * 0.35, charY + height * 0.38, width * 0.3, 4);
 
-                    // Red Skirt
                     c.fillStyle = '#b91c1c';
                     c.beginPath();
                     c.moveTo(x + width * 0.25, charY + height * 0.45);
@@ -526,12 +585,10 @@
                     c.closePath();
                     c.fill();
 
-                    // Shoes
                     c.fillStyle = '#991b1b';
                     c.fillRect(x + width * 0.25 - legSwing * 0.5, charY + height * 0.88, 11, 10);
                     c.fillRect(x + width * 0.55 + legSwing * 0.5, charY + height * 0.88, 11, 10);
                 } else {
-                    // Front / Side View
                     c.fillStyle = '#b91c1c';
                     c.beginPath();
                     c.moveTo(x + width * 0.25, charY + height * 0.45);
@@ -541,16 +598,13 @@
                     c.closePath();
                     c.fill();
 
-                    // Shoes Red & White
                     c.fillStyle = '#991b1b';
                     c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 11, 10);
                     c.fillRect(x + width * 0.55 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 11, 10);
 
-                    // White Shirt
                     c.fillStyle = '#ffffff';
                     c.fillRect(x + width * 0.25, charY + height * 0.3, width * 0.5, height * 0.22);
 
-                    // White Hijab Head
                     c.fillStyle = '#ffffff';
                     c.beginPath();
                     c.roundRect(x + width * 0.12, charY, width * 0.76, height * 0.42, 18);
@@ -559,13 +613,11 @@
                     c.lineWidth = 1.5;
                     c.stroke();
 
-                    // Face Skin Tone
                     c.fillStyle = '#fde047';
                     c.beginPath();
                     c.arc(x + width * 0.5 + (dir === 'right' ? 4 : dir === 'left' ? -4 : 0), charY + height * 0.2, 14, 0, Math.PI * 2);
                     c.fill();
 
-                    // Eyes & Smile
                     c.fillStyle = '#1e293b';
                     if (dir === 'right') {
                         c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
@@ -576,7 +628,6 @@
                         c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
                     }
 
-                    // Smile
                     c.strokeStyle = '#b91c1c';
                     c.lineWidth = 1.5;
                     c.beginPath();
@@ -586,7 +637,6 @@
             } else {
                 // ALI (MALE PECI)
                 if (dir === 'up') {
-                    // Back View
                     c.fillStyle = '#ffffff';
                     c.beginPath();
                     c.roundRect(x + width * 0.25, charY, width * 0.5, 14, 4);
@@ -613,7 +663,6 @@
                     c.fillRect(x + width * 0.23 - legSwing * 0.4, charY + height * 0.88, 12, 9);
                     c.fillRect(x + width * 0.53 + legSwing * 0.4, charY + height * 0.88, 12, 9);
                 } else {
-                    // Front / Side View
                     c.fillStyle = '#b91c1c';
                     c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.36);
                     c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.36);
@@ -676,13 +725,13 @@
             if (canvasF) {
                 const ctxF = canvasF.getContext('2d');
                 ctxF.clearRect(0, 0, canvasF.width, canvasF.height);
-                drawCharacterSprite(ctxF, 28, 30, 65, 90, 'female', 'idle', 0);
+                drawCharacterSprite(ctxF, 28, 15, 65, 90, 'female', 'idle', 0);
             }
 
             if (canvasM) {
                 const ctxM = canvasM.getContext('2d');
                 ctxM.clearRect(0, 0, canvasM.width, canvasM.height);
-                drawCharacterSprite(ctxM, 28, 30, 65, 90, 'male', 'idle', 0);
+                drawCharacterSprite(ctxM, 28, 15, 65, 90, 'male', 'idle', 0);
             }
         }
 
@@ -698,9 +747,8 @@
 
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    // Alternate between closer dark green shades for smooth blending
                     const isEven = (r + c) % 2 === 0;
-                    ctx.fillStyle = isEven ? '#15803d' : '#146c35'; // Subtler color blend
+                    ctx.fillStyle = isEven ? '#15803d' : '#146c35';
                     
                     const x = c * tileSize - cameraX;
                     const y = r * tileSize - cameraY;
@@ -708,7 +756,7 @@
                 }
             }
 
-            // Subtle Grid Line Accents between tiles to feel cohesive
+            // Subtle Grid Line Accents
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.03)';
             ctx.lineWidth = 1;
             for (let c = 0; c <= cols; c++) {
@@ -731,22 +779,19 @@
                 const bx = b.x - cameraX;
                 const by = b.y - cameraY;
 
-                // DRAW BUILDING SHADOW (Bikin bayangan realistis di bawah foto/gambar bangunan)
+                // DRAW BUILDING SHADOW
                 if (!b.isZone) {
                     ctx.save();
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                     ctx.beginPath();
-                    // Bayangan sedikit offset ke bawah & kanan sesuai sudut cahaya
                     ctx.roundRect(bx + 10, by + b.height - 15, b.width, 25, 12);
                     ctx.fill();
                     ctx.restore();
                 }
 
-                // CHECK IF CUSTOM IMAGE FOR THIS BUILDING IS UPLOADED IN ASSETS FOLDER
                 if (assetsLoaded[b.id]) {
                     ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
                 } else if (b.isZone) {
-                    // Render Open Zone (Taman) Fallback
                     ctx.fillStyle = b.color;
                     ctx.beginPath();
                     ctx.roundRect(bx, by, b.width, b.height, 16);
@@ -756,7 +801,6 @@
                     ctx.stroke();
 
                     if (b.id === 'taman') {
-                        // Flowers & Garden decor
                         ctx.font = '20px sans-serif';
                         ctx.fillText('🌸', bx + 40, by + 60);
                         ctx.fillText('🌺', bx + 120, by + 80);
@@ -765,15 +809,12 @@
                         ctx.fillText('🪑', bx + 160, by + 180);
                     }
                 } else {
-                    // 2D ARTISTIC BUILDING DRAWING LOGIC (FALLBACK CANVAS)
-                    
-                    // 1. Building Base Shadow
+                    // 2D ARTISTIC BUILDING DRAWING LOGIC
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                     ctx.beginPath();
                     ctx.roundRect(bx + 15, by + 15, b.width, b.height, 10);
                     ctx.fill();
 
-                    // 2. Building Main Wall / Front Body
                     const wallHeight = b.height * 0.55;
                     const wallY = by + b.height - wallHeight;
 
@@ -785,12 +826,10 @@
                     ctx.lineWidth = 3;
                     ctx.stroke();
 
-                    // Wall Details (Bricks / Panels & Foundation Bar)
                     ctx.fillStyle = b.wallColor;
                     ctx.fillRect(bx, wallY + wallHeight - 12, b.width, 12);
 
                     if (b.id === 'warung') {
-                        // WARUNG 2D CANOPY & COUNTER
                         ctx.fillStyle = '#db2777';
                         ctx.fillRect(bx + 20, wallY + 30, b.width - 40, 50);
                         ctx.fillStyle = '#fce7f3';
@@ -810,7 +849,6 @@
                             ctx.fillRect(bx + s * stripeW, awningY, stripeW, 35);
                         }
                     } else if (b.id === 'mading') {
-                        // MADING 2D BOARD
                         ctx.fillStyle = '#b45309';
                         ctx.fillRect(bx + 30, wallY + 30, 14, wallHeight - 30);
                         ctx.fillRect(bx + b.width - 44, wallY + 30, 14, wallHeight - 30);
@@ -833,7 +871,6 @@
                         ctx.fillStyle = '#10b981';
                         ctx.fillRect(bx + 185, wallY + 8, 35, 5);
                     } else {
-                        // CLASSROOM / PERPUS / GOR DOORS AND WINDOWS
                         const numWindows = b.id === 'gor' ? 3 : 2;
                         const winWidth = 45;
                         const winHeight = 40;
@@ -870,7 +907,6 @@
                         ctx.fill();
                     }
 
-                    // 3. 2D PITCHED ROOF WITH TILE PATTERN
                     if (b.id !== 'mading' && b.id !== 'warung') {
                         const roofHeight = b.height * 0.5;
                         const roofOverhang = 15;
@@ -911,7 +947,6 @@
                 const signX = bx + b.width / 2;
                 const signY = b.isZone ? by + 28 : by - 25;
 
-                // Sign Badge
                 ctx.fillStyle = '#0f172a';
                 ctx.beginPath();
                 ctx.roundRect(signX - (textWidth + 24) / 2, signY - 14, textWidth + 24, 28, 14);
@@ -920,7 +955,6 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Sign Text
                 ctx.fillStyle = '#ffffff';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -931,7 +965,7 @@
             ctx.restore();
         }
 
-        // DRAW TREE WITH SUPPORT FOR CUSTOM ASSETS (`assets/tree.png`)
+        // DRAW TREE WITH SUPPORT FOR CUSTOM ASSETS
         function drawTree(tree, cameraX, cameraY, zoomScale) {
             ctx.save();
             ctx.scale(zoomScale, zoomScale);
@@ -939,13 +973,11 @@
             const tx = tree.x - cameraX;
             const ty = tree.y - cameraY;
 
-            // Tree Base Shadow (Bayangan di bawah pohon)
             ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
             ctx.beginPath();
             ctx.ellipse(tx, ty + 2, tree.size * 0.85, tree.size * 0.35, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Jika ada file foto gambar pohon di folder assets/tree.png
             if (assetsLoaded.tree) {
                 const imgW = tree.size * 2.2;
                 const imgH = tree.size * 2.5;
@@ -954,27 +986,22 @@
                 return;
             }
 
-            // Fallback Vector Tree (Gambar Bawaan Canvas)
-            // Trunk
+            // Fallback Vector Tree
             ctx.fillStyle = '#78350f';
             ctx.fillRect(tx - tree.size * 0.2, ty - tree.trunkHeight, tree.size * 0.4, tree.trunkHeight);
 
-            // Foliage
             const foliageY = ty - tree.trunkHeight;
             
-            // Outer Dark Green
             ctx.fillStyle = '#14532d';
             ctx.beginPath();
             ctx.arc(tx, foliageY - tree.size * 0.4, tree.size, 0, Math.PI * 2);
             ctx.fill();
 
-            // Middle Green
             ctx.fillStyle = '#16a34a';
             ctx.beginPath();
             ctx.arc(tx - tree.size * 0.2, foliageY - tree.size * 0.6, tree.size * 0.75, 0, Math.PI * 2);
             ctx.fill();
 
-            // Highlight Light Green
             ctx.fillStyle = '#4ade80';
             ctx.beginPath();
             ctx.arc(tx + tree.size * 0.2, foliageY - tree.size * 0.7, tree.size * 0.5, 0, Math.PI * 2);
@@ -1042,7 +1069,6 @@
             player.x = Math.max(30, Math.min(MAP_WIDTH - 30, player.x));
             player.y = Math.max(40, Math.min(MAP_HEIGHT - 40, player.y));
 
-            // Check Building Proximity for Interaction
             checkBuildingProximity();
         }
 
@@ -1051,11 +1077,9 @@
             const actionBtn = document.getElementById('btnInteract');
 
             for (let b of buildings) {
-                // Calculate center of building/zone
                 const centerX = b.x + b.width / 2;
                 const centerY = b.y + b.height / 2;
                 
-                // Interaction range depends on building size
                 const rangeX = b.width / 2 + 50;
                 const rangeY = b.height / 2 + 50;
 
@@ -1101,7 +1125,6 @@
 
             closeModal();
 
-            // Display a speech bubble action message above player's head
             let actionText = "";
             switch (buildingId) {
                 case 'kelas':
@@ -1241,10 +1264,8 @@
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
 
-            // Get Adaptive Zoom for current device
             const currentZoomScale = getAdaptiveZoom();
 
-            // Camera Setup based on device zoom
             const viewWidth = canvas.width / currentZoomScale;
             const viewHeight = canvas.height / currentZoomScale;
 
@@ -1254,11 +1275,10 @@
             cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
             cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
 
-            // Clear & Draw
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawMap(cameraX, cameraY, currentZoomScale);
 
-            // Draw Trees behind the player
+            // Trees behind player
             trees.forEach(tree => {
                 if (tree.y <= player.y) {
                     drawTree(tree, cameraX, cameraY, currentZoomScale);
@@ -1274,7 +1294,7 @@
 
             // Draw Character Name Badge Above Head
             const nameCenterX = player.x - cameraX;
-            const nameY = screenY - 12; // Posisi badge nama dinaikkan agar pas di atas kepala
+            const nameY = screenY - 12;
 
             ctx.save();
             ctx.font = 'bold 12px Fredoka';
@@ -1284,13 +1304,11 @@
             const nameBoxW = nameWidth + namePadding * 2;
             const nameBoxH = 18;
 
-            // Name Tag Background
             ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
             ctx.beginPath();
             ctx.roundRect(nameCenterX - nameBoxW / 2, nameY - nameBoxH, nameBoxW, nameBoxH, 9);
             ctx.fill();
 
-            // Name Text
             ctx.fillStyle = '#facc15';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1342,7 +1360,7 @@
 
             ctx.restore();
 
-            // Draw Trees in front of player
+            // Trees in front of player
             trees.forEach(tree => {
                 if (tree.y > player.y) {
                     drawTree(tree, cameraX, cameraY, currentZoomScale);
@@ -1384,7 +1402,6 @@
 
             // Canvas Click / Tap to Move Listener
             canvas.addEventListener('pointerdown', (e) => {
-                // Ignore clicks if clicking on UI controls
                 if (e.target !== canvas) return;
 
                 const rect = canvas.getBoundingClientRect();
@@ -1411,7 +1428,7 @@
 
             setupTouchControls();
 
-            addChatMessage(playerCustomName, `Hello, ${playerCustomName} baru saja login nih😉`, true);
+            addChatMessage(playerCustomName, `Halo semuanya, ${playerCustomName} siap belajar & bermain! 😊`, true);
 
             requestAnimationFrame(gameLoop);
         }
@@ -1458,8 +1475,8 @@
                 optionF.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105";
                 optionM.className = "cursor-pointer border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60";
             } else {
-                optionM.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60";
-                optionF.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105";
+                optionM.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105";
+                optionF.className = "cursor-pointer border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60";
             }
         }
 
