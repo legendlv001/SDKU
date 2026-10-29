@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulasi Petualangan Anak Sekolah SD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #0f172a;
+            overflow: hidden;
+        }
+
+        .d-pad-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.25rem;
+            transition: all 0.1s ease;
+        }
+
+        .d-pad-btn:active {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(0.92);
+        }
+
+        /* Custom Scrollbar for Chat */
+        #chatMessages::-webkit-scrollbar {
+            width: 4px;
+        }
+        #chatMessages::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        #chatMessages::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+
+        /* Animation for Chat badge */
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.25); }
+        }
+        .animate-badge {
+            animation: pulse-badge 0.6s ease-in-out infinite;
+        }
+
+        /* Pulsing & Blinking Animation for Action Button */
+        @keyframes action-blink {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8);
+            }
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 0 18px 8px rgba(250, 204, 21, 0.6);
+            }
+        }
+
+        .btn-action-highlight {
+            animation: action-blink 0.8s ease-in-out infinite !important;
+            background-color: #facc15 !important;
+            border-color: #ffffff !important;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center h-screen w-screen text-slate-800">
+
+    <!-- SCREEN 1: SELEKSI KARAKTER -->
+    <div id="characterSelectScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-sky-600 via-indigo-700 to-purple-800 p-4 text-white overflow-y-auto">
+        <div class="text-center mb-4 animate-bounce">
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg">Petualangan Anak SD</h1>
+            <p class="text-sm md:text-base text-sky-100 mt-1 font-medium">Pilih & Buat Karakter Utama Kamu!</p>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20 mb-6 flex flex-col sm:flex-row items-center gap-3 max-w-sm w-full shadow-lg">
+            <label for="customNameInput" class="text-xs font-bold text-yellow-300 whitespace-nowrap">
+                <i class="fas fa-user-pen mr-1"></i> Nama Karakter:
+            </label>
+            <input type="text" id="customNameInput" placeholder="Ketik nama kamu..." maxlength="15" class="w-full px-3 py-1.5 text-xs rounded-xl bg-slate-900/60 border border-slate-400 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400 text-center sm:text-left font-bold">
+        </div>
+
+        <div class="flex flex-row gap-6 max-w-4xl w-full justify-center items-center">
+            <!-- Siswa Perempuan (Aisyah) -->
+            <div onclick="selectCharacter('female')" class="group cursor-pointer bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-3xl p-5 border-2 border-white/30 transition-all duration-300 hover:scale-105 flex flex-col items-center w-56 md:w-64 shadow-2xl">
+                <div class="w-36 h-44 bg-sky-100/20 rounded-2xl flex items-center justify-center mb-3 p-2 relative overflow-hidden group-hover:border-2 border-yellow-300 transition-all">
+                    <canvas id="previewFemale" width="120" height="150"></canvas>
+                </div>
+                <h2 class="text-xl font-bold text-yellow-300 mb-1">Aisyah</h2>
+                <span class="bg-pink-500/80 text-[10px] px-3 py-0.5 rounded-full uppercase font-bold tracking-wider mb-2">Siswi Hijab</span>
+                <p class="text-xs text-center text-slate-200 line-clamp-2">Gadis pintar, rapi, ramah, dan rajin membaca buku.</p>
+                <button class="mt-3 w-full py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold text-sm rounded-xl shadow-lg transition-colors">Pilih Aisyah</button>
+            </div>
+
+            <!-- Siswa Laki-Laki (Ali) -->
+            <div onclick="selectCharacter('male')" class="group cursor-pointer bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-3xl p-5 border-2 border-white/30 transition-all duration-300 hover:scale-105 flex flex-col items-center w-56 md:w-64 shadow-2xl">
+                <div class="w-36 h-44 bg-sky-100/20 rounded-2xl flex items-center justify-center mb-3 p-2 relative overflow-hidden group-hover:border-2 border-yellow-300 transition-all">
+                    <canvas id="previewMale" width="120" height="150"></canvas>
+                </div>
+                <h2 class="text-xl font-bold text-yellow-300 mb-1">Ali</h2>
+                <span class="bg-blue-500/80 text-[10px] px-3 py-0.5 rounded-full uppercase font-bold tracking-wider mb-2">Siswa Peci</span>
+                <p class="text-xs text-center text-slate-200 line-clamp-2">Anak aktif, pemberani, disiplin, dan suka olahraga.</p>
+                <button class="mt-3 w-full py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm rounded-xl shadow-lg transition-colors">Pilih Ali</button>
+            </div>
+        </div>
+
+        <div class="mt-6 text-xs text-sky-200 flex items-center gap-2">
+            <i class="fas fa-gamepad text-base"></i>
+            <span>Gunakan D-Pad layar, sentuh layar, atau Keyboard (WASD / Panah) untuk bergerak</span>
+        </div>
+    </div>
+
+    <!-- MAIN GAME CANVAS & UI (LANDSCAPE VIEW) -->
+    <div id="gameContainer" class="relative w-full h-full max-w-[1280px] max-h-[720px] bg-slate-900 overflow-hidden md:rounded-2xl shadow-2xl flex flex-col hidden">
+        <!-- Top Navigation Bar -->
+        <div class="bg-slate-800/90 backdrop-blur-md text-white px-4 py-2 flex items-center justify-between border-b border-slate-700 z-10">
+            <!-- Profile Avatar Clickable to Edit Character & Name -->
+            <div onclick="openEditCharacterModal()" class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition group bg-slate-700/50 px-3 py-1 rounded-xl border border-slate-600/60" title="Klik untuk Edit Nama & Karakter">
+                <div class="w-9 h-9 rounded-full bg-yellow-400 text-slate-900 font-bold flex items-center justify-center shadow-md text-base group-hover:scale-105 transition-transform" id="avatarBadge">
+                    👧
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <h3 id="charNameDisplay" class="font-bold text-xs md:text-sm leading-tight text-yellow-400">Nama Karakter</h3>
+                        <i class="fas fa-pencil-alt text-[10px] text-yellow-300 opacity-70 group-hover:opacity-100"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Game World -->
+        <div class="relative flex-1 w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden">
+            <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+
+            <!-- ON-SCREEN D-PAD CONTROLLER (POJOK KIRI BAWAH) -->
+            <div class="absolute bottom-4 left-4 z-30 flex flex-col items-center gap-1">
+                <div>
+                    <button id="btnUp" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-up"></i></button>
+                </div>
+                <div class="flex gap-1">
+                    <button id="btnLeft" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-left"></i></button>
+                    <button id="btnDown" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-down"></i></button>
+                    <button id="btnRight" class="d-pad-btn w-11 h-11"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTON (DI SAMPING D-PAD / INTERAKSI) -->
+            <div class="absolute bottom-4 left-44 z-30">
+                <button id="btnInteract" onclick="triggerInteraction()" class="w-14 h-14 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer">
+                    <i class="fas fa-hand-pointer text-base"></i>
+                    <span>AKSI</span>
+                </button>
+            </div>
+
+            <!-- CHAT SYSTEM (POJOK KANAN BAWAH) -->
+            <div class="absolute bottom-4 right-4 z-40 flex flex-col items-end">
+                <!-- POPUP CHAT BOX -->
+                <div id="chatBoxPopup" class="mb-3 w-72 md:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300" onmouseenter="pauseChatTimer()" onmouseleave="resetChatTimer()">
+                    <div class="bg-indigo-600 text-white px-4 py-2.5 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-comments text-yellow-300"></i>
+                            <span class="font-bold text-xs">Obrolan Sekolah</span>
+                        </div>
+                        <button onclick="toggleChat()" class="text-white hover:text-slate-200 text-xs">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Chat Messages List -->
+                    <div id="chatMessages" class="p-3 h-48 overflow-y-auto flex flex-col gap-2 text-xs">
+                        <!-- Message items go here dynamically -->
+                    </div>
+
+                    <!-- Chat Input Area -->
+                    <div class="p-2 bg-slate-100 border-t flex gap-1">
+                        <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onfocus="pauseChatTimer()" oninput="pauseChatTimer()" onblur="resetChatTimer()" onkeydown="if(event.key==='Enter') sendChatMessage()">
+                        <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FLOATING CHAT BUTTON ICON -->
+                <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95">
+                    <i class="fas fa-comment-dots"></i>
+                    <!-- Notification Counter Badge -->
+                    <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INTERACTION MODAL -->
+    <div id="dialogModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-yellow-400">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 id="modalTitle" class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-school text-yellow-500"></i> Judul
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modalContent" class="text-slate-600 text-sm mb-6 leading-relaxed">
+                Pesan interaksi...
+            </div>
+            <div class="flex justify-end gap-3" id="modalActions">
+                <button onclick="closeModal()" class="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold rounded-xl transition">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT CHARACTER & NAME MODAL -->
+    <div id="editCharModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-5 shadow-2xl text-white flex flex-col items-center">
+            <div class="flex justify-between items-center w-full mb-4 border-b border-slate-700 pb-2">
+                <h3 class="text-base font-bold text-yellow-400 flex items-center gap-2">
+                    <i class="fas fa-user-pen text-yellow-400"></i> Edit Karakter & Nama
+                </h3>
+                <button onclick="closeEditCharacterModal()" class="text-slate-400 hover:text-white text-base">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Input Edit Nama -->
+            <div class="w-full mb-4">
+                <label class="block text-xs font-bold text-slate-300 mb-1">Nama Karakter:</label>
+                <input type="text" id="editNameInput" maxlength="15" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-800 border border-slate-600 text-white font-bold focus:outline-none focus:border-yellow-400">
+            </div>
+
+            <!-- Choose Gender / Character -->
+            <div class="w-full mb-5">
+                <label class="block text-xs font-bold text-slate-300 mb-2">Pilih Karakter:</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <div id="selectOptionFemale" onclick="selectModalGender('female')" class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition">
+                        <span class="text-2xl mb-1">🧕</span>
+                        <span class="text-xs font-bold text-pink-300">Aisyah</span>
+                        <span class="text-[9px] text-slate-400">Siswi Hijab</span>
+                    </div>
+                    <div id="selectOptionMale" onclick="selectModalGender('male')" class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition">
+                        <span class="text-2xl mb-1">👦</span>
+                        <span class="text-xs font-bold text-blue-300">Ali</span>
+                        <span class="text-[9px] text-slate-400">Siswa Peci</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 w-full">
+                <button onclick="closeEditCharacterModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-xl transition">Batal</button>
+                <button onclick="saveCharacterEdits()" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-xs font-bold rounded-xl transition">Simpan Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ASSETS MANAGEMENT (CUSTOM IMAGES FOR GITHUB REPO)
+        const ASSETS = {
+            tree: new Image(),
+            female: new Image(),
+            male: new Image(),
+            // BUILDING & FACILITY ASSETS FOR GITHUB
+            kelas: new Image(),
+            perpus: new Image(),
+            gor: new Image(),
+            warung: new Image(),
+            mading: new Image(),
+            taman: new Image()
+        };
+
+        // Path gambar relatif untuk GitHub Pages / Local folder assets
+        ASSETS.tree.src = 'assets/tree.png';
+        ASSETS.female.src = 'assets/avatar_female.png';
+        ASSETS.male.src = 'assets/avatar_male.png';
+        
+        ASSETS.kelas.src = 'assets/kelas.png';
+        ASSETS.perpus.src = 'assets/perpus.png';
+        ASSETS.gor.src = 'assets/gor.png';
+        ASSETS.warung.src = 'assets/warung.png';
+        ASSETS.mading.src = 'assets/mading.png';
+        ASSETS.taman.src = 'assets/taman.png';
+
+        let assetsLoaded = {
+            tree: false,
+            female: false,
+            male: false,
+            kelas: false,
+            perpus: false,
+            gor: false,
+            warung: false,
+            mading: false,
+            taman: false
+        };
+
+        ASSETS.tree.onload = () => assetsLoaded.tree = true;
+        ASSETS.female.onload = () => assetsLoaded.female = true;
+        ASSETS.male.onload = () => assetsLoaded.male = true;
+        ASSETS.kelas.onload = () => assetsLoaded.kelas = true;
+        ASSETS.perpus.onload = () => assetsLoaded.perpus = true;
+        ASSETS.gor.onload = () => assetsLoaded.gor = true;
+        ASSETS.warung.onload = () => assetsLoaded.warung = true;
+        ASSETS.mading.onload = () => assetsLoaded.mading = true;
+        ASSETS.taman.onload = () => assetsLoaded.taman = true;
+
+        // Game State Variables
+        let selectedGender = null;
+        let playerCustomName = "";
+        let walkTimer = 0;
+        let tempModalGender = null;
+        let nearbyBuilding = null;
+
+        // Chat Variables
+        let isChatOpen = false;
+        let unreadCount = 0;
+        let chatTimer = null;
+        let isTypingOrHovered = false;
+        const autoHideDelay = 5000;
+
+        // Speech Bubble Variable
+        let playerSpeechBubble = null; // { text: string, timer: number }
+
+        // Random Trees Data
+        const trees = [];
+        const NUM_TREES = 8; // A few trees scattered randomly
+
+        // SCHOOL BUILDINGS & FACILITIES DEFINITION WITH INTERACTION DATA
+        const buildings = [
+            { 
+                id: 'kelas', 
+                name: 'Ruang Kelas', 
+                icon: '🏫', 
+                x: 200, 
+                y: 100, 
+                width: 380, 
+                height: 220, 
+                color: '#fef08a', 
+                wallColor: '#eab308', 
+                roofColor: '#b91c1c',
+                dialogTitle: 'Ruang Kelas SD',
+                dialogText: 'Selamat datang di Ruang Kelas! Tempat kamu dan teman-teman belajar matematika, bahasa, dan IPA bersama guru.',
+                actionLabel: 'Masuk Belajar'
+            },
+            { 
+                id: 'perpus', 
+                name: 'Perpustakaan', 
+                icon: '📚', 
+                x: 680, 
+                y: 100, 
+                width: 340, 
+                height: 220, 
+                color: '#bfdbfe', 
+                wallColor: '#3b82f6', 
+                roofColor: '#1e3a8a',
+                dialogTitle: 'Perpustakaan Sekolah',
+                dialogText: 'Suasana di sini sangat tenang. Ada ribuan buku cerita, ensiklopedia, dan buku pelajaran yang bisa kamu baca.',
+                actionLabel: 'Baca Buku'
+            },
+            { 
+                id: 'gor', 
+                name: 'Gedung Olahraga', 
+                icon: '🏀', 
+                x: 1100, 
+                y: 100, 
+                width: 420, 
+                height: 250, 
+                color: '#fed7aa', 
+                wallColor: '#f97316', 
+                roofColor: '#9a3412',
+                dialogTitle: 'Gedung Olahraga (GOR)',
+                dialogText: 'Area serbaguna untuk main basket, bulu tangkis, dan senam bersama saat pelajaran PJOK!',
+                actionLabel: 'Olah Raga'
+            },
+            { 
+                id: 'mading', 
+                name: 'Mading Sekolah', 
+                icon: '📌', 
+                x: 1600, 
+                y: 150, 
+                width: 260, 
+                height: 180, 
+                color: '#fef3c7', 
+                wallColor: '#d97706', 
+                roofColor: '#78350f',
+                dialogTitle: 'Mading Sekolah',
+                dialogText: 'Papan informasi sekolah: Pengumuman lomba menggambar minggu depan dan puisi karya siswa kelas 5!',
+                actionLabel: 'Baca Pengumuman'
+            },
+            { 
+                id: 'warung', 
+                name: 'Warung Sekolah', 
+                icon: '🍜', 
+                x: 160, 
+                y: 800, 
+                width: 340, 
+                height: 250, 
+                color: '#fbcfe8', 
+                wallColor: '#ec4899', 
+                roofColor: '#9d174d',
+                dialogTitle: 'Warung & Kantin Sekolah',
+                dialogText: 'Aroma jajanan lezat! Ada mi goreng, es teh manis, kue pastel, dan susu kotak segar.',
+                actionLabel: 'Beli Jajanan'
+            },
+            { 
+                id: 'taman', 
+                name: 'Taman Sekolah', 
+                icon: '🌻', 
+                x: 1400, 
+                y: 750, 
+                width: 380, 
+                height: 280, 
+                color: '#86efac', 
+                isZone: true,
+                dialogTitle: 'Taman Bunga Sekolah',
+                dialogText: 'Taman yang asri dengan bunga warna-warni dan udara sejuk. Tempat pas untuk bersantai bersama teman saat istirahat.',
+                actionLabel: 'Bersantai'
+            }
+        ];
+
+        function generateTrees() {
+            trees.length = 0; // Clear existing
+            for (let i = 0; i < NUM_TREES; i++) {
+                let tx, ty, dist, insideBuilding;
+                do {
+                    tx = 150 + Math.random() * (MAP_WIDTH - 300);
+                    ty = 150 + Math.random() * (MAP_HEIGHT - 300);
+                    dist = Math.hypot(tx - 1000, ty - 600);
+
+                    insideBuilding = buildings.some(b => 
+                        tx > b.x - 40 && tx < b.x + b.width + 40 &&
+                        ty > b.y - 40 && ty < b.y + b.height + 40
+                    );
+                } while (dist < 200 || insideBuilding);
+
+                trees.push({
+                    x: tx,
+                    y: ty,
+                    size: 35 + Math.random() * 20,
+                    trunkHeight: 25 + Math.random() * 10
+                });
+            }
+            trees.sort((a, b) => a.y - b.y);
+        }
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // MAP DIMENSIONS & ZOOM FACTOR
+        const MAP_WIDTH = 2000;
+        const MAP_HEIGHT = 1200;
+        const ZOOM_SCALE = 0.65;
+
+        // Player Object
+        const player = {
+            x: 1000,
+            y: 600,
+            speed: 5.5,
+            width: 50,
+            height: 70,
+            direction: 'idle',
+            targetX: null,
+            targetY: null,
+            isMovingToTarget: false
+        };
+
+        // Keys state
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            w: false,
+            s: false,
+            a: false,
+            d: false
+        };
+
+        // DRAW CHARACTER SPRITES (Female/Male with Directions OR Custom Image Assets)
+        function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
+            c.save();
+
+            const imgAsset = (gender === 'female') ? ASSETS.female : ASSETS.male;
+            const isLoaded = (gender === 'female') ? assetsLoaded.female : assetsLoaded.male;
+
+            // Check if custom avatar PNG spritesheet image is loaded
+            if (isLoaded) {
+                // Determine spritesheet frame index based on direction
+                // 0: Diam, 1: Berjalan ke Atas, 2: Berjalan ke Bawah, 3: Berjalan ke Kiri, 4: Berjalan ke Kanan
+                let frameIndex = 0;
+                if (dir === 'up') frameIndex = 1;
+                else if (dir === 'down') frameIndex = 2;
+                else if (dir === 'left') frameIndex = 3;
+                else if (dir === 'right') frameIndex = 4;
+                else frameIndex = 0; // Diam
+
+                const frameWidth = imgAsset.width / 5;
+                const frameHeight = imgAsset.height;
+
+                // Shadow
+                c.fillStyle = 'rgba(0,0,0,0.2)';
+                c.beginPath();
+                c.ellipse(x + width / 2, y + height - 2, width * 0.4, 5, 0, 0, Math.PI * 2);
+                c.fill();
+
+                // Draw cropped frame from 5-frame horizontal spritesheet
+                c.drawImage(
+                    imgAsset,
+                    frameIndex * frameWidth, 0, frameWidth, frameHeight,
+                    x, y, width, height
+                );
+
+                c.restore();
+                return;
+            }
+
+            // Shadow
+            c.fillStyle = 'rgba(0,0,0,0.2)';
+            c.beginPath();
+            c.ellipse(x + width / 2, y + height - 4, width * 0.4, 6, 0, 0, Math.PI * 2);
+            c.fill();
+
+            const isFemale = (gender === 'female');
+            const bounce = (dir !== 'idle') ? Math.sin(walkStep * 0.3) * 3 : 0;
+            const legSwing = (dir !== 'idle') ? Math.sin(walkStep * 0.3) * 8 : 0;
+
+            const charY = y + bounce;
+
+            if (isFemale) {
+                // AISYAH (FEMALE HIJAB)
+                if (dir === 'up') {
+                    // Back View
+                    c.fillStyle = '#ffffff';
+                    c.beginPath();
+                    c.roundRect(x + width * 0.15, charY + 2, width * 0.7, height * 0.42, 14);
+                    c.fill();
+                    c.strokeStyle = '#cbd5e1';
+                    c.lineWidth = 1.5;
+                    c.stroke();
+
+                    // Backpack Red
+                    c.fillStyle = '#dc2626';
+                    c.beginPath();
+                    c.roundRect(x + width * 0.28, charY + height * 0.25, width * 0.44, height * 0.28, 8);
+                    c.fill();
+                    c.fillStyle = '#ffffff';
+                    c.fillRect(x + width * 0.35, charY + height * 0.38, width * 0.3, 4);
+
+                    // Red Skirt
+                    c.fillStyle = '#b91c1c';
+                    c.beginPath();
+                    c.moveTo(x + width * 0.25, charY + height * 0.45);
+                    c.lineTo(x + width * 0.75, charY + height * 0.45);
+                    c.lineTo(x + width * 0.85, charY + height * 0.82);
+                    c.lineTo(x + width * 0.15, charY + height * 0.82);
+                    c.closePath();
+                    c.fill();
+
+                    // Shoes
+                    c.fillStyle = '#991b1b';
+                    c.fillRect(x + width * 0.25 - legSwing * 0.5, charY + height * 0.82, 10, 10);
+                    c.fillRect(x + width * 0.55 + legSwing * 0.5, charY + height * 0.82, 10, 10);
+                } else {
+                    // Front / Side View
+                    c.fillStyle = '#b91c1c';
+                    c.beginPath();
+                    c.moveTo(x + width * 0.25, charY + height * 0.45);
+                    c.lineTo(x + width * 0.75, charY + height * 0.45);
+                    c.lineTo(x + width * 0.85 + (dir === 'right' ? 4 : 0), charY + height * 0.82);
+                    c.lineTo(x + width * 0.15 - (dir === 'left' ? 4 : 0), charY + height * 0.82);
+                    c.closePath();
+                    c.fill();
+
+                    // Shoes Red & White
+                    c.fillStyle = '#991b1b';
+                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.82, 11, 10);
+                    c.fillRect(x + width * 0.55 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.82, 11, 10);
+
+                    // White Shirt
+                    c.fillStyle = '#ffffff';
+                    c.fillRect(x + width * 0.25, charY + height * 0.3, width * 0.5, height * 0.22);
+
+                    // White Hijab Head
+                    c.fillStyle = '#ffffff';
+                    c.beginPath();
+                    c.roundRect(x + width * 0.12, charY, width * 0.76, height * 0.42, 18);
+                    c.fill();
+                    c.strokeStyle = '#e2e8f0';
+                    c.lineWidth = 1.5;
+                    c.stroke();
+
+                    // Face Skin Tone
+                    c.fillStyle = '#fde047';
+                    c.beginPath();
+                    c.arc(x + width * 0.5 + (dir === 'right' ? 4 : dir === 'left' ? -4 : 0), charY + height * 0.2, 14, 0, Math.PI * 2);
+                    c.fill();
+
+                    // Eyes & Smile
+                    c.fillStyle = '#1e293b';
+                    if (dir === 'right') {
+                        c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
+                    } else if (dir === 'left') {
+                        c.beginPath(); c.arc(x + width * 0.42, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
+                    } else {
+                        c.beginPath(); c.arc(x + width * 0.42, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
+                        c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
+                    }
+
+                    // Smile
+                    c.strokeStyle = '#b91c1c';
+                    c.lineWidth = 1.5;
+                    c.beginPath();
+                    c.arc(x + width * 0.5 + (dir === 'right' ? 3 : dir === 'left' ? -3 : 0), charY + height * 0.23, 4, 0.1, Math.PI - 0.1);
+                    c.stroke();
+                }
+            } else {
+                // ALI (MALE PECI)
+                if (dir === 'up') {
+                    // Back View
+                    c.fillStyle = '#ffffff';
+                    c.beginPath();
+                    c.roundRect(x + width * 0.25, charY, width * 0.5, 14, 4);
+                    c.fill();
+                    c.strokeStyle = '#cbd5e1';
+                    c.stroke();
+
+                    c.fillStyle = '#1e293b';
+                    c.fillRect(x + width * 0.28, charY + 12, width * 0.44, 10);
+
+                    c.fillStyle = '#ffffff';
+                    c.fillRect(x + width * 0.25, charY + 22, width * 0.5, height * 0.3);
+
+                    c.fillStyle = '#dc2626';
+                    c.beginPath();
+                    c.roundRect(x + width * 0.28, charY + 25, width * 0.44, height * 0.25, 6);
+                    c.fill();
+
+                    c.fillStyle = '#b91c1c';
+                    c.fillRect(x + width * 0.25, charY + height * 0.52, width * 0.22, height * 0.32);
+                    c.fillRect(x + width * 0.53, charY + height * 0.52, width * 0.22, height * 0.32);
+
+                    c.fillStyle = '#991b1b';
+                    c.fillRect(x + width * 0.23 - legSwing * 0.4, charY + height * 0.84, 12, 9);
+                    c.fillRect(x + width * 0.53 + legSwing * 0.4, charY + height * 0.84, 12, 9);
+                } else {
+                    // Front / Side View
+                    c.fillStyle = '#b91c1c';
+                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.32);
+                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.32);
+
+                    c.fillStyle = '#991b1b';
+                    c.fillRect(x + width * 0.23 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.84, 12, 9);
+                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.84, 12, 9);
+
+                    c.fillStyle = '#ffffff';
+                    c.fillRect(x + width * 0.24, charY + 22, width * 0.52, height * 0.32);
+
+                    c.fillStyle = '#b91c1c';
+                    c.beginPath();
+                    c.moveTo(x + width * 0.5, charY + 24);
+                    c.lineTo(x + width * 0.54, charY + 36);
+                    c.lineTo(x + width * 0.5, charY + 44);
+                    c.lineTo(x + width * 0.46, charY + 36);
+                    c.closePath();
+                    c.fill();
+
+                    c.fillStyle = '#fde047';
+                    c.beginPath();
+                    c.arc(x + width * 0.5 + (dir === 'right' ? 3 : dir === 'left' ? -3 : 0), charY + 16, 14, 0, Math.PI * 2);
+                    c.fill();
+
+                    c.fillStyle = '#ffffff';
+                    c.beginPath();
+                    c.roundRect(x + width * 0.22 + (dir === 'right' ? 3 : dir === 'left' ? -3 : 0), charY - 2, width * 0.56, 14, 4);
+                    c.fill();
+                    c.strokeStyle = '#cbd5e1';
+                    c.lineWidth = 1;
+                    c.stroke();
+
+                    c.fillStyle = '#1e293b';
+                    if (dir === 'right') {
+                        c.beginPath(); c.arc(x + width * 0.58, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
+                    } else if (dir === 'left') {
+                        c.beginPath(); c.arc(x + width * 0.42, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
+                    } else {
+                        c.beginPath(); c.arc(x + width * 0.42, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
+                        c.beginPath(); c.arc(x + width * 0.58, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
+                    }
+
+                    c.strokeStyle = '#b91c1c';
+                    c.lineWidth = 1.5;
+                    c.beginPath();
+                    c.arc(x + width * 0.5 + (dir === 'right' ? 2 : dir === 'left' ? -2 : 0), charY + 20, 4, 0.1, Math.PI - 0.1);
+                    c.stroke();
+                }
+            }
+
+            c.restore();
+        }
+
+        // Render Previews for Character Selection Screen
+        function renderPreviews() {
+            const canvasF = document.getElementById('previewFemale');
+            const canvasM = document.getElementById('previewMale');
+
+            if (canvasF) {
+                const ctxF = canvasF.getContext('2d');
+                ctxF.clearRect(0, 0, canvasF.width, canvasF.height);
+                drawCharacterSprite(ctxF, 35, 35, 50, 70, 'female', 'idle', 0);
+            }
+
+            if (canvasM) {
+                const ctxM = canvasM.getContext('2d');
+                ctxM.clearRect(0, 0, canvasM.width, canvasM.height);
+                drawCharacterSprite(ctxM, 35, 35, 50, 70, 'male', 'idle', 0);
+            }
+        }
+
+        // DRAW SCHOOL MAP & BUILDINGS
+        function drawMap(cameraX, cameraY) {
+            ctx.save();
+            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+
+            // Checkered Grass Tile Pattern - Blended tones
+            const tileSize = 80; // Size of each checkered square
+            const cols = Math.ceil(MAP_WIDTH / tileSize);
+            const rows = Math.ceil(MAP_HEIGHT / tileSize);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    // Alternate between closer dark green shades for smooth blending
+                    const isEven = (r + c) % 2 === 0;
+                    ctx.fillStyle = isEven ? '#15803d' : '#146c35'; // Subtler color blend
+                    
+                    const x = c * tileSize - cameraX;
+                    const y = r * tileSize - cameraY;
+                    ctx.fillRect(x, y, tileSize, tileSize);
+                }
+            }
+
+            // Subtle Grid Line Accents between tiles to feel cohesive
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.03)';
+            ctx.lineWidth = 1;
+            for (let c = 0; c <= cols; c++) {
+                const x = c * tileSize - cameraX;
+                ctx.beginPath();
+                ctx.moveTo(x, -cameraY);
+                ctx.lineTo(x, MAP_HEIGHT - cameraY);
+                ctx.stroke();
+            }
+            for (let r = 0; r <= rows; r++) {
+                const y = r * tileSize - cameraY;
+                ctx.beginPath();
+                ctx.moveTo(-cameraX, y);
+                ctx.lineTo(MAP_WIDTH - cameraX, y);
+                ctx.stroke();
+            }
+
+            // DRAW BUILDINGS & ZONES
+            buildings.forEach(b => {
+                const bx = b.x - cameraX;
+                const by = b.y - cameraY;
+
+                // CHECK IF CUSTOM IMAGE FOR THIS BUILDING IS UPLOADED IN ASSETS FOLDER
+                if (assetsLoaded[b.id]) {
+                    ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
+                } else if (b.isZone) {
+                    // Render Open Zone (Taman) Fallback
+                    ctx.fillStyle = b.color;
+                    ctx.beginPath();
+                    ctx.roundRect(bx, by, b.width, b.height, 16);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    if (b.id === 'taman') {
+                        // Flowers & Garden decor
+                        ctx.font = '20px sans-serif';
+                        ctx.fillText('🌸', bx + 40, by + 60);
+                        ctx.fillText('🌺', bx + 120, by + 80);
+                        ctx.fillText('🌷', bx + 220, by + 60);
+                        ctx.fillText('🌻', bx + 300, by + 100);
+                        ctx.fillText('🪑', bx + 160, by + 180);
+                    }
+                } else {
+                    // 2D ARTISTIC BUILDING DRAWING LOGIC (FALLBACK CANVAS)
+                    
+                    // 1. Building Base Shadow
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.beginPath();
+                    ctx.roundRect(bx + 15, by + 15, b.width, b.height, 10);
+                    ctx.fill();
+
+                    // 2. Building Main Wall / Front Body
+                    const wallHeight = b.height * 0.55;
+                    const wallY = by + b.height - wallHeight;
+
+                    ctx.fillStyle = b.color;
+                    ctx.beginPath();
+                    ctx.roundRect(bx, wallY, b.width, wallHeight, [0, 0, 10, 10]);
+                    ctx.fill();
+                    ctx.strokeStyle = b.wallColor;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    // Wall Details (Bricks / Panels & Foundation Bar)
+                    ctx.fillStyle = b.wallColor;
+                    ctx.fillRect(bx, wallY + wallHeight - 12, b.width, 12);
+
+                    if (b.id === 'warung') {
+                        // WARUNG 2D CANOPY & COUNTER
+                        ctx.fillStyle = '#db2777';
+                        ctx.fillRect(bx + 20, wallY + 30, b.width - 40, 50);
+                        ctx.fillStyle = '#fce7f3';
+                        ctx.fillRect(bx + 25, wallY + 35, b.width - 50, 40);
+
+                        ctx.font = '20px sans-serif';
+                        ctx.fillText('🧃', bx + 40, wallY + 62);
+                        ctx.fillText('🍞', bx + 110, wallY + 62);
+                        ctx.fillText('🍜', bx + 180, wallY + 62);
+                        ctx.fillText('🧋', bx + 250, wallY + 62);
+
+                        const awningY = wallY - 15;
+                        const stripes = 8;
+                        const stripeW = b.width / stripes;
+                        for (let s = 0; s < stripes; s++) {
+                            ctx.fillStyle = s % 2 === 0 ? '#ec4899' : '#ffffff';
+                            ctx.fillRect(bx + s * stripeW, awningY, stripeW, 35);
+                        }
+                    } else if (b.id === 'mading') {
+                        // MADING 2D BOARD
+                        ctx.fillStyle = '#b45309';
+                        ctx.fillRect(bx + 30, wallY + 30, 14, wallHeight - 30);
+                        ctx.fillRect(bx + b.width - 44, wallY + 30, 14, wallHeight - 30);
+
+                        ctx.fillStyle = '#fef3c7';
+                        ctx.fillRect(bx + 20, wallY - 10, b.width - 40, wallHeight - 20);
+                        ctx.strokeStyle = '#78350f';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(bx + 20, wallY - 10, b.width - 40, wallHeight - 20);
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(bx + 35, wallY, 70, 50);
+                        ctx.fillRect(bx + 120, wallY, 50, 45);
+                        ctx.fillRect(bx + 180, wallY, 55, 50);
+
+                        ctx.fillStyle = '#ef4444';
+                        ctx.fillRect(bx + 40, wallY + 8, 40, 5);
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.fillRect(bx + 125, wallY + 8, 30, 5);
+                        ctx.fillStyle = '#10b981';
+                        ctx.fillRect(bx + 185, wallY + 8, 35, 5);
+                    } else {
+                        // CLASSROOM / PERPUS / GOR DOORS AND WINDOWS
+                        const numWindows = b.id === 'gor' ? 3 : 2;
+                        const winWidth = 45;
+                        const winHeight = 40;
+                        const spacing = (b.width - (numWindows * winWidth) - 80) / (numWindows + 1);
+
+                        for (let i = 0; i < numWindows; i++) {
+                            const winX = bx + 25 + i * (winWidth + spacing + 30);
+                            const winY = wallY + 20;
+
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(winX, winY, winWidth, winHeight);
+                            ctx.fillStyle = '#38bdf8';
+                            ctx.fillRect(winX + 3, winY + 3, winWidth - 6, winHeight - 6);
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                            ctx.beginPath();
+                            ctx.moveTo(winX + 5, winY + winHeight - 5);
+                            ctx.lineTo(winX + winWidth - 5, winY + 5);
+                            ctx.lineTo(winX + winWidth - 15, winY + 5);
+                            ctx.lineTo(winX + 5, winY + winHeight - 15);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+
+                        const doorW = 44;
+                        const doorH = 65;
+                        const doorX = bx + b.width / 2 - doorW / 2;
+                        const doorY = wallY + wallHeight - doorH;
+
+                        ctx.fillStyle = '#78350f';
+                        ctx.fillRect(doorX, doorY, doorW, doorH);
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.beginPath();
+                        ctx.arc(doorX + doorW - 8, doorY + doorH / 2, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // 3. 2D PITCHED ROOF WITH TILE PATTERN
+                    if (b.id !== 'mading' && b.id !== 'warung') {
+                        const roofHeight = b.height * 0.5;
+                        const roofOverhang = 15;
+
+                        ctx.fillStyle = b.roofColor;
+                        ctx.beginPath();
+                        ctx.moveTo(bx - roofOverhang, wallY + 5);
+                        ctx.lineTo(bx + b.width / 2, by - 10);
+                        ctx.lineTo(bx + b.width + roofOverhang, wallY + 5);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                        ctx.lineWidth = 2;
+                        for (let rLine = 1; rLine <= 4; rLine++) {
+                            const ratio = rLine / 5;
+                            const startX = (bx - roofOverhang) + (b.width / 2 - (bx - roofOverhang)) * ratio;
+                            const endX = (bx + b.width + roofOverhang) - ((bx + b.width + roofOverhang) - b.width / 2) * ratio;
+                            const currentY = (wallY + 5) - ((wallY + 5) - (by - 10)) * ratio;
+
+                            ctx.beginPath();
+                            ctx.moveTo(startX, currentY);
+                            ctx.lineTo(endX, currentY);
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                // Facility Signboard Label
+                ctx.save();
+                ctx.font = 'bold 16px Fredoka';
+                const labelText = `${b.icon} ${b.name}`;
+                const textWidth = ctx.measureText(labelText).width;
+                const signX = bx + b.width / 2;
+                const signY = b.isZone ? by + 28 : by - 25;
+
+                // Sign Badge
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.roundRect(signX - (textWidth + 24) / 2, signY - 14, textWidth + 24, 28, 14);
+                ctx.fill();
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Sign Text
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labelText, signX, signY);
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        // DRAW TREE WITH SUPPORT FOR CUSTOM ASSETS (`assets/tree.png`)
+        function drawTree(tree, cameraX, cameraY) {
+            ctx.save();
+            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+
+            const tx = tree.x - cameraX;
+            const ty = tree.y - cameraY;
+
+            // Jika ada file foto gambar pohon di folder assets/tree.png
+            if (assetsLoaded.tree) {
+                const imgW = tree.size * 2.2;
+                const imgH = tree.size * 2.5;
+                ctx.drawImage(ASSETS.tree, tx - imgW / 2, ty - imgH + 10, imgW, imgH);
+                ctx.restore();
+                return;
+            }
+
+            // Fallback Vector Tree (Gambar Bawaan Canvas)
+            // Tree Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(tx, ty, tree.size * 0.8, tree.size * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Trunk
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(tx - tree.size * 0.2, ty - tree.trunkHeight, tree.size * 0.4, tree.trunkHeight);
+
+            // Foliage
+            const foliageY = ty - tree.trunkHeight;
+            
+            // Outer Dark Green
+            ctx.fillStyle = '#14532d';
+            ctx.beginPath();
+            ctx.arc(tx, foliageY - tree.size * 0.4, tree.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Middle Green
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath();
+            ctx.arc(tx - tree.size * 0.2, foliageY - tree.size * 0.6, tree.size * 0.75, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Highlight Light Green
+            ctx.fillStyle = '#4ade80';
+            ctx.beginPath();
+            ctx.arc(tx + tree.size * 0.2, foliageY - tree.size * 0.7, tree.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // UPDATE GAME LOGIC
+        function updateGame() {
+            let dx = 0;
+            let dy = 0;
+
+            if (player.isMovingToTarget && player.targetX !== null && player.targetY !== null) {
+                const diffX = player.targetX - player.x;
+                const diffY = player.targetY - player.y;
+                const dist = Math.hypot(diffX, diffY);
+
+                if (dist < player.speed) {
+                    player.x = player.targetX;
+                    player.y = player.targetY;
+                    player.isMovingToTarget = false;
+                    player.targetX = null;
+                    player.targetY = null;
+                    player.direction = 'idle';
+                    walkTimer = 0;
+                } else {
+                    dx = diffX / dist;
+                    dy = diffY / dist;
+                    player.x += dx * player.speed;
+                    player.y += dy * player.speed;
+
+                    if (Math.abs(diffX) > Math.abs(diffY)) {
+                        player.direction = (diffX > 0) ? 'right' : 'left';
+                    } else {
+                        player.direction = (diffY > 0) ? 'down' : 'up';
+                    }
+                    walkTimer++;
+                }
+            } else {
+                if (keys.ArrowUp || keys.w) dy -= 1;
+                if (keys.ArrowDown || keys.s) dy += 1;
+                if (keys.ArrowLeft || keys.a) dx -= 1;
+                if (keys.ArrowRight || keys.d) dx += 1;
+
+                if (dx !== 0 || dy !== 0) {
+                    const len = Math.hypot(dx, dy);
+                    player.x += (dx / len) * player.speed;
+                    player.y += (dy / len) * player.speed;
+
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        player.direction = (dx > 0) ? 'right' : 'left';
+                    } else {
+                        player.direction = (dy > 0) ? 'down' : 'up';
+                    }
+
+                    walkTimer++;
+                } else {
+                    player.direction = 'idle';
+                    walkTimer = 0;
+                }
+            }
+
+            // Map Bounds
+            player.x = Math.max(30, Math.min(MAP_WIDTH - 30, player.x));
+            player.y = Math.max(40, Math.min(MAP_HEIGHT - 40, player.y));
+
+            // Check Building Proximity for Interaction
+            checkBuildingProximity();
+        }
+
+        function checkBuildingProximity() {
+            nearbyBuilding = null;
+            const actionBtn = document.getElementById('btnInteract');
+
+            for (let b of buildings) {
+                // Calculate center of building/zone
+                const centerX = b.x + b.width / 2;
+                const centerY = b.y + b.height / 2;
+                
+                // Interaction range depends on building size
+                const rangeX = b.width / 2 + 50;
+                const rangeY = b.height / 2 + 50;
+
+                if (Math.abs(player.x - centerX) < rangeX && Math.abs(player.y - centerY) < rangeY) {
+                    nearbyBuilding = b;
+                    break;
+                }
+            }
+
+            if (nearbyBuilding) {
+                if (actionBtn) actionBtn.classList.add('btn-action-highlight');
+            } else {
+                if (actionBtn) actionBtn.classList.remove('btn-action-highlight');
+            }
+        }
+
+        function triggerInteraction() {
+            if (!nearbyBuilding) return;
+
+            document.getElementById('modalTitle').innerHTML = `${nearbyBuilding.icon} ${nearbyBuilding.dialogTitle}`;
+            document.getElementById('modalContent').innerHTML = `
+                <p class="mb-3">${nearbyBuilding.dialogText}</p>
+                <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs font-semibold text-amber-800 flex items-center gap-2">
+                    <i class="fas fa-sparkles text-amber-500"></i>
+                    <span>Aktivitas: ${nearbyBuilding.actionLabel}</span>
+                </div>
+            `;
+            
+            const modalActions = document.getElementById('modalActions');
+            modalActions.innerHTML = `
+                <button onclick="performBuildingAction('${nearbyBuilding.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5">
+                    <i class="fas fa-play"></i> ${nearbyBuilding.actionLabel}
+                </button>
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs transition">Tutup</button>
+            `;
+
+            document.getElementById('dialogModal').classList.remove('hidden');
+        }
+
+        function performBuildingAction(buildingId) {
+            const b = buildings.find(item => item.id === buildingId);
+            if (!b) return;
+
+            closeModal();
+
+            // Display a speech bubble action message above player's head
+            let actionText = "";
+            switch (buildingId) {
+                case 'kelas':
+                    actionText = "Aku sedang rajin belajar di kelas! 📖";
+                    break;
+                case 'perpus':
+                    actionText = "Asyik banget membaca buku cerita di perpus! 📚";
+                    break;
+                case 'gor':
+                    actionText = "Semangat olah raga biar badan sehat! 🏀";
+                    break;
+                case 'mading':
+                    actionText = "Wah, pengumuman lombanya menarik sekali! 📌";
+                    break;
+                case 'warung':
+                    actionText = "Nyam nyam, jajanan warungnya enak sekali! 🍜";
+                    break;
+                case 'taman':
+                    actionText = "Udaranya sejuk sekali bersantai di taman! 🌻";
+                    break;
+                default:
+                    actionText = `Sedang berada di ${b.name}`;
+            }
+
+            addChatMessage(playerCustomName, actionText, true);
+        }
+
+        function pauseChatTimer() {
+            isTypingOrHovered = true;
+            if (chatTimer) {
+                clearTimeout(chatTimer);
+                chatTimer = null;
+            }
+        }
+
+        function resetChatTimer() {
+            isTypingOrHovered = false;
+            if (chatTimer) clearTimeout(chatTimer);
+            if (isChatOpen) {
+                chatTimer = setTimeout(() => {
+                    const chatInput = document.getElementById('chatInput');
+                    if (document.activeElement !== chatInput && !isTypingOrHovered) {
+                        closeChat();
+                    }
+                }, autoHideDelay);
+            }
+        }
+
+        function toggleChat() {
+            if (isChatOpen) {
+                closeChat();
+            } else {
+                openChat();
+            }
+        }
+
+        function openChat() {
+            isChatOpen = true;
+            document.getElementById('chatBoxPopup').classList.remove('hidden');
+            unreadCount = 0;
+            updateChatBadge();
+            resetChatTimer();
+        }
+
+        function closeChat() {
+            isChatOpen = false;
+            document.getElementById('chatBoxPopup').classList.add('hidden');
+            if (chatTimer) clearTimeout(chatTimer);
+        }
+
+        function updateChatBadge() {
+            const badge = document.getElementById('chatBadge');
+            if (!badge) return;
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function addChatMessage(sender, text, isPlayer = false) {
+            const chatMessages = document.getElementById('chatMessages');
+            if (!chatMessages) return;
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex flex-col ${isPlayer ? 'items-end' : 'items-start'}`;
+
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'text-[10px] font-bold text-slate-400 mb-0.5 px-1';
+            senderSpan.innerText = sender;
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = `px-3 py-1.5 rounded-2xl max-w-[85%] text-xs ${
+                isPlayer 
+                    ? 'bg-indigo-600 text-white rounded-br-none' 
+                    : 'bg-slate-200 text-slate-800 rounded-bl-none font-medium'
+            }`;
+            bubbleDiv.innerText = text;
+
+            msgDiv.appendChild(senderSpan);
+            msgDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(msgDiv);
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            if (!isChatOpen) {
+                unreadCount++;
+                updateChatBadge();
+            } else {
+                resetChatTimer();
+            }
+
+            if (isPlayer) {
+                playerSpeechBubble = {
+                    text: text,
+                    timer: Date.now() + 4000
+                };
+            }
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            if (!input) return;
+            const text = input.value.trim();
+            if (text.length === 0) return;
+
+            addChatMessage(playerCustomName || "Saya", text, true);
+            input.value = "";
+            resetChatTimer();
+        }
+
+        function gameLoop() {
+            updateGame();
+
+            // Resize Canvas to Container
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            // Camera Setup
+            const viewWidth = canvas.width / ZOOM_SCALE;
+            const viewHeight = canvas.height / ZOOM_SCALE;
+
+            let cameraX = player.x - viewWidth / 2;
+            let cameraY = player.y - viewHeight / 2;
+
+            cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
+            cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
+
+            // Clear & Draw
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMap(cameraX, cameraY);
+
+            // Draw Trees behind the player
+            trees.forEach(tree => {
+                if (tree.y <= player.y) {
+                    drawTree(tree, cameraX, cameraY);
+                }
+            });
+
+            // Render Player
+            ctx.save();
+            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+            const screenX = player.x - cameraX - player.width / 2;
+            const screenY = player.y - cameraY - player.height / 2;
+            drawCharacterSprite(ctx, screenX, screenY, player.width, player.height, selectedGender, player.direction, walkTimer);
+
+            // Draw Character Name Badge Above Head
+            const nameCenterX = player.x - cameraX;
+            const nameY = screenY - 8;
+
+            ctx.save();
+            ctx.font = 'bold 12px Fredoka';
+            const nameText = playerCustomName || "Pemain";
+            const nameWidth = ctx.measureText(nameText).width;
+            const namePadding = 8;
+            const nameBoxW = nameWidth + namePadding * 2;
+            const nameBoxH = 18;
+
+            // Name Tag Background
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+            ctx.beginPath();
+            ctx.roundRect(nameCenterX - nameBoxW / 2, nameY - nameBoxH, nameBoxW, nameBoxH, 9);
+            ctx.fill();
+
+            // Name Text
+            ctx.fillStyle = '#facc15';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(nameText, nameCenterX, nameY - nameBoxH / 2);
+            ctx.restore();
+
+            // Speech Bubble
+            if (playerSpeechBubble && Date.now() < playerSpeechBubble.timer) {
+                const bubbleX = player.x - cameraX;
+                const bubbleY = nameY - 22;
+
+                ctx.font = 'bold 13px Fredoka';
+                const textWidth = ctx.measureText(playerSpeechBubble.text).width;
+                const padding = 12;
+                const boxWidth = Math.max(70, textWidth + padding * 2);
+                const boxHeight = 28;
+
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 6;
+
+                ctx.beginPath();
+                ctx.roundRect(bubbleX - boxWidth / 2, bubbleY - boxHeight, boxWidth, boxHeight, 10);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(bubbleX - 6, bubbleY);
+                ctx.lineTo(bubbleX, bubbleY + 7);
+                ctx.lineTo(bubbleX + 6, bubbleY);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(bubbleX - 5, bubbleY - 2, 10, 3);
+
+                ctx.fillStyle = '#1e293b';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(playerSpeechBubble.text, bubbleX, bubbleY - boxHeight / 2);
+                ctx.restore();
+            } else if (playerSpeechBubble && Date.now() >= playerSpeechBubble.timer) {
+                playerSpeechBubble = null;
+            }
+
+            ctx.restore();
+
+            // Draw Trees in front of player
+            trees.forEach(tree => {
+                if (tree.y > player.y) {
+                    drawTree(tree, cameraX, cameraY);
+                }
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function selectCharacter(gender) {
+            selectedGender = gender;
+            const customName = document.getElementById('customNameInput').value.trim();
+            playerCustomName = customName || (gender === 'female' ? 'Aisyah' : 'Ali');
+
+            document.getElementById('charNameDisplay').innerText = playerCustomName;
+            document.getElementById('avatarBadge').innerText = (gender === 'female') ? '👧' : '👦';
+
+            document.getElementById('characterSelectScreen').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+
+            generateTrees();
+
+            // Keyboard Listeners
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    if (nearbyBuilding) {
+                        triggerInteraction();
+                    }
+                } else if (keys.hasOwnProperty(e.key)) {
+                    keys[e.key] = true;
+                    player.isMovingToTarget = false;
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+            });
+
+            // Canvas Click / Tap to Move Listener
+            canvas.addEventListener('pointerdown', (e) => {
+                // Ignore clicks if clicking on UI controls
+                if (e.target !== canvas) return;
+
+                const rect = canvas.getBoundingClientRect();
+                const clickClientX = e.clientX - rect.left;
+                const clickClientY = e.clientY - rect.top;
+
+                const viewWidth = canvas.width / ZOOM_SCALE;
+                const viewHeight = canvas.height / ZOOM_SCALE;
+
+                let cameraX = player.x - viewWidth / 2;
+                let cameraY = player.y - viewHeight / 2;
+
+                cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
+                cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
+
+                const worldX = (clickClientX / ZOOM_SCALE) + cameraX;
+                const worldY = (clickClientY / ZOOM_SCALE) + cameraY;
+
+                player.targetX = Math.max(30, Math.min(MAP_WIDTH - 30, worldX));
+                player.targetY = Math.max(40, Math.min(MAP_HEIGHT - 40, worldY));
+                player.isMovingToTarget = true;
+            });
+
+            setupTouchControls();
+
+            addChatMessage(playerCustomName, `Hello, ${playerCustomName} baru saja login nih😉`, true);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function setupTouchControls() {
+            const bindBtn = (id, keyName) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                const start = (e) => { 
+                    e.preventDefault(); 
+                    keys[keyName] = true; 
+                    player.isMovingToTarget = false; 
+                };
+                const end = (e) => { e.preventDefault(); keys[keyName] = false; };
+                btn.addEventListener('touchstart', start);
+                btn.addEventListener('touchend', end);
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('mouseup', end);
+            };
+
+            bindBtn('btnUp', 'ArrowUp');
+            bindBtn('btnDown', 'ArrowDown');
+            bindBtn('btnLeft', 'ArrowLeft');
+            bindBtn('btnRight', 'ArrowRight');
+        }
+
+        function openEditCharacterModal() {
+            tempModalGender = selectedGender;
+            document.getElementById('editNameInput').value = playerCustomName;
+            selectModalGender(selectedGender);
+            document.getElementById('editCharModal').classList.remove('hidden');
+        }
+
+        function closeEditCharacterModal() {
+            document.getElementById('editCharModal').classList.add('hidden');
+        }
+
+        function selectModalGender(gender) {
+            tempModalGender = gender;
+            const optionF = document.getElementById('selectOptionFemale');
+            const optionM = document.getElementById('selectOptionMale');
+
+            if (gender === 'female') {
+                optionF.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105";
+                optionM.className = "cursor-pointer border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60";
+            } else {
+                optionM.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60";
+                optionF.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105";
+            }
+        }
+
+        function saveCharacterEdits() {
+            const newName = document.getElementById('editNameInput').value.trim();
+            if (newName) {
+                playerCustomName = newName;
+                document.getElementById('charNameDisplay').innerText = playerCustomName;
+            }
+
+            if (tempModalGender) {
+                selectedGender = tempModalGender;
+                document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '👧' : '👦';
+            }
+
+            closeEditCharacterModal();
+        }
+
+        function closeModal() {
+            document.getElementById('dialogModal').classList.add('hidden');
+        }
+
+        window.onload = function() {
+            renderPreviews();
+        };
+    </script>
+</body>
+</html>
