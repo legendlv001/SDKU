@@ -564,16 +564,24 @@
                         colIndex = Math.floor(walkStep * 0.4) % COLS;
                     }
 
+                    // Precise Frame Padding/Inset Margin to eliminate adjacent frame bleeding
+                    const padX = frameWidth * 0.05;  // 5% margin dari batas kiri-kanan frame
+                    const padY = frameHeight * 0.02; // 2% margin dari batas atas-bawah frame
+                    const srcX = colIndex * frameWidth + padX;
+                    const srcY = rowIndex * frameHeight + padY;
+                    const srcW = frameWidth - (padX * 2);
+                    const srcH = frameHeight - (padY * 2);
+
                     // Shadow pas di telapak kaki
                     c.fillStyle = 'rgba(0,0,0,0.25)';
                     c.beginPath();
                     c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
                     c.fill();
 
-                    // Draw cropped frame from 10x4 Grid Spritesheet
+                    // Draw precisely cropped frame without bleeding into neighbor frames
                     c.drawImage(
                         imgAsset,
-                        colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight,
+                        srcX, srcY, srcW, srcH,
                         x, y, width, height
                     );
                 } else {
