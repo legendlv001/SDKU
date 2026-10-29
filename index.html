@@ -542,26 +542,35 @@
 
             // Check if custom avatar PNG spritesheet image is loaded
             if (isLoaded) {
-                let frameIndex = 0;
-                if (dir === 'up') frameIndex = 1;
-                else if (dir === 'down') frameIndex = 2;
-                else if (dir === 'left') frameIndex = 3;
-                else if (dir === 'right') frameIndex = 4;
-                else frameIndex = 0; // Diam
+                // Grid Spritesheet: 10 Kolom x 4 Baris
+                const COLS = 10;
+                const ROWS = 4;
 
-                const frameWidth = imgAsset.width / 5;
-                const frameHeight = imgAsset.height;
+                const frameWidth = imgAsset.width / COLS;
+                const frameHeight = imgAsset.height / ROWS;
 
-                // Shadow pas di telapak kaki (mencegah terlihat melayang)
+                let rowIndex = 3; // Default: Hadap Bawah (Baris 4)
+                if (dir === 'right') rowIndex = 0;      // Baris 1: Kanan
+                else if (dir === 'left') rowIndex = 1;  // Baris 2: Kiri
+                else if (dir === 'up') rowIndex = 2;    // Baris 3: Atas
+                else if (dir === 'down') rowIndex = 3;  // Baris 4: Bawah
+
+                // Frame animasi (0 - 9) berjalan secara terus-menerus saat bergerak
+                let colIndex = 0;
+                if (dir !== 'idle') {
+                    colIndex = Math.floor(walkStep * 0.4) % COLS;
+                }
+
+                // Shadow pas di telapak kaki (mencegah melayang)
                 c.fillStyle = 'rgba(0,0,0,0.25)';
                 c.beginPath();
                 c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
                 c.fill();
 
-                // Draw cropped frame from 5-frame horizontal spritesheet
+                // Draw cropped frame from 10x4 Grid Spritesheet
                 c.drawImage(
                     imgAsset,
-                    frameIndex * frameWidth, 0, frameWidth, frameHeight,
+                    colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight,
                     x, y, width, height
                 );
 
