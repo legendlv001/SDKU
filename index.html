@@ -94,9 +94,32 @@
         .animate-badge {
             animation: badge-bounce 0.5s ease-in-out infinite;
         }
+
+        /* OVERLAY MINTA ROTASI HP JIKA PORTRAIT */
+        #rotateNotice {
+            display: none;
+        }
+
+        @media screen and (orientation: portrait) and (max-width: 768px) {
+            #rotateNotice {
+                display: flex !important;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- OVERLAY PERINGATAN PUTAR HP KE LANDSCAPE -->
+    <div id="rotateNotice" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white">
+        <div class="w-20 h-20 mb-4 text-yellow-400 animate-bounce flex items-center justify-center bg-slate-900 rounded-3xl border-2 border-yellow-400">
+            <i class="fas fa-mobile-screen-button text-4xl transform rotate-90"></i>
+        </div>
+        <h2 class="text-xl font-extrabold text-yellow-400 mb-2">Putar Layar HP Kamu!</h2>
+        <p class="text-xs text-slate-300 mb-6 max-w-xs">Untuk pengalaman bermain terbaik, silakan putar HP kamu ke posisi <b>Miring / Landscape</b>.</p>
+        <button onclick="requestLandscapeAndFullscreen()" class="px-5 py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-2xl text-xs shadow-lg flex items-center gap-2">
+            <i class="fas fa-expand"></i> Kunci Layar Landscape
+        </button>
+    </div>
 
     <!-- SCREEN 1: CHARACTER SELECTION SCREEN -->
     <div id="characterSelectScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
@@ -1381,6 +1404,9 @@
             document.getElementById('characterSelectScreen').classList.add('hidden');
             document.getElementById('gameContainer').classList.remove('hidden');
 
+            // Coba Otomatis Masuk Mode Landscape / Fullscreen saat Pilih Karakter
+            requestLandscapeAndFullscreen();
+
             generateTrees();
 
             // Keyboard Listeners
@@ -1499,8 +1525,29 @@
             document.getElementById('dialogModal').classList.add('hidden');
         }
 
+        // FUNGSI UNTUK OTOMATIS LAYAR LANDSCAPE & FULLSCREEN DI HP ANDROID
+        function requestLandscapeAndFullscreen() {
+            const docEl = document.documentElement;
+            
+            // Masuk Fullscreen
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen().catch(() => {});
+            } else if (docEl.webkitRequestFullscreen) {
+                docEl.webkitRequestFullscreen();
+            }
+
+            // Kunci Rotasi ke Landscape (Android Web API)
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        }
+
         window.onload = function() {
             renderPreviews();
+            // Coba kunci orientasi awal jika didukung
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
         };
     </script>
 </body>
