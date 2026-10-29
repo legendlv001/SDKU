@@ -540,39 +540,51 @@
             const imgAsset = (gender === 'female') ? ASSETS.female : ASSETS.male;
             const isLoaded = (gender === 'female') ? assetsLoaded.female : assetsLoaded.male;
 
-            // Check if custom avatar PNG spritesheet image is loaded
+            // Check if custom avatar PNG image is loaded
             if (isLoaded) {
-                // Grid Spritesheet: 10 Kolom x 4 Baris
-                const COLS = 10;
-                const ROWS = 4;
+                // Deteksi apakah gambar berupa Spritesheet Grid (lebar > 500px) atau Gambar Tunggal
+                const isSpritesheet = imgAsset.width > 500;
 
-                const frameWidth = imgAsset.width / COLS;
-                const frameHeight = imgAsset.height / ROWS;
+                if (isSpritesheet) {
+                    // Grid Spritesheet: 10 Kolom x 4 Baris
+                    const COLS = 10;
+                    const ROWS = 4;
 
-                let rowIndex = 3; // Default: Hadap Bawah (Baris 4)
-                if (dir === 'right') rowIndex = 0;      // Baris 1: Kanan
-                else if (dir === 'left') rowIndex = 1;  // Baris 2: Kiri
-                else if (dir === 'up') rowIndex = 2;    // Baris 3: Atas
-                else if (dir === 'down') rowIndex = 3;  // Baris 4: Bawah
+                    const frameWidth = imgAsset.width / COLS;
+                    const frameHeight = imgAsset.height / ROWS;
 
-                // Frame animasi (0 - 9) berjalan secara terus-menerus saat bergerak
-                let colIndex = 0;
-                if (dir !== 'idle') {
-                    colIndex = Math.floor(walkStep * 0.4) % COLS;
+                    let rowIndex = 3; // Default: Hadap Bawah (Baris 4)
+                    if (dir === 'right') rowIndex = 0;      // Baris 1: Kanan
+                    else if (dir === 'left') rowIndex = 1;  // Baris 2: Kiri
+                    else if (dir === 'up') rowIndex = 2;    // Baris 3: Atas
+                    else if (dir === 'down') rowIndex = 3;  // Baris 4: Bawah
+
+                    let colIndex = 0;
+                    if (dir !== 'idle') {
+                        colIndex = Math.floor(walkStep * 0.4) % COLS;
+                    }
+
+                    // Shadow pas di telapak kaki
+                    c.fillStyle = 'rgba(0,0,0,0.25)';
+                    c.beginPath();
+                    c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
+                    c.fill();
+
+                    // Draw cropped frame from 10x4 Grid Spritesheet
+                    c.drawImage(
+                        imgAsset,
+                        colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight,
+                        x, y, width, height
+                    );
+                } else {
+                    // Gambar Tunggal (Bukan Grid) - Tampilkan Seluruh Gambar Utuh
+                    c.fillStyle = 'rgba(0,0,0,0.25)';
+                    c.beginPath();
+                    c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
+                    c.fill();
+
+                    c.drawImage(imgAsset, x, y, width, height);
                 }
-
-                // Shadow pas di telapak kaki (mencegah melayang)
-                c.fillStyle = 'rgba(0,0,0,0.25)';
-                c.beginPath();
-                c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
-                c.fill();
-
-                // Draw cropped frame from 10x4 Grid Spritesheet
-                c.drawImage(
-                    imgAsset,
-                    colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight,
-                    x, y, width, height
-                );
 
                 c.restore();
                 return;
