@@ -561,12 +561,13 @@
 
                     let colIndex = 0;
                     if (dir !== 'idle') {
-                        colIndex = Math.floor(walkStep * 0.4) % COLS;
+                        // Perlambat animasi langkah agar transisi frame lebih halus & tidak melompat
+                        colIndex = Math.floor(walkStep * 0.25) % COLS;
                     }
 
-                    // Strict pixel clipping boundary to ensure 0 bleed from neighboring frames
-                    const clipPadX = 1.5; // Padding piksel aman di sisi kiri & kanan frame
-                    const clipPadY = 1.0; // Padding piksel aman di sisi atas & bawah frame
+                    // Margin pemotongan ketat (5px) untuk membuang piksel tepi/frame tetangga
+                    const clipPadX = 5.0; 
+                    const clipPadY = 4.0; 
 
                     const srcX = Math.floor(colIndex * rawFrameWidth) + clipPadX;
                     const srcY = Math.floor(rowIndex * rawFrameHeight) + clipPadY;
