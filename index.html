@@ -561,18 +561,19 @@
 
                     let colIndex = 0;
                     if (dir !== 'idle') {
-                        // Perlambat animasi langkah agar transisi frame lebih halus & tidak melompat
-                        colIndex = Math.floor(walkStep * 0.25) % COLS;
+                        // Perlambat animasi langkah agar transisi frame lebih tenang
+                        colIndex = Math.floor(walkStep * 0.2) % COLS;
                     }
 
-                    // Margin pemotongan ketat (5px) untuk membuang piksel tepi/frame tetangga
-                    const clipPadX = 5.0; 
-                    const clipPadY = 4.0; 
+                    // MARGIN PEMOTONGAN SUPER KETAT (8px)
+                    // Memastikan area potong berada tepat di tengah frame tanpa menyentuh tepi
+                    const clipPadX = 8.0; 
+                    const clipPadY = 6.0; 
 
-                    const srcX = Math.floor(colIndex * rawFrameWidth) + clipPadX;
-                    const srcY = Math.floor(rowIndex * rawFrameHeight) + clipPadY;
-                    const srcW = Math.max(1, Math.floor(rawFrameWidth) - (clipPadX * 2));
-                    const srcH = Math.max(1, Math.floor(rawFrameHeight) - (clipPadY * 2));
+                    const srcX = (colIndex * rawFrameWidth) + clipPadX;
+                    const srcY = (rowIndex * rawFrameHeight) + clipPadY;
+                    const srcW = Math.max(1, rawFrameWidth - (clipPadX * 2));
+                    const srcH = Math.max(1, rawFrameHeight - (clipPadY * 2));
 
                     // Shadow pas di telapak kaki
                     c.fillStyle = 'rgba(0,0,0,0.25)';
@@ -580,7 +581,7 @@
                     c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
                     c.fill();
 
-                    // Draw precisely cropped frame without bleeding into neighbor frames
+                    // Render hanya area aman di dalam frame
                     c.drawImage(
                         imgAsset,
                         srcX, srcY, srcW, srcH,
