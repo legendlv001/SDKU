@@ -775,6 +775,17 @@
                 const bx = b.x - cameraX;
                 const by = b.y - cameraY;
 
+                // DRAW BUILDING SHADOW (Bikin bayangan realistis di bawah foto/gambar bangunan)
+                if (!b.isZone) {
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.beginPath();
+                    // Bayangan sedikit offset ke bawah & kanan sesuai sudut cahaya
+                    ctx.roundRect(bx + 10, by + b.height - 15, b.width, 25, 12);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
                 // CHECK IF CUSTOM IMAGE FOR THIS BUILDING IS UPLOADED IN ASSETS FOLDER
                 if (assetsLoaded[b.id]) {
                     ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
@@ -972,6 +983,12 @@
             const tx = tree.x - cameraX;
             const ty = tree.y - cameraY;
 
+            // Tree Base Shadow (Bayangan di bawah pohon)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+            ctx.beginPath();
+            ctx.ellipse(tx, ty + 2, tree.size * 0.85, tree.size * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+
             // Jika ada file foto gambar pohon di folder assets/tree.png
             if (assetsLoaded.tree) {
                 const imgW = tree.size * 2.2;
@@ -982,12 +999,6 @@
             }
 
             // Fallback Vector Tree (Gambar Bawaan Canvas)
-            // Tree Shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.beginPath();
-            ctx.ellipse(tx, ty, tree.size * 0.8, tree.size * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill();
-
             // Trunk
             ctx.fillStyle = '#78350f';
             ctx.fillRect(tx - tree.size * 0.2, ty - tree.trunkHeight, tree.size * 0.4, tree.trunkHeight);
