@@ -121,40 +121,29 @@
         </button>
     </div>
 
-    <!-- SCREEN 1: CHARACTER SELECTION SCREEN -->
-    <div id="characterSelectScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
-        <div class="bg-slate-900 border-2 border-yellow-400/80 rounded-3xl p-6 md:p-8 max-w-lg w-full text-center shadow-2xl text-white">
-            <h1 class="text-2xl md:text-3xl font-extrabold text-yellow-400 mb-2">Pilih Karakter Murid SD</h1>
-            <p class="text-xs md:text-sm text-slate-300 mb-6">Masukkan nama kamu dan pilih karakter anak sekolah yang ingin kamu mainkan!</p>
+    <!-- SCREEN 0: LOGIN SCREEN (BASED ON SPREADSHEET USER DATABASE) -->
+    <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
+        <div class="bg-slate-900 border-2 border-yellow-400/80 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl text-white">
+            <div class="w-16 h-16 mx-auto mb-3 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-3xl font-black shadow-lg">
+                🏫
+            </div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-yellow-400 mb-1">SDKU World</h1>
+            <p class="text-xs md:text-sm text-slate-300 mb-6">Masukkan Nama terdaftar untuk masuk ke permainan.</p>
             
-            <!-- Input Nama -->
-            <div class="mb-6 text-left">
-                <label class="block text-xs font-bold text-slate-300 mb-2">Nama Karakter Kamu:</label>
-                <input type="text" id="customNameInput" placeholder="Contoh: Budi" maxlength="15" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
-            </div>
-
-            <!-- Kartu Pilihan Karakter -->
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <!-- Siswi Hijab -->
-                <div onclick="selectCharacter('female')" class="cursor-pointer border-2 border-slate-700 hover:border-pink-400 rounded-2xl p-4 bg-slate-800/80 hover:bg-slate-800 transition flex flex-col items-center group">
-                    <div class="w-24 h-28 flex items-center justify-center mb-2">
-                        <canvas id="previewFemale" width="120" height="120"></canvas>
-                    </div>
-                    <span class="font-bold text-pink-300 text-sm group-hover:scale-105 transition-transform">🧕 Aisyah</span>
-                    <span class="text-[10px] text-slate-400">Siswi SD Hijab</span>
+            <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Nama Lengkap (Sesuai Database):</label>
+                    <input type="text" id="loginUsername" required placeholder="Masukkan Nama..." class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
                 </div>
 
-                <!-- Siswa Peci -->
-                <div onclick="selectCharacter('male')" class="cursor-pointer border-2 border-slate-700 hover:border-blue-400 rounded-2xl p-4 bg-slate-800/80 hover:bg-slate-800 transition flex flex-col items-center group">
-                    <div class="w-24 h-28 flex items-center justify-center mb-2">
-                        <canvas id="previewMale" width="120" height="120"></canvas>
-                    </div>
-                    <span class="font-bold text-blue-300 text-sm group-hover:scale-105 transition-transform">👦 Ali</span>
-                    <span class="text-[10px] text-slate-400">Siswa SD Peci</span>
+                <div id="loginErrorMsg" class="hidden text-red-400 text-xs font-semibold bg-red-950/60 p-2.5 rounded-xl border border-red-800/80">
+                    Nama tidak terdaftar di database! Pastikan ejaan nama benar.
                 </div>
-            </div>
 
-            <p class="text-[11px] text-slate-400 italic">Tekan salah satu karakter di atas untuk memulai permainan!</p>
+                <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl text-sm shadow-lg transition-transform active:scale-98 flex items-center justify-center gap-2">
+                    <i class="fas fa-right-to-bracket"></i> Masuk Ke Game
+                </button>
+            </form>
         </div>
     </div>
 
@@ -162,16 +151,17 @@
     <div id="gameContainer" class="game-viewport shadow-2xl md:rounded-2xl hidden">
         <!-- Top Navigation Bar -->
         <div class="bg-slate-800/90 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 flex items-center justify-between border-b border-slate-700 z-10">
-            <!-- Profile Avatar Clickable to Edit Character & Name -->
-            <div onclick="openEditCharacterModal()" class="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition group bg-slate-700/50 px-2.5 py-1 rounded-xl border border-slate-600/60" title="Klik untuk Edit Nama & Karakter">
+            <!-- Profile Avatar Clickable to Edit Character & Name (HANYA UNTUK ADMIN) -->
+            <div id="userProfileBadge" onclick="openEditCharacterModal()" class="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition group bg-slate-700/50 px-2.5 py-1 rounded-xl border border-slate-600/60" title="Profil Pengguna">
                 <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-yellow-400 text-slate-900 font-bold flex items-center justify-center shadow-md text-xs md:text-base group-hover:scale-105 transition-transform" id="avatarBadge">
-                    👧
+                    👦
                 </div>
                 <div>
                     <div class="flex items-center gap-1.5">
                         <h3 id="charNameDisplay" class="font-bold text-xs md:text-sm leading-tight text-yellow-400">Nama Karakter</h3>
-                        <i class="fas fa-pencil-alt text-[10px] text-yellow-300 opacity-70 group-hover:opacity-100"></i>
+                        <i id="editIconIndicator" class="fas fa-pencil-alt text-[10px] text-yellow-300 hidden"></i>
                     </div>
+                    <p id="charRoleDisplay" class="text-[10px] text-slate-300 font-semibold leading-none mt-0.5">Jabatan</p>
                 </div>
             </div>
         </div>
@@ -260,47 +250,112 @@
 
     <!-- EDIT CHARACTER & NAME MODAL -->
     <div id="editCharModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-5 shadow-2xl text-white flex flex-col items-center">
-            <div class="flex justify-between items-center w-full mb-4 border-b border-slate-700 pb-2">
-                <h3 class="text-base font-bold text-yellow-400 flex items-center gap-2">
-                    <i class="fas fa-user-pen text-yellow-400"></i> Edit Karakter & Nama
+        <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[90vh] overflow-y-auto relative">
+            <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
+                <!-- Tombol Logout di Pojok Kiri Atas Modal (Tersedia untuk Semua Karakter) -->
+                <button onclick="handleLogout()" class="px-3 py-1 bg-red-600/90 hover:bg-red-600 text-white text-[11px] font-bold rounded-xl transition flex items-center gap-1.5 shadow-md">
+                    <i class="fas fa-right-from-bracket"></i> Logout
+                </button>
+
+                <h3 class="text-sm md:text-base font-bold text-yellow-400 flex items-center gap-2">
+                    <i class="fas fa-user-pen text-yellow-400"></i> Pengaturan Profil
                 </h3>
                 <button onclick="closeEditCharacterModal()" class="text-slate-400 hover:text-white text-base">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <!-- Input Edit Nama -->
-            <div class="w-full mb-4">
-                <label class="block text-xs font-bold text-slate-300 mb-1">Nama Karakter:</label>
-                <input type="text" id="editNameInput" maxlength="15" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-800 border border-slate-600 text-white font-bold focus:outline-none focus:border-yellow-400">
-            </div>
+            <!-- CONTAINER PENGATURAN HANYA TAMPIL JIKA MEMILIKI HAK AKSES FULL / ADMIN -->
+            <div id="adminSettingsContainer" class="w-full">
+                <!-- Input Edit Nama -->
+                <div class="w-full mb-3 shrink-0">
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Nama Karakter:</label>
+                    <input type="text" id="editNameInput" maxlength="15" class="w-full px-3 py-1.5 text-xs rounded-xl bg-slate-800 border border-slate-600 text-white font-bold focus:outline-none focus:border-yellow-400">
+                </div>
 
-            <!-- Choose Gender / Character -->
-            <div class="w-full mb-5">
-                <label class="block text-xs font-bold text-slate-300 mb-2">Pilih Karakter:</label>
-                <div class="grid grid-cols-2 gap-3">
-                    <div id="selectOptionFemale" onclick="selectModalGender('female')" class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition">
-                        <span class="text-2xl mb-1">🧕</span>
-                        <span class="text-xs font-bold text-pink-300">Aisyah</span>
-                        <span class="text-[9px] text-slate-400">Siswi Hijab</span>
-                    </div>
-                    <div id="selectOptionMale" onclick="selectModalGender('male')" class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition">
-                        <span class="text-2xl mb-1">👦</span>
-                        <span class="text-xs font-bold text-blue-300">Ali</span>
-                        <span class="text-[9px] text-slate-400">Siswa Peci</span>
+                <!-- Choose Gender / Character -->
+                <div class="w-full mb-4 shrink-0">
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Pilih Karakter:</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div id="selectOptionFemale" onclick="selectModalGender('female')" class="cursor-pointer border-2 rounded-2xl p-2.5 flex flex-col items-center bg-slate-800 transition">
+                            <span class="text-xl mb-0.5">🧕</span>
+                            <span class="text-xs font-bold text-pink-300">Aisyah</span>
+                            <span class="text-[9px] text-slate-400">Siswi Hijab</span>
+                        </div>
+                        <div id="selectOptionMale" onclick="selectModalGender('male')" class="cursor-pointer border-2 rounded-2xl p-2.5 flex flex-col items-center bg-slate-800 transition">
+                            <span class="text-xl mb-0.5">👦</span>
+                            <span class="text-xs font-bold text-blue-300">Ali</span>
+                            <span class="text-[9px] text-slate-400">Siswa Peci</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex gap-2 w-full">
-                <button onclick="closeEditCharacterModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-xl transition">Batal</button>
-                <button onclick="saveCharacterEdits()" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-xs font-bold rounded-xl transition">Simpan Changes</button>
+                <div class="flex gap-2 w-full mb-1 shrink-0">
+                    <button onclick="closeEditCharacterModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-xl transition">Batal</button>
+                    <button id="saveCharEditBtn" onclick="saveCharacterEdits()" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-xs font-bold rounded-xl transition">Simpan Changes</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        // SPREADSHEET CONFIGURATION (READS ENTIRE COLUMN A IN SHEET 'Login', SKIPPING ROW 1)
+        const SPREADSHEET_ID = "1J4ePsSEV8xE3VCR-10Avf3W8FOQ-R1xSqWO-4IMzyWc";
+        const SHEET_NAME = "Login";
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+        // DEFAULT FALLBACK DATABASE (IN CASE OF OFFLINE / FETCH DELAY)
+        let USER_DATABASE = [
+            { name: "Admin", gender: "L", role: "ADMIN", status: "Full" },
+            { name: "Ali", gender: "L", role: "SISWA", status: "Full" },
+            { name: "Aisyah", gender: "P", role: "SISWI", status: "User" }
+        ];
+
+        // FETCH USER LIST FROM GOOGLE SPREADSHEET AUTOMATICALLY
+        async function fetchSpreadsheetUsers() {
+            try {
+                const response = await fetch(CSV_URL);
+                if (!response.ok) return;
+
+                const csvText = await response.text();
+                const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+                if (lines.length <= 1) return; // Only header exists
+
+                const fetchedUsers = [];
+
+                // LOOPING MULAI DARI BARIS 2 (INDEX 1) UNTUK MELEWATI BARIS 1 / HEADER
+                for (let i = 1; i < lines.length; i++) {
+                    // Split CSV values while removing wrapping quotes
+                    const cols = lines[i].split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map(cell => {
+                        return cell.replace(/^"|"$/g, '').trim();
+                    });
+
+                    const nameVal = cols[0] || ""; // Kolom A
+                    const genderVal = cols[1] || "L"; // Kolom B
+                    const roleVal = cols[2] || "SISWA"; // Kolom C
+                    const statusVal = cols[3] || "User"; // Kolom D
+
+                    // Hanya tambahkan jika Kolom A memuat nama
+                    if (nameVal && nameVal.toLowerCase() !== "nama") {
+                        fetchedUsers.push({
+                            name: nameVal,
+                            gender: genderVal.toUpperCase(),
+                            role: roleVal.toUpperCase(),
+                            status: statusVal
+                        });
+                    }
+                }
+
+                if (fetchedUsers.length > 0) {
+                    USER_DATABASE = fetchedUsers;
+                    console.log(`Berhasil memuat ${USER_DATABASE.length} pengguna dari Google Spreadsheet Sheet Login!`);
+                }
+            } catch (err) {
+                console.warn("Gagal mengambil live data dari Spreadsheet, menggunakan fallback database.", err);
+            }
+        }
+
         // ASSETS MANAGEMENT (CUSTOM IMAGES FOR GITHUB REPO)
         const ASSETS = {
             tree: new Image(),
@@ -350,11 +405,112 @@
         ASSETS.taman.onload = () => assetsLoaded.taman = true;
 
         // Game State Variables
-        let selectedGender = null;
+        let currentUserAccount = null;
+        let selectedGender = 'male';
         let playerCustomName = "";
+        let playerRole = "";
+        let isAdminUser = false;
         let walkTimer = 0;
         let tempModalGender = null;
         let nearbyBuilding = null;
+
+        // AUTHENTICATION LOGIC BASED ON SPREADSHEET USER DATABASE
+        function handleLogin(e) {
+            e.preventDefault();
+            const inputUsername = document.getElementById('loginUsername').value.trim();
+            const errorMsg = document.getElementById('loginErrorMsg');
+            
+            if (!inputUsername) return;
+
+            // Clean input string (remove extra whitespace & lower case)
+            const cleanInput = inputUsername.replace(/\s+/g, ' ').toLowerCase();
+
+            // Cari pengguna berdasarkan Nama di Kolom A
+            const matchedUser = USER_DATABASE.find(user => 
+                user.name.trim().replace(/\s+/g, ' ').toLowerCase() === cleanInput
+            );
+
+            if (matchedUser) {
+                errorMsg.classList.add('hidden');
+                currentUserAccount = matchedUser;
+
+                playerCustomName = matchedUser.name;
+                selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male';
+                playerRole = matchedUser.role || 'SISWA';
+                
+                // Cek status di Kolom D: Bisa edit jika "Full" atau "Admin"
+                const statusD = (matchedUser.status || "").toLowerCase().trim();
+                isAdminUser = (statusD === 'full' || statusD === 'admin');
+
+                // Tampilkan Tampilan Game
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('gameContainer').classList.remove('hidden');
+
+                // Update UI Profil
+                document.getElementById('charNameDisplay').innerText = playerCustomName;
+                document.getElementById('charRoleDisplay').innerText = playerRole;
+                document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
+
+                const editIndicator = document.getElementById('editIconIndicator');
+                if (isAdminUser) {
+                    editIndicator.classList.remove('hidden');
+                } else {
+                    editIndicator.classList.add('hidden');
+                }
+
+                requestLandscapeAndFullscreen();
+                generateTrees();
+                setupGameEvents();
+                addChatMessage(playerCustomName, `Halo semuanya, ${playerCustomName} (${playerRole}) siap bergabung! 😊`, true);
+                requestAnimationFrame(gameLoop);
+            } else {
+                errorMsg.innerText = `Nama "${inputUsername}" tidak terdaftar di Sheet Login!`;
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        function setupGameEvents() {
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    if (nearbyBuilding) triggerInteraction();
+                } else if (keys.hasOwnProperty(e.key)) {
+                    keys[e.key] = true;
+                    player.isMovingToTarget = false;
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+            });
+
+            canvas.addEventListener('pointerdown', (e) => {
+                if (e.target !== canvas) return;
+
+                const rect = canvas.getBoundingClientRect();
+                const clickClientX = e.clientX - rect.left;
+                const clickClientY = e.clientY - rect.top;
+
+                const currentZoom = getAdaptiveZoom();
+                const viewWidth = canvas.width / currentZoom;
+                const viewHeight = canvas.height / currentZoom;
+
+                let cameraX = player.x - viewWidth / 2;
+                let cameraY = player.y - viewHeight / 2;
+
+                cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
+                cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
+
+                const worldX = (clickClientX / currentZoom) + cameraX;
+                const worldY = (clickClientY / currentZoom) + cameraY;
+
+                player.targetX = Math.max(30, Math.min(MAP_WIDTH - 30, worldX));
+                player.targetY = Math.max(40, Math.min(MAP_HEIGHT - 40, worldY));
+                player.isMovingToTarget = true;
+            });
+
+            setupTouchControls();
+        }
 
         // Chat Variables
         let isChatOpen = false;
@@ -1129,27 +1285,46 @@
             const screenY = player.y - cameraY - player.height / 2;
             drawCharacterSprite(ctx, screenX, screenY, player.width, player.height, selectedGender, player.direction, walkTimer);
 
-            // Draw Character Name Badge Above Head
+            // Draw Character Name Badge & Role Badge Above Head
             const nameCenterX = player.x - cameraX;
-            const nameY = screenY - 12;
+            const nameY = screenY - 10;
 
             ctx.save();
             ctx.font = 'bold 12px Fredoka';
             const nameText = playerCustomName || "Pemain";
+            const roleText = playerRole || "";
+            
             const nameWidth = ctx.measureText(nameText).width;
-            const namePadding = 8;
-            const nameBoxW = nameWidth + namePadding * 2;
-            const nameBoxH = 18;
+            ctx.font = 'bold 9px Fredoka';
+            const roleWidth = roleText ? ctx.measureText(roleText).width : 0;
 
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+            const maxTextWidth = Math.max(nameWidth, roleWidth);
+            const namePadding = 10;
+            const nameBoxW = maxTextWidth + namePadding * 2;
+            const nameBoxH = roleText ? 28 : 18;
+
+            // Background Badge Papan Nama & Jabatan
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
             ctx.beginPath();
-            ctx.roundRect(nameCenterX - nameBoxW / 2, nameY - nameBoxH, nameBoxW, nameBoxH, 9);
+            ctx.roundRect(nameCenterX - nameBoxW / 2, nameY - nameBoxH, nameBoxW, nameBoxH, 8);
             ctx.fill();
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 1;
+            ctx.stroke();
 
+            // Teks Nama Karakter (Kuning)
             ctx.fillStyle = '#facc15';
+            ctx.font = 'bold 12px Fredoka';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(nameText, nameCenterX, nameY - nameBoxH / 2);
+            ctx.textBaseline = 'top';
+            ctx.fillText(nameText, nameCenterX, nameY - nameBoxH + 3);
+
+            // Teks Jabatan Kolom C (Putih/Abu-abu Muda)
+            if (roleText) {
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = 'bold 9px Fredoka';
+                ctx.fillText(roleText, nameCenterX, nameY - nameBoxH + 16);
+            }
             ctx.restore();
 
             // Speech Bubble
@@ -1298,7 +1473,18 @@
         function openEditCharacterModal() {
             tempModalGender = selectedGender;
             document.getElementById('editNameInput').value = playerCustomName;
-            selectModalGender(selectedGender);
+            
+            const adminContainer = document.getElementById('adminSettingsContainer');
+
+            if (!isAdminUser) {
+                // Jika Kolom D bukan "Full" / "Admin": Sembunyikan form edit nama & karakter, sisakan hanya tombol Logout di atas
+                adminContainer.classList.add('hidden');
+            } else {
+                // Jika Kolom D bernilai "Full" / "Admin": Tampilkan form edit karakter
+                adminContainer.classList.remove('hidden');
+                selectModalGender(selectedGender);
+            }
+
             document.getElementById('editCharModal').classList.remove('hidden');
         }
 
@@ -1312,15 +1498,17 @@
             const optionM = document.getElementById('selectOptionMale');
 
             if (gender === 'female') {
-                optionF.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105";
-                optionM.className = "cursor-pointer border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60";
+                optionF.className = `cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105`;
+                optionM.className = `cursor-pointer border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60`;
             } else {
-                optionM.className = "cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105";
-                optionF.className = "cursor-pointer border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60";
+                optionM.className = `cursor-pointer border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center bg-yellow-400/20 transition scale-105`;
+                optionF.className = `cursor-pointer border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center bg-slate-800 transition opacity-60`;
             }
         }
 
         function saveCharacterEdits() {
+            if (!isAdminUser) return;
+
             const newName = document.getElementById('editNameInput').value.trim();
             if (newName) {
                 playerCustomName = newName;
@@ -1329,10 +1517,22 @@
 
             if (tempModalGender) {
                 selectedGender = tempModalGender;
-                document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '👧' : '👦';
+                document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
             }
 
             closeEditCharacterModal();
+        }
+
+        // FUNGSI LOGOUT
+        function handleLogout() {
+            closeEditCharacterModal();
+            currentUserAccount = null;
+            isAdminUser = false;
+            
+            // Sembunyikan Game Container & Tampilkan Layar Login
+            document.getElementById('gameContainer').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('loginUsername').value = "";
         }
 
         function closeModal() {
@@ -1356,23 +1556,10 @@
             }
         }
 
-        function renderPreviews() {
-            const pf = document.getElementById('previewFemale');
-            if (pf) {
-                const ctxF = pf.getContext('2d');
-                ctxF.clearRect(0, 0, 120, 120);
-                drawCharacterSprite(ctxF, 27, 15, 65, 90, 'female', 'idle', 0);
-            }
-            const pm = document.getElementById('previewMale');
-            if (pm) {
-                const ctxM = pm.getContext('2d');
-                ctxM.clearRect(0, 0, 120, 120);
-                drawCharacterSprite(ctxM, 27, 15, 65, 90, 'male', 'idle', 0);
-            }
-        }
-
         window.onload = function() {
-            renderPreviews();
+            // Memuat database akun dari Google Spreadsheet secara otomatis
+            fetchSpreadsheetUsers();
+
             // Otomatis minta Fullscreen & Kunci Landscape saat aplikasi dibuka
             requestLandscapeAndFullscreen();
         };
