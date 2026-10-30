@@ -555,24 +555,24 @@
                     let colIndex = 0;
                     if (dir !== 'idle') {
                         // Animasi langkah kaki
-                        colIndex = Math.floor(walkStep * 0.25) % COLS;
+                        colIndex = Math.floor(walkStep * 0.22) % COLS;
                     }
 
-                    // MARGIN PEMOTONGAN TERKONTROL DAN TERSENTRALISASI
-                    // Mengisolasi karakter di tengah sel seluas 70% frame agar posisi berdiri dan melangkah tetap di pusat
-                    const cropWidth = frameWidth * 0.70;
+                    // MARGIN PEMOTONGAN DENGAN PRESISI SENTRALISASI FRAME (PENGUNCIAN POSISI KARAKTER)
+                    const cropWidth = frameWidth * 0.68;
                     const cropHeight = frameHeight * 0.88;
 
-                    const srcX = (colIndex * frameWidth) + (frameWidth - cropWidth) / 2;
-                    const srcY = (rowIndex * frameHeight) + (frameHeight - cropHeight) / 2;
+                    // Mengambil titik tengah sel secara terukur untuk mencegah karakter melompat/bergeser
+                    const srcX = (colIndex * frameWidth) + Math.floor((frameWidth - cropWidth) / 2);
+                    const srcY = (rowIndex * frameHeight) + Math.floor((frameHeight - cropHeight) / 2);
 
-                    // Shadow pas di telapak kaki
+                    // Bayangan Pas di Telapak Kaki (Centered Anchor)
                     c.fillStyle = 'rgba(0,0,0,0.25)';
                     c.beginPath();
                     c.ellipse(x + width / 2, y + height - 2, width * 0.32, 6, 0, 0, Math.PI * 2);
                     c.fill();
 
-                    // Render karakter terpusat tanpa distorsi atau pergeseran posisi
+                    // Render karakter terisolasi di posisi sentral
                     c.drawImage(
                         imgAsset,
                         srcX, srcY, cropWidth, cropHeight,
