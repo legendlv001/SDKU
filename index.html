@@ -496,16 +496,9 @@
         const MAP_WIDTH = 2000;
         const MAP_HEIGHT = 1200;
 
-        // ADAPTIVE ZOOM SCALE BASED ON DEVICE WIDTH (HP, TABLET, LAPTOP)
+        // FIXED UNIFIED ZOOM SCALE (SAME VIEW FOR ALL DEVICES: HP, TABLET, LAPTOP)
         function getAdaptiveZoom() {
-            const screenW = window.innerWidth;
-            if (screenW < 640) {
-                return 0.70; // HP / Mobile: Zoom sedikit lebih jauh agar bangunan & area luas terlihat pas
-            } else if (screenW < 1024) {
-                return 0.82; // Tablet: Zoom sedang
-            } else {
-                return 0.95; // Laptop / Desktop: Zoom dekat & jelas
-            }
+            return 0.85; // Skala Zoom Tetap Universal untuk Semua Perangkat
         }
 
         // Player Object (Ukuran Karakter 65x90)
@@ -565,10 +558,10 @@
                         colIndex = Math.floor(walkStep * 0.25) % COLS;
                     }
 
-                    // POTONG DI DALAM BATAS FRAME AGAR KARAKTER DI SEBELAHNYA TIDAK IKUT TAMPIL
-                    // Margin horizontal diperbesar; bagian transparan pada aset menjaga latar tetap bersih.
-                    const cropMarginX = frameWidth * 0.18;
-                    const cropMarginY = frameHeight * 0.04;
+                    // MARGIN POTONG SANGAT PRESISI UNTUK MENCEGAH TAMPILNYA FRAME LAIN
+                    // Memotong 12% dari lebar frame dan 6% dari tinggi frame sebagai margin aman
+                    const cropMarginX = frameWidth * 0.12;
+                    const cropMarginY = frameHeight * 0.06;
 
                     const srcX = (colIndex * frameWidth) + cropMarginX;
                     const srcY = (rowIndex * frameHeight) + cropMarginY;
@@ -1576,11 +1569,15 @@
 
         window.onload = function() {
             renderPreviews();
-            // Coba kunci orientasi awal jika didukung
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(() => {});
-            }
+            // Otomatis minta Fullscreen & Kunci Landscape saat aplikasi dibuka
+            requestLandscapeAndFullscreen();
         };
+
+        // Event listener tambahan saat pengguna menyentuh/klik pertama kali untuk memastikan orientasi terkunci
+        window.addEventListener('pointerdown', function initOrientation() {
+            requestLandscapeAndFullscreen();
+            window.removeEventListener('pointerdown', initOrientation);
+        }, { once: true });
     </script>
 </body>
 </html>
