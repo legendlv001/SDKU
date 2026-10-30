@@ -558,33 +558,31 @@
                         colIndex = Math.floor(walkStep * 0.25) % COLS;
                     }
 
-                    // MARGIN POTONG SANGAT PRESISI UNTUK MENCEGAH TAMPILNYA FRAME LAIN
-                    // Memotong 12% dari lebar frame dan 6% dari tinggi frame sebagai margin aman
-                    const cropMarginX = frameWidth * 0.12;
-                    const cropMarginY = frameHeight * 0.06;
+                    // MARGIN PEMOTONGAN TERKONTROL DAN TERSENTRALISASI
+                    // Mengisolasi karakter di tengah sel seluas 70% frame agar posisi berdiri dan melangkah tetap di pusat
+                    const cropWidth = frameWidth * 0.70;
+                    const cropHeight = frameHeight * 0.88;
 
-                    const srcX = (colIndex * frameWidth) + cropMarginX;
-                    const srcY = (rowIndex * frameHeight) + cropMarginY;
-                    const srcW = frameWidth - (cropMarginX * 2);
-                    const srcH = frameHeight - (cropMarginY * 2);
+                    const srcX = (colIndex * frameWidth) + (frameWidth - cropWidth) / 2;
+                    const srcY = (rowIndex * frameHeight) + (frameHeight - cropHeight) / 2;
 
                     // Shadow pas di telapak kaki
                     c.fillStyle = 'rgba(0,0,0,0.25)';
                     c.beginPath();
-                    c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
+                    c.ellipse(x + width / 2, y + height - 2, width * 0.32, 6, 0, 0, Math.PI * 2);
                     c.fill();
 
-                    // Render hanya area bersih dalam frame tanpa terkena gambar tetangga
+                    // Render karakter terpusat tanpa distorsi atau pergeseran posisi
                     c.drawImage(
                         imgAsset,
-                        srcX, srcY, srcW, srcH,
+                        srcX, srcY, cropWidth, cropHeight,
                         x, y, width, height
                     );
                 } else {
                     // Gambar Tunggal (Bukan Grid) - Tampilkan Seluruh Gambar Utuh
                     c.fillStyle = 'rgba(0,0,0,0.25)';
                     c.beginPath();
-                    c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
+                    c.ellipse(x + width / 2, y + height - 2, width * 0.32, 6, 0, 0, Math.PI * 2);
                     c.fill();
 
                     c.drawImage(imgAsset, x, y, width, height);
