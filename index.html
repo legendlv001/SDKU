@@ -689,299 +689,90 @@
                     c.fill();
                     c.strokeStyle = '#cbd5e1';
                     c.stroke();
+                } else {
+                    c.fillStyle = '#ffffff';
+                    c.fillRect(x + width * 0.25, charY + height * 0.3, width * 0.5, height * 0.25);
 
                     c.fillStyle = '#1e293b';
-                    c.fillRect(x + width * 0.28, charY + 12, width * 0.44, 10);
-
-                    c.fillStyle = '#ffffff';
-                    c.fillRect(x + width * 0.25, charY + 22, width * 0.5, height * 0.3);
-
-                    c.fillStyle = '#dc2626';
                     c.beginPath();
-                    c.roundRect(x + width * 0.28, charY + 25, width * 0.44, height * 0.25, 6);
-                    c.fill();
-
-                    c.fillStyle = '#b91c1c';
-                    c.fillRect(x + width * 0.25, charY + height * 0.52, width * 0.22, height * 0.36);
-                    c.fillRect(x + width * 0.53, charY + height * 0.52, width * 0.22, height * 0.36);
-
-                    c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.23 - legSwing * 0.4, charY + height * 0.88, 12, 9);
-                    c.fillRect(x + width * 0.53 + legSwing * 0.4, charY + height * 0.88, 12, 9);
-                } else {
-                    c.fillStyle = '#b91c1c';
-                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.36);
-                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing * 0.5 : 0), charY + height * 0.52, width * 0.22, height * 0.36);
-
-                    c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.23 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 12, 9);
-                    c.fillRect(x + width * 0.53 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 12, 9);
-
-                    c.fillStyle = '#ffffff';
-                    c.fillRect(x + width * 0.24, charY + 22, width * 0.52, height * 0.32);
-
-                    c.fillStyle = '#b91c1c';
-                    c.beginPath();
-                    c.moveTo(x + width * 0.5, charY + 24);
-                    c.lineTo(x + width * 0.54, charY + 36);
-                    c.lineTo(x + width * 0.5, charY + 44);
-                    c.lineTo(x + width * 0.46, charY + 36);
-                    c.closePath();
+                    c.roundRect(x + width * 0.25, charY, width * 0.5, 14, 4);
                     c.fill();
 
                     c.fillStyle = '#fde047';
                     c.beginPath();
-                    c.arc(x + width * 0.5 + (dir === 'right' ? 3 : dir === 'left' ? -3 : 0), charY + 16, 14, 0, Math.PI * 2);
+                    c.arc(x + width * 0.5 + (dir === 'right' ? 4 : dir === 'left' ? -4 : 0), charY + height * 0.2, 12, 0, Math.PI * 2);
                     c.fill();
-
-                    c.fillStyle = '#ffffff';
-                    c.beginPath();
-                    c.roundRect(x + width * 0.22 + (dir === 'right' ? 3 : dir === 'left' ? -3 : 0), charY - 2, width * 0.56, 14, 4);
-                    c.fill();
-                    c.strokeStyle = '#cbd5e1';
-                    c.lineWidth = 1;
-                    c.stroke();
 
                     c.fillStyle = '#1e293b';
-                    if (dir === 'right') {
-                        c.beginPath(); c.arc(x + width * 0.58, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
-                    } else if (dir === 'left') {
-                        c.beginPath(); c.arc(x + width * 0.42, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
-                    } else {
-                        c.beginPath(); c.arc(x + width * 0.42, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
-                        c.beginPath(); c.arc(x + width * 0.58, charY + 16, 2.5, 0, Math.PI * 2); c.fill();
-                    }
+                    c.beginPath(); c.arc(x + width * 0.42, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
+                    c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
 
-                    c.strokeStyle = '#b91c1c';
-                    c.lineWidth = 1.5;
-                    c.beginPath();
-                    c.arc(x + width * 0.5 + (dir === 'right' ? 2 : dir === 'left' ? -2 : 0), charY + 20, 4, 0.1, Math.PI - 0.1);
-                    c.stroke();
+                    c.fillStyle = '#b91c1c';
+                    c.fillRect(x + width * 0.28 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.55, 10, height * 0.4);
+                    c.fillRect(x + width * 0.52 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.55, 10, height * 0.4);
                 }
             }
 
             c.restore();
         }
 
-        // Render Previews for Character Selection Screen
-        function renderPreviews() {
-            const canvasF = document.getElementById('previewFemale');
-            const canvasM = document.getElementById('previewMale');
-
-            if (canvasF) {
-                const ctxF = canvasF.getContext('2d');
-                ctxF.clearRect(0, 0, canvasF.width, canvasF.height);
-                drawCharacterSprite(ctxF, 28, 15, 65, 90, 'female', 'idle', 0);
-            }
-
-            if (canvasM) {
-                const ctxM = canvasM.getContext('2d');
-                ctxM.clearRect(0, 0, canvasM.width, canvasM.height);
-                drawCharacterSprite(ctxM, 28, 15, 65, 90, 'male', 'idle', 0);
-            }
-        }
-
-        // DRAW SCHOOL MAP & BUILDINGS
+        // DRAW MAP FUNCTION
         function drawMap(cameraX, cameraY, zoomScale) {
             ctx.save();
             ctx.scale(zoomScale, zoomScale);
 
-            // Checkered Grass Tile Pattern - Blended tones
-            const tileSize = 80;
-            const cols = Math.ceil(MAP_WIDTH / tileSize);
-            const rows = Math.ceil(MAP_HEIGHT / tileSize);
+            // Grass background grid
+            const tileSize = 100;
+            const startCol = Math.floor(cameraX / tileSize);
+            const endCol = startCol + Math.ceil((canvas.width / zoomScale) / tileSize) + 1;
+            const startRow = Math.floor(cameraY / tileSize);
+            const endRow = startRow + Math.ceil((canvas.height / zoomScale) / tileSize) + 1;
 
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const isEven = (r + c) % 2 === 0;
-                    ctx.fillStyle = isEven ? '#15803d' : '#146c35';
-                    
-                    const x = c * tileSize - cameraX;
-                    const y = r * tileSize - cameraY;
-                    ctx.fillRect(x, y, tileSize, tileSize);
+            for (let c = startCol; c <= endCol; c++) {
+                for (let r = startRow; r <= endRow; r++) {
+                    const tileX = c * tileSize - cameraX;
+                    const tileY = r * tileSize - cameraY;
+                    ctx.fillStyle = (c + r) % 2 === 0 ? '#15803d' : '#166534';
+                    ctx.fillRect(tileX, tileY, tileSize, tileSize);
                 }
             }
 
-            // Subtle Grid Line Accents
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.03)';
-            ctx.lineWidth = 1;
-            for (let c = 0; c <= cols; c++) {
-                const x = c * tileSize - cameraX;
-                ctx.beginPath();
-                ctx.moveTo(x, -cameraY);
-                ctx.lineTo(x, MAP_HEIGHT - cameraY);
-                ctx.stroke();
-            }
-            for (let r = 0; r <= rows; r++) {
-                const y = r * tileSize - cameraY;
-                ctx.beginPath();
-                ctx.moveTo(-cameraX, y);
-                ctx.lineTo(MAP_WIDTH - cameraX, y);
-                ctx.stroke();
-            }
-
-            // DRAW BUILDINGS & ZONES
+            // Draw Buildings
             buildings.forEach(b => {
                 const bx = b.x - cameraX;
                 const by = b.y - cameraY;
 
-                // DRAW BUILDING SHADOW
-                if (!b.isZone) {
-                    ctx.save();
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                    ctx.beginPath();
-                    ctx.roundRect(bx + 10, by + b.height - 15, b.width, 25, 12);
-                    ctx.fill();
-                    ctx.restore();
-                }
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
 
-                if (assetsLoaded[b.id]) {
-                    ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
-                } else if (b.isZone) {
+                if (b.isZone) {
                     ctx.fillStyle = b.color;
                     ctx.beginPath();
-                    ctx.roundRect(bx, by, b.width, b.height, 16);
+                    ctx.roundRect(bx, by, b.width, b.height, 24);
                     ctx.fill();
-                    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#4ade80';
+                    ctx.lineWidth = 4;
                     ctx.stroke();
-
-                    if (b.id === 'taman') {
-                        ctx.font = '20px sans-serif';
-                        ctx.fillText('🌸', bx + 40, by + 60);
-                        ctx.fillText('🌺', bx + 120, by + 80);
-                        ctx.fillText('🌷', bx + 220, by + 60);
-                        ctx.fillText('🌻', bx + 300, by + 100);
-                        ctx.fillText('🪑', bx + 160, by + 180);
-                    }
                 } else {
-                    // 2D ARTISTIC BUILDING DRAWING LOGIC
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                    ctx.beginPath();
-                    ctx.roundRect(bx + 15, by + 15, b.width, b.height, 10);
-                    ctx.fill();
-
-                    const wallHeight = b.height * 0.55;
-                    const wallY = by + b.height - wallHeight;
-
-                    ctx.fillStyle = b.color;
-                    ctx.beginPath();
-                    ctx.roundRect(bx, wallY, b.width, wallHeight, [0, 0, 10, 10]);
-                    ctx.fill();
-                    ctx.strokeStyle = b.wallColor;
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-
-                    ctx.fillStyle = b.wallColor;
-                    ctx.fillRect(bx, wallY + wallHeight - 12, b.width, 12);
-
-                    if (b.id === 'warung') {
-                        ctx.fillStyle = '#db2777';
-                        ctx.fillRect(bx + 20, wallY + 30, b.width - 40, 50);
-                        ctx.fillStyle = '#fce7f3';
-                        ctx.fillRect(bx + 25, wallY + 35, b.width - 50, 40);
-
-                        ctx.font = '20px sans-serif';
-                        ctx.fillText('🧃', bx + 40, wallY + 62);
-                        ctx.fillText('🍞', bx + 110, wallY + 62);
-                        ctx.fillText('🍜', bx + 180, wallY + 62);
-                        ctx.fillText('🧋', bx + 250, wallY + 62);
-
-                        const awningY = wallY - 15;
-                        const stripes = 8;
-                        const stripeW = b.width / stripes;
-                        for (let s = 0; s < stripes; s++) {
-                            ctx.fillStyle = s % 2 === 0 ? '#ec4899' : '#ffffff';
-                            ctx.fillRect(bx + s * stripeW, awningY, stripeW, 35);
-                        }
-                    } else if (b.id === 'mading') {
-                        ctx.fillStyle = '#b45309';
-                        ctx.fillRect(bx + 30, wallY + 30, 14, wallHeight - 30);
-                        ctx.fillRect(bx + b.width - 44, wallY + 30, 14, wallHeight - 30);
-
-                        ctx.fillStyle = '#fef3c7';
-                        ctx.fillRect(bx + 20, wallY - 10, b.width - 40, wallHeight - 20);
-                        ctx.strokeStyle = '#78350f';
-                        ctx.lineWidth = 4;
-                        ctx.strokeRect(bx + 20, wallY - 10, b.width - 40, wallHeight - 20);
-
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(bx + 35, wallY, 70, 50);
-                        ctx.fillRect(bx + 120, wallY, 50, 45);
-                        ctx.fillRect(bx + 180, wallY, 55, 50);
-
-                        ctx.fillStyle = '#ef4444';
-                        ctx.fillRect(bx + 40, wallY + 8, 40, 5);
-                        ctx.fillStyle = '#3b82f6';
-                        ctx.fillRect(bx + 125, wallY + 8, 30, 5);
-                        ctx.fillStyle = '#10b981';
-                        ctx.fillRect(bx + 185, wallY + 8, 35, 5);
+                    const imgAsset = ASSETS[b.id];
+                    if (assetsLoaded[b.id]) {
+                        ctx.drawImage(imgAsset, bx, by, b.width, b.height);
                     } else {
-                        const numWindows = b.id === 'gor' ? 3 : 2;
-                        const winWidth = 45;
-                        const winHeight = 40;
-                        const spacing = (b.width - (numWindows * winWidth) - 80) / (numWindows + 1);
-
-                        for (let i = 0; i < numWindows; i++) {
-                            const winX = bx + 25 + i * (winWidth + spacing + 30);
-                            const winY = wallY + 20;
-
-                            ctx.fillStyle = '#ffffff';
-                            ctx.fillRect(winX, winY, winWidth, winHeight);
-                            ctx.fillStyle = '#38bdf8';
-                            ctx.fillRect(winX + 3, winY + 3, winWidth - 6, winHeight - 6);
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                            ctx.beginPath();
-                            ctx.moveTo(winX + 5, winY + winHeight - 5);
-                            ctx.lineTo(winX + winWidth - 5, winY + 5);
-                            ctx.lineTo(winX + winWidth - 15, winY + 5);
-                            ctx.lineTo(winX + 5, winY + winHeight - 15);
-                            ctx.closePath();
-                            ctx.fill();
-                        }
-
-                        const doorW = 44;
-                        const doorH = 65;
-                        const doorX = bx + b.width / 2 - doorW / 2;
-                        const doorY = wallY + wallHeight - doorH;
-
-                        ctx.fillStyle = '#78350f';
-                        ctx.fillRect(doorX, doorY, doorW, doorH);
-                        ctx.fillStyle = '#fbbf24';
-                        ctx.beginPath();
-                        ctx.arc(doorX + doorW - 8, doorY + doorH / 2, 3, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-
-                    if (b.id !== 'mading' && b.id !== 'warung') {
-                        const roofHeight = b.height * 0.5;
-                        const roofOverhang = 15;
-
+                        // Roof
                         ctx.fillStyle = b.roofColor;
                         ctx.beginPath();
-                        ctx.moveTo(bx - roofOverhang, wallY + 5);
+                        ctx.moveTo(bx - 10, by + 50);
                         ctx.lineTo(bx + b.width / 2, by - 10);
-                        ctx.lineTo(bx + b.width + roofOverhang, wallY + 5);
+                        ctx.lineTo(bx + b.width + 10, by + 50);
                         ctx.closePath();
                         ctx.fill();
 
-                        ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
-
-                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-                        ctx.lineWidth = 2;
-                        for (let rLine = 1; rLine <= 4; rLine++) {
-                            const ratio = rLine / 5;
-                            const startX = (bx - roofOverhang) + (b.width / 2 - (bx - roofOverhang)) * ratio;
-                            const endX = (bx + b.width + roofOverhang) - ((bx + b.width + roofOverhang) - b.width / 2) * ratio;
-                            const currentY = (wallY + 5) - ((wallY + 5) - (by - 10)) * ratio;
-
-                            ctx.beginPath();
-                            ctx.moveTo(startX, currentY);
-                            ctx.lineTo(endX, currentY);
-                            ctx.stroke();
-                        }
+                        // Wall
+                        ctx.fillStyle = b.wallColor;
+                        ctx.fillRect(bx, by + 50, b.width, b.height - 50);
                     }
                 }
 
@@ -1562,6 +1353,21 @@
             // Kunci Rotasi ke Landscape (Android Web API)
             if (screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
+            }
+        }
+
+        function renderPreviews() {
+            const pf = document.getElementById('previewFemale');
+            if (pf) {
+                const ctxF = pf.getContext('2d');
+                ctxF.clearRect(0, 0, 120, 120);
+                drawCharacterSprite(ctxF, 27, 15, 65, 90, 'female', 'idle', 0);
+            }
+            const pm = document.getElementById('previewMale');
+            if (pm) {
+                const ctxM = pm.getContext('2d');
+                ctxM.clearRect(0, 0, 120, 120);
+                drawCharacterSprite(ctxM, 27, 15, 65, 90, 'male', 'idle', 0);
             }
         }
 
