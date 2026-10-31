@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -695,7 +696,7 @@
                 const isSpritesheet = imgAsset.width > 500;
 
                 if (isSpritesheet) {
-                    // Grid Spritesheet: 10 Kolom x 4 Baris
+                    // Grid Spritesheet: 10 Kolom x 4 Baris (Sesuai Prompt)
                     const COLS = 10;
                     const ROWS = 4;
 
@@ -711,16 +712,15 @@
                     let colIndex = 0;
                     if (dir !== 'idle') {
                         // Animasi langkah kaki
-                        colIndex = Math.floor(walkStep * 0.22) % COLS;
+                        colIndex = Math.floor(walkStep * 0.15) % COLS;
                     }
 
-                    // MARGIN PEMOTONGAN DENGAN PRESISI SENTRALISASI FRAME (PENGUNCIAN POSISI KARAKTER)
-                    const cropWidth = frameWidth * 0.68;
-                    const cropHeight = frameHeight * 0.88;
+                    // Menampilkan seluruh frame sel secara penuh (full cell crop) agar karakter tidak terpotong atau melayang
+                    const cropWidth = frameWidth;
+                    const cropHeight = frameHeight;
 
-                    // Mengambil titik tengah sel secara terukur untuk mencegah karakter melompat/bergeser
-                    const srcX = (colIndex * frameWidth) + Math.floor((frameWidth - cropWidth) / 2);
-                    const srcY = (rowIndex * frameHeight) + Math.floor((frameHeight - cropHeight) / 2);
+                    const srcX = colIndex * frameWidth;
+                    const srcY = rowIndex * frameHeight;
 
                     // Bayangan Pas di Telapak Kaki (Centered Anchor)
                     c.fillStyle = 'rgba(0,0,0,0.25)';
