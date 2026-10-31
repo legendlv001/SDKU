@@ -1030,7 +1030,7 @@
                     if (Math.abs(diffX) > Math.abs(diffY)) {
                         player.direction = (diffX > 0) ? 'right' : 'left';
                     } else {
-                        player.direction = (dy > 0) ? 'down' : 'up';
+                        player.direction = (diffY > 0) ? 'down' : 'up';
                     }
                     walkTimer++;
                 }
@@ -1523,11 +1523,10 @@
             closeEditCharacterModal();
         }
 
-        // FUNGSI LOGOUT (Ditambahkan notifikasi ke chat bahwa pengguna telah keluar)
+        // FUNGSI LOGOUT (Ditambahkan notifikasi di chat saat logout)
         function handleLogout() {
-            const logoutMsg = `${playerCustomName} telah keluar dari permainan (Logout). 👋`;
-            addChatMessage("Sistem", logoutMsg, false);
-
+            const logoutName = playerCustomName || "Seseorang";
+            
             closeEditCharacterModal();
             currentUserAccount = null;
             isAdminUser = false;
@@ -1536,6 +1535,9 @@
             document.getElementById('gameContainer').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('loginUsername').value = "";
+
+            // Tambahkan pesan ke chat box bahwa pengguna telah keluar
+            addChatMessage("Sistem", `${logoutName} telah keluar (logout) dari permainan. 👋`, false);
         }
 
         function closeModal() {
