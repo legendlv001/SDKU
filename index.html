@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -29,7 +28,7 @@
             padding: 0;
         }
 
-        /* Responsive Landscape Container (Fits HP, Tablet, Laptop smoothly) */
+        /* Responsive Landscape Container */
         .game-viewport {
             width: 100vw;
             height: 100vh;
@@ -57,26 +56,6 @@
             }
         }
 
-        .d-pad-btn {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(8px);
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            transition: all 0.1s ease;
-        }
-
-        .d-pad-btn:active {
-            transform: scale(0.92);
-            background: rgba(250, 204, 21, 0.8);
-            border-color: #facc15;
-        }
-
         .btn-action-highlight {
             animation: pulse-ring 1.5s infinite;
         }
@@ -96,7 +75,6 @@
             animation: badge-bounce 0.5s ease-in-out infinite;
         }
 
-        /* OVERLAY MINTA ROTASI HP JIKA PORTRAIT */
         #rotateNotice {
             display: none;
         }
@@ -122,7 +100,7 @@
         </button>
     </div>
 
-    <!-- SCREEN 0: LOGIN SCREEN (BASED ON SPREADSHEET USER DATABASE) -->
+    <!-- SCREEN 0: LOGIN SCREEN -->
     <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
         <div class="bg-slate-900 border-2 border-yellow-400/80 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl text-white">
             <div class="w-16 h-16 mx-auto mb-3 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-3xl font-black shadow-lg">
@@ -148,11 +126,10 @@
         </div>
     </div>
 
-    <!-- SCREEN 2: MAIN GAME CANVAS & UI (LANDSCAPE VIEW - ALL DEVICES) -->
+    <!-- SCREEN 2: MAIN GAME CANVAS & UI -->
     <div id="gameContainer" class="game-viewport shadow-2xl md:rounded-2xl hidden">
         <!-- Top Navigation Bar -->
         <div class="bg-slate-800/90 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 flex items-center justify-between border-b border-slate-700 z-10">
-            <!-- Profile Avatar Clickable to Edit Character & Name (HANYA UNTUK ADMIN) -->
             <div id="userProfileBadge" onclick="openEditCharacterModal()" class="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition group bg-slate-700/50 px-2.5 py-1 rounded-xl border border-slate-600/60" title="Profil Pengguna">
                 <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-yellow-400 text-slate-900 font-bold flex items-center justify-center shadow-md text-xs md:text-base group-hover:scale-105 transition-transform" id="avatarBadge">
                     👦
@@ -171,29 +148,30 @@
         <div class="relative flex-1 w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden">
             <canvas id="gameCanvas" class="block w-full h-full"></canvas>
 
-            <!-- ON-SCREEN D-PAD CONTROLLER (POJOK KIRI BAWAH) -->
-            <div class="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-30 flex flex-col items-center gap-1 scale-90 sm:scale-100 origin-bottom-left">
-                <div>
-                    <button id="btnUp" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-up"></i></button>
-                </div>
-                <div class="flex gap-1">
-                    <button id="btnLeft" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-left"></i></button>
-                    <button id="btnDown" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-down"></i></button>
-                    <button id="btnRight" class="d-pad-btn w-9 h-9 sm:w-11 sm:h-11"><i class="fas fa-chevron-right"></i></button>
-                </div>
+            <!-- MINI MAP DI KIRI ATAS DI BAWAH PROFIL -->
+            <div class="absolute top-2 left-2 z-30 w-24 h-16 md:w-28 md:h-20 bg-slate-900/95 rounded-xl border border-yellow-400/80 shadow-lg overflow-hidden shrink-0 flex flex-col">
+                <div class="bg-slate-800 text-[8px] font-bold text-yellow-400 px-1 py-0.5 text-center border-b border-slate-700">Mini Map</div>
+                <canvas id="miniMapCanvas" class="w-full flex-1 block"></canvas>
             </div>
 
-            <!-- ACTION BUTTON (SAMPING D-PAD) -->
-            <div class="absolute bottom-2 left-36 sm:bottom-4 sm:left-44 z-30 scale-90 sm:scale-100 origin-bottom-left">
-                <button id="btnInteract" onclick="triggerInteraction()" class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-[10px] sm:text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer">
-                    <i class="fas fa-hand-pointer text-xs sm:text-base"></i>
-                    <span>AKSI</span>
+            <!-- ANALOG PS-STYLE KECIL (TANPA PANAH) & TOMBOL AKSI BERDEMPETAN DI KIRI BAWAH -->
+            <div class="absolute bottom-2 left-2 z-30 flex items-end gap-0">
+                <div id="psAnalogStick" class="relative w-16 h-16 bg-gradient-to-b from-slate-700 to-slate-900 rounded-full border-2 border-slate-500 shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
+                    <div id="analogKnob" class="w-8 h-8 rounded-full bg-gradient-to-b from-slate-600 to-slate-800 border border-slate-400 shadow-inner flex items-center justify-center transform transition-transform duration-75">
+                        <div class="w-3 h-3 rounded-full bg-slate-500 shadow-sm flex items-center justify-center">
+                            <div class="w-1 h-1 rounded-full bg-yellow-400"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btnInteract" onclick="triggerInteraction()" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-[9px] shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
+                    <i class="fas fa-hand-pointer text-[10px]"></i>
+                    <span class="text-[8px] leading-none">AKSI</span>
                 </button>
             </div>
 
             <!-- CHAT SYSTEM (POJOK KANAN BAWAH) -->
             <div class="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 z-40 flex flex-col items-end">
-                <!-- POPUP CHAT BOX -->
                 <div id="chatBoxPopup" class="mb-2 sm:mb-3 w-64 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300" onmouseenter="pauseChatTimer()" onmouseleave="resetChatTimer()">
                     <div class="bg-indigo-600 text-white px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between">
                         <div class="flex items-center gap-2">
@@ -205,12 +183,8 @@
                         </button>
                     </div>
                     
-                    <!-- Chat Messages List -->
-                    <div id="chatMessages" class="p-2 sm:p-3 h-36 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs">
-                        <!-- Message items go here dynamically -->
-                    </div>
+                    <div id="chatMessages" class="p-2 sm:p-3 h-36 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs"></div>
 
-                    <!-- Chat Input Area -->
                     <div class="p-2 bg-slate-100 border-t flex gap-1">
                         <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onfocus="pauseChatTimer()" oninput="pauseChatTimer()" onblur="resetChatTimer()" onkeydown="if(event.key==='Enter') sendChatMessage()">
                         <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold">
@@ -219,10 +193,8 @@
                     </div>
                 </div>
 
-                <!-- FLOATING CHAT BUTTON ICON -->
                 <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base sm:text-xl transition-all hover:scale-105 active:scale-95">
                     <i class="fas fa-comment-dots"></i>
-                    <!-- Notification Counter Badge -->
                     <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-extrabold w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
                 </button>
             </div>
@@ -253,7 +225,6 @@
     <div id="editCharModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
-                <!-- Tombol Logout di Pojok Kiri Atas Modal (Tersedia untuk Semua Karakter) -->
                 <button onclick="handleLogout()" class="px-3 py-1 bg-red-600/90 hover:bg-red-600 text-white text-[11px] font-bold rounded-xl transition flex items-center gap-1.5 shadow-md">
                     <i class="fas fa-right-from-bracket"></i> Logout
                 </button>
@@ -266,15 +237,12 @@
                 </button>
             </div>
 
-            <!-- CONTAINER PENGATURAN HANYA TAMPIL JIKA MEMILIKI HAK AKSES FULL / ADMIN -->
             <div id="adminSettingsContainer" class="w-full">
-                <!-- Input Edit Nama -->
                 <div class="w-full mb-3 shrink-0">
                     <label class="block text-xs font-bold text-slate-300 mb-1">Nama Karakter:</label>
                     <input type="text" id="editNameInput" maxlength="15" class="w-full px-3 py-1.5 text-xs rounded-xl bg-slate-800 border border-slate-600 text-white font-bold focus:outline-none focus:border-yellow-400">
                 </div>
 
-                <!-- Choose Gender / Character -->
                 <div class="w-full mb-4 shrink-0">
                     <label class="block text-xs font-bold text-slate-300 mb-1.5">Pilih Karakter:</label>
                     <div class="grid grid-cols-2 gap-2.5">
@@ -300,19 +268,16 @@
     </div>
 
     <script>
-        // SPREADSHEET CONFIGURATION (READS ENTIRE COLUMN A IN SHEET 'Login', SKIPPING ROW 1)
         const SPREADSHEET_ID = "1J4ePsSEV8xE3VCR-10Avf3W8FOQ-R1xSqWO-4IMzyWc";
         const SHEET_NAME = "Login";
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
-        // DEFAULT FALLBACK DATABASE (IN CASE OF OFFLINE / FETCH DELAY)
         let USER_DATABASE = [
             { name: "Admin", gender: "L", role: "ADMIN", status: "Full" },
             { name: "Ali", gender: "L", role: "SISWA", status: "Full" },
             { name: "Aisyah", gender: "P", role: "SISWI", status: "User" }
         ];
 
-        // FETCH USER LIST FROM GOOGLE SPREADSHEET AUTOMATICALLY
         async function fetchSpreadsheetUsers() {
             try {
                 const response = await fetch(CSV_URL);
@@ -320,24 +285,16 @@
 
                 const csvText = await response.text();
                 const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-                if (lines.length <= 1) return; // Only header exists
+                if (lines.length <= 1) return;
 
                 const fetchedUsers = [];
-
-                // LOOPING MULAI DARI BARIS 2 (INDEX 1) UNTUK MELEWATI BARIS 1 / HEADER
                 for (let i = 1; i < lines.length; i++) {
-                    // Split CSV values while removing wrapping quotes
-                    const cols = lines[i].split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map(cell => {
-                        return cell.replace(/^"|"$/g, '').trim();
-                    });
+                    const cols = lines[i].split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
+                    const nameVal = cols[0] || "";
+                    const genderVal = cols[1] || "L";
+                    const roleVal = cols[2] || "SISWA";
+                    const statusVal = cols[3] || "User";
 
-                    const nameVal = cols[0] || ""; // Kolom A
-                    const genderVal = cols[1] || "L"; // Kolom B
-                    const roleVal = cols[2] || "SISWA"; // Kolom C
-                    const statusVal = cols[3] || "User"; // Kolom D
-
-                    // Hanya tambahkan jika Kolom A memuat nama
                     if (nameVal && nameVal.toLowerCase() !== "nama") {
                         fetchedUsers.push({
                             name: nameVal,
@@ -350,19 +307,16 @@
 
                 if (fetchedUsers.length > 0) {
                     USER_DATABASE = fetchedUsers;
-                    console.log(`Berhasil memuat ${USER_DATABASE.length} pengguna dari Google Spreadsheet Sheet Login!`);
                 }
             } catch (err) {
                 console.warn("Gagal mengambil live data dari Spreadsheet, menggunakan fallback database.", err);
             }
         }
 
-        // ASSETS MANAGEMENT (CUSTOM IMAGES FOR GITHUB REPO)
         const ASSETS = {
             tree: new Image(),
             female: new Image(),
             male: new Image(),
-            // BUILDING & FACILITY ASSETS FOR GITHUB
             kelas: new Image(),
             perpus: new Image(),
             gor: new Image(),
@@ -371,11 +325,9 @@
             taman: new Image()
         };
 
-        // Path gambar relatif untuk GitHub Pages / Local folder assets
         ASSETS.tree.src = 'assets/tree.png';
         ASSETS.female.src = 'assets/avatar_female.png';
         ASSETS.male.src = 'assets/avatar_male.png';
-        
         ASSETS.kelas.src = 'assets/kelas.png';
         ASSETS.perpus.src = 'assets/perpus.png';
         ASSETS.gor.src = 'assets/gor.png';
@@ -384,15 +336,9 @@
         ASSETS.taman.src = 'assets/taman.png';
 
         let assetsLoaded = {
-            tree: false,
-            female: false,
-            male: false,
-            kelas: false,
-            perpus: false,
-            gor: false,
-            warung: false,
-            mading: false,
-            taman: false
+            tree: false, female: false, male: false,
+            kelas: false, perpus: false, gor: false,
+            warung: false, mading: false, taman: false
         };
 
         ASSETS.tree.onload = () => assetsLoaded.tree = true;
@@ -405,7 +351,6 @@
         ASSETS.mading.onload = () => assetsLoaded.mading = true;
         ASSETS.taman.onload = () => assetsLoaded.taman = true;
 
-        // Game State Variables
         let currentUserAccount = null;
         let selectedGender = 'male';
         let playerCustomName = "";
@@ -415,7 +360,6 @@
         let tempModalGender = null;
         let nearbyBuilding = null;
 
-        // AUTHENTICATION LOGIC BASED ON SPREADSHEET USER DATABASE
         function handleLogin(e) {
             e.preventDefault();
             const inputUsername = document.getElementById('loginUsername').value.trim();
@@ -423,10 +367,7 @@
             
             if (!inputUsername) return;
 
-            // Clean input string (remove extra whitespace & lower case)
             const cleanInput = inputUsername.replace(/\s+/g, ' ').toLowerCase();
-
-            // Cari pengguna berdasarkan Nama di Kolom A
             const matchedUser = USER_DATABASE.find(user => 
                 user.name.trim().replace(/\s+/g, ' ').toLowerCase() === cleanInput
             );
@@ -434,20 +375,16 @@
             if (matchedUser) {
                 errorMsg.classList.add('hidden');
                 currentUserAccount = matchedUser;
-
                 playerCustomName = matchedUser.name;
                 selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male';
                 playerRole = matchedUser.role || 'SISWA';
                 
-                // Cek status di Kolom D: Bisa edit jika "Full" atau "Admin"
                 const statusD = (matchedUser.status || "").toLowerCase().trim();
                 isAdminUser = (statusD === 'full' || statusD === 'admin');
 
-                // Tampilkan Tampilan Game
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('gameContainer').classList.remove('hidden');
 
-                // Update UI Profil
                 document.getElementById('charNameDisplay').innerText = playerCustomName;
                 document.getElementById('charRoleDisplay').innerText = playerRole;
                 document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
@@ -487,7 +424,6 @@
 
             canvas.addEventListener('pointerdown', (e) => {
                 if (e.target !== canvas) return;
-
                 const rect = canvas.getBoundingClientRect();
                 const clickClientX = e.clientX - rect.left;
                 const clickClientY = e.clientY - rect.top;
@@ -510,245 +446,126 @@
                 player.isMovingToTarget = true;
             });
 
-            setupTouchControls();
+            setupTouchAnalogStick();
         }
 
-        // Chat Variables
         let isChatOpen = false;
         let unreadCount = 0;
         let chatTimer = null;
         let isTypingOrHovered = false;
         const autoHideDelay = 5000;
+        let playerSpeechBubble = null;
 
-        // Speech Bubble Variable
-        let playerSpeechBubble = null; // { text: string, timer: number }
-
-        // Random Trees Data
         const trees = [];
-        const NUM_TREES = 8; // A few trees scattered randomly
+        const NUM_TREES = 8;
 
-        // SCHOOL BUILDINGS & FACILITIES DEFINITION WITH INTERACTION DATA
         const buildings = [
-            { 
-                id: 'kelas', 
-                name: 'Ruang Kelas', 
-                icon: '🏫', 
-                x: 200, 
-                y: 100, 
-                width: 380, 
-                height: 220, 
-                color: '#fef08a', 
-                wallColor: '#eab308', 
-                roofColor: '#b91c1c',
-                dialogTitle: 'Ruang Kelas SD',
-                dialogText: 'Selamat datang di Ruang Kelas! Tempat kamu dan teman-teman belajar matematika, bahasa, dan IPA bersama guru.',
-                actionLabel: 'Masuk Belajar'
-            },
-            { 
-                id: 'perpus', 
-                name: 'Perpustakaan', 
-                icon: '📚', 
-                x: 680, 
-                y: 100, 
-                width: 340, 
-                height: 220, 
-                color: '#bfdbfe', 
-                wallColor: '#3b82f6', 
-                roofColor: '#1e3a8a',
-                dialogTitle: 'Perpustakaan Sekolah',
-                dialogText: 'Suasana di sini sangat tenang. Ada ribuan buku cerita, ensiklopedia, dan buku pelajaran yang bisa kamu baca.',
-                actionLabel: 'Baca Buku'
-            },
-            { 
-                id: 'gor', 
-                name: 'Gedung Olahraga', 
-                icon: '🏀', 
-                x: 1100, 
-                y: 100, 
-                width: 420, 
-                height: 250, 
-                color: '#fed7aa', 
-                wallColor: '#f97316', 
-                roofColor: '#9a3412',
-                dialogTitle: 'Gedung Olahraga (GOR)',
-                dialogText: 'Area serbaguna untuk main basket, bulu tangkis, dan senam bersama saat pelajaran PJOK!',
-                actionLabel: 'Olah Raga'
-            },
-            { 
-                id: 'mading', 
-                name: 'Mading Sekolah', 
-                icon: '📌', 
-                x: 1600, 
-                y: 150, 
-                width: 260, 
-                height: 180, 
-                color: '#fef3c7', 
-                wallColor: '#d97706', 
-                roofColor: '#78350f',
-                dialogTitle: 'Mading Sekolah',
-                dialogText: 'Papan informasi sekolah: Pengumuman lomba menggambar minggu depan dan puisi karya siswa kelas 5!',
-                actionLabel: 'Baca Pengumuman'
-            },
-            { 
-                id: 'warung', 
-                name: 'Warung Sekolah', 
-                icon: '🍜', 
-                x: 160, 
-                y: 800, 
-                width: 340, 
-                height: 250, 
-                color: '#fbcfe8', 
-                wallColor: '#ec4899', 
-                roofColor: '#9d174d',
-                dialogTitle: 'Warung & Kantin Sekolah',
-                dialogText: 'Aroma jajanan lezat! Ada mi goreng, es teh manis, kue pastel, dan susu kotak segar.',
-                actionLabel: 'Beli Jajanan'
-            },
-            { 
-                id: 'taman', 
-                name: 'Taman Sekolah', 
-                icon: '🌻', 
-                x: 1400, 
-                y: 750, 
-                width: 380, 
-                height: 280, 
-                color: '#86efac', 
-                isZone: true,
-                dialogTitle: 'Taman Bunga Sekolah',
-                dialogText: 'Taman yang asri dengan bunga warna-warni dan udara sejuk. Tempat pas untuk bersantai bersama teman saat istirahat.',
-                actionLabel: 'Bersantai'
-            }
+            { id: 'kelas', name: 'Ruang Kelas', icon: '🏫', x: 200, y: 100, width: 380, height: 220, color: '#fef08a', wallColor: '#eab308', roofColor: '#b91c1c', dialogTitle: 'Ruang Kelas SD', dialogText: 'Selamat datang di Ruang Kelas! Tempat belajar bersama guru.', actionLabel: 'Masuk Belajar' },
+            { id: 'perpus', name: 'Perpustakaan', icon: '📚', x: 680, y: 100, width: 340, height: 220, color: '#bfdbfe', wallColor: '#3b82f6', roofColor: '#1e3a8a', dialogTitle: 'Perpustakaan Sekolah', dialogText: 'Ada ribuan buku cerita dan ensiklopedia di sini.', actionLabel: 'Baca Buku' },
+            { id: 'gor', name: 'Gedung Olahraga', icon: '🏀', x: 1100, y: 100, width: 420, height: 250, color: '#fed7aa', wallColor: '#f97316', roofColor: '#9a3412', dialogTitle: 'Gedung Olahraga (GOR)', dialogText: 'Area serbaguna untuk main basket dan bulu tangkis.', actionLabel: 'Olah Raga' },
+            { id: 'mading', name: 'Mading Sekolah', icon: '📌', x: 1600, y: 150, width: 260, height: 180, color: '#fef3c7', wallColor: '#d97706', roofColor: '#78350f', dialogTitle: 'Mading Sekolah', dialogText: 'Papan informasi pengumuman lomba dan karya siswa.', actionLabel: 'Baca Pengumuman' },
+            { id: 'warung', name: 'Warung Sekolah', icon: '🍜', x: 160, y: 800, width: 340, height: 250, color: '#fbcfe8', wallColor: '#ec4899', roofColor: '#9d174d', dialogTitle: 'Warung & Kantin Sekolah', dialogText: 'Aroma jajanan lezat seperti mi goreng dan es teh manis.', actionLabel: 'Beli Jajanan' },
+            { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, color: '#86efac', isZone: true, dialogTitle: 'Taman Bunga Sekolah', dialogText: 'Taman asri dengan bunga warna-warni untuk bersantai.', actionLabel: 'Bersantai' }
         ];
 
         function generateTrees() {
-            trees.length = 0; // Clear existing
+            trees.length = 0;
             for (let i = 0; i < NUM_TREES; i++) {
                 let tx, ty, dist, insideBuilding;
                 do {
                     tx = 150 + Math.random() * (MAP_WIDTH - 300);
                     ty = 150 + Math.random() * (MAP_HEIGHT - 300);
                     dist = Math.hypot(tx - 1000, ty - 600);
-
                     insideBuilding = buildings.some(b => 
                         tx > b.x - 40 && tx < b.x + b.width + 40 &&
                         ty > b.y - 40 && ty < b.y + b.height + 40
                     );
                 } while (dist < 200 || insideBuilding);
-
-                trees.push({
-                    x: tx,
-                    y: ty,
-                    size: 35 + Math.random() * 20,
-                    trunkHeight: 25 + Math.random() * 10
-                });
+                trees.push({ x: tx, y: ty, size: 35 + Math.random() * 20, trunkHeight: 25 + Math.random() * 10 });
             }
             trees.sort((a, b) => a.y - b.y);
         }
 
-        // Canvas Setup
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const miniMapCanvas = document.getElementById('miniMapCanvas');
+        const miniMapCtx = miniMapCanvas ? miniMapCanvas.getContext('2d') : null;
 
-        // MAP DIMENSIONS
         const MAP_WIDTH = 2000;
         const MAP_HEIGHT = 1200;
 
-        // FIXED UNIFIED ZOOM SCALE (SAME VIEW FOR ALL DEVICES: HP, TABLET, LAPTOP)
         function getAdaptiveZoom() {
-            return 0.85; // Skala Zoom Tetap Universal untuk Semua Perangkat
+            return 0.85;
         }
 
-        // Player Object (Ukuran Karakter 65x90) - Kecepatan dikurangi dari 5.5 menjadi 2.8
         const player = {
-            x: 1000,
-            y: 600,
-            speed: 2.8,
-            width: 65,
-            height: 90,
-            direction: 'idle',
-            targetX: null,
-            targetY: null,
-            isMovingToTarget: false
+            x: 1000, y: 600, speed: 2.8, width: 65, height: 90,
+            direction: 'idle', targetX: null, targetY: null, isMovingToTarget: false
         };
 
-        // Keys state
-        const keys = {
-            ArrowUp: false,
-            ArrowDown: false,
-            ArrowLeft: false,
-            ArrowRight: false,
-            w: false,
-            s: false,
-            a: false,
-            d: false
-        };
+        const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false };
 
-        // DRAW CHARACTER SPRITES (Female/Male with Directions OR Custom Image Assets)
+        // RENDER KARAKTER DARI SPRITESHEET YANG SUDAH DIPISAH PER FRAME
         function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
             c.save();
-
             const imgAsset = (gender === 'female') ? ASSETS.female : ASSETS.male;
             const isLoaded = (gender === 'female') ? assetsLoaded.female : assetsLoaded.male;
 
-            // Check if custom avatar PNG image is loaded
             if (isLoaded) {
-                // Deteksi apakah gambar berupa Spritesheet Grid (lebar > 500px) atau Gambar Tunggal
-                const isSpritesheet = imgAsset.width > 500;
+                const sheetW = imgAsset.width || 2268;
+                const sheetH = imgAsset.height || 1512;
+                const isSpritesheet = sheetW > 500;
 
                 if (isSpritesheet) {
-                    // Grid Spritesheet: 10 Kolom x 4 Baris (Sesuai Prompt)
+                    // Sprite asli tersusun rapat: 10 kolom x 4 baris.
+                    // Jangan menambahkan GAP karena ukuran gambar sudah terbagi
+                    // rata menjadi 10 frame mendatar dan 4 frame tegak.
                     const COLS = 10;
                     const ROWS = 4;
+                    const cellWidth = sheetW / COLS;
+                    const cellHeight = sheetH / ROWS;
 
-                    const frameWidth = imgAsset.width / COLS;
-                    const frameHeight = imgAsset.height / ROWS;
-
-                    let rowIndex = 3; // Default: Hadap Bawah (Baris 4)
-                    if (dir === 'right') rowIndex = 0;      // Baris 1: Kanan
-                    else if (dir === 'left') rowIndex = 1;  // Baris 2: Kiri
-                    else if (dir === 'up') rowIndex = 2;    // Baris 3: Atas
-                    else if (dir === 'down') rowIndex = 3;  // Baris 4: Bawah
+                    let rowIndex = 3; // Baris 4: tampak depan
+                    if (dir === 'right') rowIndex = 0; // Baris 1: menghadap kanan
+                    else if (dir === 'left') rowIndex = 1; // Baris 2: menghadap kiri
+                    else if (dir === 'up') rowIndex = 2; // Baris 3: tampak belakang
+                    else if (dir === 'down') rowIndex = 3; // Baris 4: tampak depan
 
                     let colIndex = 0;
                     if (dir !== 'idle') {
-                        // Animasi langkah kaki
                         colIndex = Math.floor(walkStep * 0.15) % COLS;
                     }
 
-                    // Menampilkan seluruh frame sel secara penuh (full cell crop) agar karakter tidak terpotong atau melayang
-                    const cropWidth = frameWidth;
-                    const cropHeight = frameHeight;
+                    // Batas setiap frame dihitung langsung dari ukuran gambar asli.
+                    // Inset 1 px hanya untuk menghindari garis tepi akibat pembulatan.
+                    const inset = 0;
+                    const cropX = colIndex * cellWidth + inset;
+                    const cropY = rowIndex * cellHeight + inset;
+                    const cropW = cellWidth - inset * 2;
+                    const cropH = cellHeight - inset * 2;
 
-                    const srcX = colIndex * frameWidth;
-                    const srcY = rowIndex * frameHeight;
-
-                    // Bayangan Pas di Telapak Kaki (Centered Anchor)
                     c.fillStyle = 'rgba(0,0,0,0.25)';
                     c.beginPath();
                     c.ellipse(x + width / 2, y + height - 2, width * 0.32, 6, 0, 0, Math.PI * 2);
                     c.fill();
 
-                    // Render karakter terisolasi di posisi sentral
-                    c.drawImage(
-                        imgAsset,
-                        srcX, srcY, cropWidth, cropHeight,
-                        x, y, width, height
-                    );
+                    // Batasi gambar pada kotak karakter.
+                    c.beginPath();
+                    c.rect(x, y, width, height);
+                    c.clip();
+                    c.drawImage(imgAsset, cropX, cropY, cropW, cropH, x, y, width, height);
                 } else {
-                    // Gambar Tunggal (Bukan Grid) - Tampilkan Seluruh Gambar Utuh
                     c.fillStyle = 'rgba(0,0,0,0.25)';
                     c.beginPath();
                     c.ellipse(x + width / 2, y + height - 2, width * 0.32, 6, 0, 0, Math.PI * 2);
                     c.fill();
-
                     c.drawImage(imgAsset, x, y, width, height);
                 }
-
                 c.restore();
                 return;
             }
 
-            // Fallback Vector Drawing - Shadow Pas di Kaki
+            // Fallback Vector Drawing
             c.fillStyle = 'rgba(0,0,0,0.25)';
             c.beginPath();
             c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
@@ -756,128 +573,30 @@
 
             const isFemale = (gender === 'female');
             const bounce = (dir !== 'idle') ? Math.sin(walkStep * 0.3) * 3 : 0;
-            const legSwing = (dir !== 'idle') ? Math.sin(walkStep * 0.3) * 8 : 0;
-
             const charY = y + bounce;
 
             if (isFemale) {
-                // AISYAH (FEMALE HIJAB)
-                if (dir === 'up') {
-                    c.fillStyle = '#ffffff';
-                    c.beginPath();
-                    c.roundRect(x + width * 0.15, charY + 2, width * 0.7, height * 0.42, 14);
-                    c.fill();
-                    c.strokeStyle = '#cbd5e1';
-                    c.lineWidth = 1.5;
-                    c.stroke();
-
-                    c.fillStyle = '#dc2626';
-                    c.beginPath();
-                    c.roundRect(x + width * 0.28, charY + height * 0.25, width * 0.44, height * 0.28, 8);
-                    c.fill();
-                    c.fillStyle = '#ffffff';
-                    c.fillRect(x + width * 0.35, charY + height * 0.38, width * 0.3, 4);
-
-                    c.fillStyle = '#b91c1c';
-                    c.beginPath();
-                    c.moveTo(x + width * 0.25, charY + height * 0.45);
-                    c.lineTo(x + width * 0.75, charY + height * 0.45);
-                    c.lineTo(x + width * 0.85, charY + height * 0.88);
-                    c.lineTo(x + width * 0.15, charY + height * 0.88);
-                    c.closePath();
-                    c.fill();
-
-                    c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.25 - legSwing * 0.5, charY + height * 0.88, 11, 10);
-                    c.fillRect(x + width * 0.55 + legSwing * 0.5, charY + height * 0.88, 11, 10);
-                } else {
-                    c.fillStyle = '#b91c1c';
-                    c.beginPath();
-                    c.moveTo(x + width * 0.25, charY + height * 0.45);
-                    c.lineTo(x + width * 0.75, charY + height * 0.45);
-                    c.lineTo(x + width * 0.85 + (dir === 'right' ? 4 : 0), charY + height * 0.88);
-                    c.lineTo(x + width * 0.15 - (dir === 'left' ? 4 : 0), charY + height * 0.88);
-                    c.closePath();
-                    c.fill();
-
-                    c.fillStyle = '#991b1b';
-                    c.fillRect(x + width * 0.25 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 11, 10);
-                    c.fillRect(x + width * 0.55 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.88, 11, 10);
-
-                    c.fillStyle = '#ffffff';
-                    c.fillRect(x + width * 0.25, charY + height * 0.3, width * 0.5, height * 0.22);
-
-                    c.fillStyle = '#ffffff';
-                    c.beginPath();
-                    c.roundRect(x + width * 0.12, charY, width * 0.76, height * 0.42, 18);
-                    c.fill();
-                    c.strokeStyle = '#e2e8f0';
-                    c.lineWidth = 1.5;
-                    c.stroke();
-
-                    c.fillStyle = '#fde047';
-                    c.beginPath();
-                    c.arc(x + width * 0.5 + (dir === 'right' ? 4 : dir === 'left' ? -4 : 0), charY + height * 0.2, 14, 0, Math.PI * 2);
-                    c.fill();
-
-                    c.fillStyle = '#1e293b';
-                    if (dir === 'right') {
-                        c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
-                    } else if (dir === 'left') {
-                        c.beginPath(); c.arc(x + width * 0.42, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
-                    } else {
-                        c.beginPath(); c.arc(x + width * 0.42, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
-                        c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
-                    }
-
-                    c.strokeStyle = '#b91c1c';
-                    c.lineWidth = 1.5;
-                    c.beginPath();
-                    c.arc(x + width * 0.5 + (dir === 'right' ? 3 : dir === 'left' ? -3 : 0), charY + height * 0.23, 4, 0.1, Math.PI - 0.1);
-                    c.stroke();
-                }
+                c.fillStyle = '#b91c1c';
+                c.fillRect(x + width * 0.25, charY + height * 0.45, width * 0.5, height * 0.43);
+                c.fillStyle = '#ffffff';
+                c.beginPath();
+                c.roundRect(x + width * 0.12, charY, width * 0.76, height * 0.42, 18);
+                c.fill();
             } else {
-                // ALI (MALE PECI)
-                if (dir === 'up') {
-                    c.fillStyle = '#ffffff';
-                    c.beginPath();
-                    c.roundRect(x + width * 0.25, charY, width * 0.5, 14, 4);
-                    c.fill();
-                    c.strokeStyle = '#cbd5e1';
-                    c.stroke();
-                } else {
-                    c.fillStyle = '#ffffff';
-                    c.fillRect(x + width * 0.25, charY + height * 0.3, width * 0.5, height * 0.25);
-
-                    c.fillStyle = '#1e293b';
-                    c.beginPath();
-                    c.roundRect(x + width * 0.25, charY, width * 0.5, 14, 4);
-                    c.fill();
-
-                    c.fillStyle = '#fde047';
-                    c.beginPath();
-                    c.arc(x + width * 0.5 + (dir === 'right' ? 4 : dir === 'left' ? -4 : 0), charY + height * 0.2, 12, 0, Math.PI * 2);
-                    c.fill();
-
-                    c.fillStyle = '#1e293b';
-                    c.beginPath(); c.arc(x + width * 0.42, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
-                    c.beginPath(); c.arc(x + width * 0.58, charY + height * 0.19, 2.5, 0, Math.PI * 2); c.fill();
-
-                    c.fillStyle = '#b91c1c';
-                    c.fillRect(x + width * 0.28 + (dir === 'right' ? legSwing : -legSwing), charY + height * 0.55, 10, height * 0.4);
-                    c.fillRect(x + width * 0.52 - (dir === 'right' ? legSwing : -legSwing), charY + height * 0.55, 10, height * 0.4);
-                }
+                c.fillStyle = '#ffffff';
+                c.fillRect(x + width * 0.25, charY + height * 0.3, width * 0.5, height * 0.25);
+                c.fillStyle = '#1e293b';
+                c.beginPath();
+                c.roundRect(x + width * 0.25, charY, width * 0.5, 14, 4);
+                c.fill();
             }
-
             c.restore();
         }
 
-        // DRAW MAP FUNCTION
         function drawMap(cameraX, cameraY, zoomScale) {
             ctx.save();
             ctx.scale(zoomScale, zoomScale);
 
-            // Grass background grid
             const tileSize = 100;
             const startCol = Math.floor(cameraX / tileSize);
             const endCol = startCol + Math.ceil((canvas.width / zoomScale) / tileSize) + 1;
@@ -893,12 +612,10 @@
                 }
             }
 
-            // Draw Buildings
             buildings.forEach(b => {
                 const bx = b.x - cameraX;
                 const by = b.y - cameraY;
 
-                // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.3)';
                 ctx.beginPath();
                 ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2);
@@ -917,7 +634,6 @@
                     if (assetsLoaded[b.id]) {
                         ctx.drawImage(imgAsset, bx, by, b.width, b.height);
                     } else {
-                        // Roof
                         ctx.fillStyle = b.roofColor;
                         ctx.beginPath();
                         ctx.moveTo(bx - 10, by + 50);
@@ -925,14 +641,11 @@
                         ctx.lineTo(bx + b.width + 10, by + 50);
                         ctx.closePath();
                         ctx.fill();
-
-                        // Wall
                         ctx.fillStyle = b.wallColor;
                         ctx.fillRect(bx, by + 50, b.width, b.height - 50);
                     }
                 }
 
-                // Facility Signboard Label
                 ctx.save();
                 ctx.font = 'bold 16px Fredoka';
                 const labelText = `${b.icon} ${b.name}`;
@@ -958,7 +671,6 @@
             ctx.restore();
         }
 
-        // DRAW TREE WITH SUPPORT FOR CUSTOM ASSETS
         function drawTree(tree, cameraX, cameraY, zoomScale) {
             ctx.save();
             ctx.scale(zoomScale, zoomScale);
@@ -979,31 +691,60 @@
                 return;
             }
 
-            // Fallback Vector Tree
             ctx.fillStyle = '#78350f';
             ctx.fillRect(tx - tree.size * 0.2, ty - tree.trunkHeight, tree.size * 0.4, tree.trunkHeight);
-
-            const foliageY = ty - tree.trunkHeight;
-            
             ctx.fillStyle = '#14532d';
             ctx.beginPath();
-            ctx.arc(tx, foliageY - tree.size * 0.4, tree.size, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#16a34a';
-            ctx.beginPath();
-            ctx.arc(tx - tree.size * 0.2, foliageY - tree.size * 0.6, tree.size * 0.75, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#4ade80';
-            ctx.beginPath();
-            ctx.arc(tx + tree.size * 0.2, foliageY - tree.size * 0.7, tree.size * 0.5, 0, Math.PI * 2);
+            ctx.arc(tx, ty - tree.trunkHeight - tree.size * 0.4, tree.size, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();
         }
 
-        // UPDATE GAME LOGIC
+        function renderMiniMap() {
+            if (!miniMapCtx || !miniMapCanvas) return;
+
+            miniMapCanvas.width = miniMapCanvas.clientWidth * window.devicePixelRatio;
+            miniMapCanvas.height = miniMapCanvas.clientHeight * window.devicePixelRatio;
+
+            miniMapCtx.clearRect(0, 0, miniMapCanvas.width, miniMapCanvas.height);
+            miniMapCtx.save();
+            miniMapCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            const scaleX = miniMapCanvas.clientWidth / MAP_WIDTH;
+            const scaleY = miniMapCanvas.clientHeight / MAP_HEIGHT;
+
+            miniMapCtx.fillStyle = '#0f172a';
+            miniMapCtx.fillRect(0, 0, miniMapCanvas.clientWidth, miniMapCanvas.clientHeight);
+
+            buildings.forEach(b => {
+                miniMapCtx.fillStyle = b.roofColor || '#eab308';
+                miniMapCtx.fillRect(b.x * scaleX, b.y * scaleY, b.width * scaleX, b.height * scaleY);
+
+                // LABEL NAMA TEMPAT DI MINI MAP
+                miniMapCtx.save();
+                miniMapCtx.fillStyle = '#ffffff';
+                miniMapCtx.font = 'bold 7px Fredoka';
+                miniMapCtx.textAlign = 'center';
+                miniMapCtx.textBaseline = 'middle';
+                miniMapCtx.fillText(b.name, (b.x + b.width / 2) * scaleX, (b.y + b.height / 2) * scaleY);
+                miniMapCtx.restore();
+            });
+
+            const playerMiniX = player.x * scaleX;
+            const playerMiniY = player.y * scaleY;
+
+            miniMapCtx.fillStyle = '#facc15';
+            miniMapCtx.beginPath();
+            miniMapCtx.arc(playerMiniX, playerMiniY, 3, 0, Math.PI * 2);
+            miniMapCtx.fill();
+            miniMapCtx.strokeStyle = '#ffffff';
+            miniMapCtx.lineWidth = 1;
+            miniMapCtx.stroke();
+
+            miniMapCtx.restore();
+        }
+
         function updateGame() {
             let dx = 0;
             let dy = 0;
@@ -1050,7 +791,6 @@
                     } else {
                         player.direction = (dy > 0) ? 'down' : 'up';
                     }
-
                     walkTimer++;
                 } else {
                     player.direction = 'idle';
@@ -1058,7 +798,6 @@
                 }
             }
 
-            // Map Bounds
             player.x = Math.max(30, Math.min(MAP_WIDTH - 30, player.x));
             player.y = Math.max(40, Math.min(MAP_HEIGHT - 40, player.y));
 
@@ -1072,7 +811,6 @@
             for (let b of buildings) {
                 const centerX = b.x + b.width / 2;
                 const centerY = b.y + b.height / 2;
-                
                 const rangeX = b.width / 2 + 50;
                 const rangeY = b.height / 2 + 50;
 
@@ -1117,29 +855,15 @@
             if (!b) return;
 
             closeModal();
-
             let actionText = "";
             switch (buildingId) {
-                case 'kelas':
-                    actionText = "Aku sedang rajin belajar di kelas! 📖";
-                    break;
-                case 'perpus':
-                    actionText = "Asyik banget membaca buku cerita di perpus! 📚";
-                    break;
-                case 'gor':
-                    actionText = "Semangat olah raga biar badan sehat! 🏀";
-                    break;
-                case 'mading':
-                    actionText = "Wah, pengumuman lombanya menarik sekali! 📌";
-                    break;
-                case 'warung':
-                    actionText = "Nyam nyam, jajanan warungnya enak sekali! 🍜";
-                    break;
-                case 'taman':
-                    actionText = "Udaranya sejuk sekali bersantai di taman! 🌻";
-                    break;
-                default:
-                    actionText = `Sedang berada di ${b.name}`;
+                case 'kelas': actionText = "Aku sedang rajin belajar di kelas! 📖"; break;
+                case 'perpus': actionText = "Asyik banget membaca buku cerita di perpus! 📚"; break;
+                case 'gor': actionText = "Semangat olah raga biar badan sehat! 🏀"; break;
+                case 'mading': actionText = "Wah, pengumuman lombanya menarik sekali! 📌"; break;
+                case 'warung': actionText = "Nyam nyam, jajanan warungnya enak sekali! 🍜"; break;
+                case 'taman': actionText = "Udaranya sejuk sekali bersantai di taman! 🌻"; break;
+                default: actionText = `Sedang berada di ${b.name}`;
             }
 
             addChatMessage(playerCustomName, actionText, true);
@@ -1167,11 +891,8 @@
         }
 
         function toggleChat() {
-            if (isChatOpen) {
-                closeChat();
-            } else {
-                openChat();
-            }
+            if (isChatOpen) closeChat();
+            else openChat();
         }
 
         function openChat() {
@@ -1212,16 +933,13 @@
 
             const bubbleDiv = document.createElement('div');
             bubbleDiv.className = `px-3 py-1.5 rounded-2xl max-w-[85%] text-xs ${
-                isPlayer 
-                    ? 'bg-indigo-600 text-white rounded-br-none' 
-                    : 'bg-slate-200 text-slate-800 rounded-bl-none font-medium'
+                isPlayer ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-200 text-slate-800 rounded-bl-none font-medium'
             }`;
             bubbleDiv.innerText = text;
 
             msgDiv.appendChild(senderSpan);
             msgDiv.appendChild(bubbleDiv);
             chatMessages.appendChild(msgDiv);
-
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
             if (!isChatOpen) {
@@ -1232,10 +950,7 @@
             }
 
             if (isPlayer) {
-                playerSpeechBubble = {
-                    text: text,
-                    timer: Date.now() + 4000
-                };
+                playerSpeechBubble = { text: text, timer: Date.now() + 4000 };
             }
         }
 
@@ -1253,12 +968,10 @@
         function gameLoop() {
             updateGame();
 
-            // Resize Canvas to Container
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
 
             const currentZoomScale = getAdaptiveZoom();
-
             const viewWidth = canvas.width / currentZoomScale;
             const viewHeight = canvas.height / currentZoomScale;
 
@@ -1271,21 +984,18 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawMap(cameraX, cameraY, currentZoomScale);
 
-            // Trees behind player
             trees.forEach(tree => {
                 if (tree.y <= player.y) {
                     drawTree(tree, cameraX, cameraY, currentZoomScale);
                 }
             });
 
-            // Render Player
             ctx.save();
             ctx.scale(currentZoomScale, currentZoomScale);
             const screenX = player.x - cameraX - player.width / 2;
             const screenY = player.y - cameraY - player.height / 2;
             drawCharacterSprite(ctx, screenX, screenY, player.width, player.height, selectedGender, player.direction, walkTimer);
 
-            // Draw Character Name Badge & Role Badge Above Head
             const nameCenterX = player.x - cameraX;
             const nameY = screenY - 10;
 
@@ -1303,7 +1013,6 @@
             const nameBoxW = maxTextWidth + namePadding * 2;
             const nameBoxH = roleText ? 28 : 18;
 
-            // Background Badge Papan Nama & Jabatan
             ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
             ctx.beginPath();
             ctx.roundRect(nameCenterX - nameBoxW / 2, nameY - nameBoxH, nameBoxW, nameBoxH, 8);
@@ -1312,14 +1021,12 @@
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Teks Nama Karakter (Kuning)
             ctx.fillStyle = '#facc15';
             ctx.font = 'bold 12px Fredoka';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(nameText, nameCenterX, nameY - nameBoxH + 3);
 
-            // Teks Jabatan Kolom C (Putih/Abu-abu Muda)
             if (roleText) {
                 ctx.fillStyle = '#cbd5e1';
                 ctx.font = 'bold 9px Fredoka';
@@ -1327,7 +1034,6 @@
             }
             ctx.restore();
 
-            // Speech Bubble
             if (playerSpeechBubble && Date.now() < playerSpeechBubble.timer) {
                 const bubbleX = player.x - cameraX;
                 const bubbleY = nameY - 24;
@@ -1372,115 +1078,83 @@
 
             ctx.restore();
 
-            // Trees in front of player
             trees.forEach(tree => {
                 if (tree.y > player.y) {
                     drawTree(tree, cameraX, cameraY, currentZoomScale);
                 }
             });
 
+            renderMiniMap();
             requestAnimationFrame(gameLoop);
         }
 
-        function selectCharacter(gender) {
-            selectedGender = gender;
-            const customName = document.getElementById('customNameInput').value.trim();
-            playerCustomName = customName || (gender === 'female' ? 'Aisyah' : 'Ali');
+        function setupTouchAnalogStick() {
+            const stick = document.getElementById('psAnalogStick');
+            const knob = document.getElementById('analogKnob');
+            if (!stick || !knob) return;
 
-            document.getElementById('charNameDisplay').innerText = playerCustomName;
-            document.getElementById('avatarBadge').innerText = (gender === 'female') ? '👧' : '👦';
+            let isDragging = false;
+            let centerPos = { x: 0, y: 0 };
+            const maxRadius = 22;
 
-            document.getElementById('characterSelectScreen').classList.add('hidden');
-            document.getElementById('gameContainer').classList.remove('hidden');
-
-            // Coba Otomatis Masuk Mode Landscape / Fullscreen saat Pilih Karakter
-            requestLandscapeAndFullscreen();
-
-            generateTrees();
-
-            // Keyboard Listeners
-            window.addEventListener('keydown', (e) => {
-                if (e.code === 'Space') {
-                    e.preventDefault();
-                    if (nearbyBuilding) {
-                        triggerInteraction();
-                    }
-                } else if (keys.hasOwnProperty(e.key)) {
-                    keys[e.key] = true;
-                    player.isMovingToTarget = false;
-                }
-            });
-
-            window.addEventListener('keyup', (e) => {
-                if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
-            });
-
-            // Canvas Click / Tap to Move Listener
-            canvas.addEventListener('pointerdown', (e) => {
-                if (e.target !== canvas) return;
-
-                const rect = canvas.getBoundingClientRect();
-                const clickClientX = e.clientX - rect.left;
-                const clickClientY = e.clientY - rect.top;
-
-                const currentZoom = getAdaptiveZoom();
-                const viewWidth = canvas.width / currentZoom;
-                const viewHeight = canvas.height / currentZoom;
-
-                let cameraX = player.x - viewWidth / 2;
-                let cameraY = player.y - viewHeight / 2;
-
-                cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
-                cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
-
-                const worldX = (clickClientX / currentZoom) + cameraX;
-                const worldY = (clickClientY / currentZoom) + cameraY;
-
-                player.targetX = Math.max(30, Math.min(MAP_WIDTH - 30, worldX));
-                player.targetY = Math.max(40, Math.min(MAP_HEIGHT - 40, worldY));
-                player.isMovingToTarget = true;
-            });
-
-            setupTouchControls();
-
-            addChatMessage(playerCustomName, `Halo semuanya, ${playerCustomName} siap belajar & bermain! 😊`, true);
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        function setupTouchControls() {
-            const bindBtn = (id, keyName) => {
-                const btn = document.getElementById(id);
-                if (!btn) return;
-                const start = (e) => { 
-                    e.preventDefault(); 
-                    keys[keyName] = true; 
-                    player.isMovingToTarget = false; 
-                };
-                const end = (e) => { e.preventDefault(); keys[keyName] = false; };
-                btn.addEventListener('touchstart', start);
-                btn.addEventListener('touchend', end);
-                btn.addEventListener('mousedown', start);
-                btn.addEventListener('mouseup', end);
+            const handleStart = (e) => {
+                e.preventDefault();
+                isDragging = true;
+                const rect = stick.getBoundingClientRect();
+                centerPos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                handleMove(e);
             };
 
-            bindBtn('btnUp', 'ArrowUp');
-            bindBtn('btnDown', 'ArrowDown');
-            bindBtn('btnLeft', 'ArrowLeft');
-            bindBtn('btnRight', 'ArrowRight');
+            const handleMove = (e) => {
+                if (!isDragging) return;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                let deltaX = clientX - centerPos.x;
+                let deltaY = clientY - centerPos.y;
+                const dist = Math.hypot(deltaX, deltaY);
+
+                if (dist > maxRadius) {
+                    deltaX = (deltaX / dist) * maxRadius;
+                    deltaY = (deltaY / dist) * maxRadius;
+                }
+
+                knob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+                keys.ArrowLeft = deltaX < -6;
+                keys.ArrowRight = deltaX > 6;
+                keys.ArrowUp = deltaY < -6;
+                keys.ArrowDown = deltaY > 6;
+                player.isMovingToTarget = false;
+            };
+
+            const handleEnd = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                knob.style.transform = `translate(0px, 0px)`;
+                keys.ArrowLeft = false;
+                keys.ArrowRight = false;
+                keys.ArrowUp = false;
+                keys.ArrowDown = false;
+            };
+
+            stick.addEventListener('touchstart', handleStart, { passive: false });
+            window.addEventListener('touchmove', handleMove, { passive: false });
+            window.addEventListener('touchend', handleEnd);
+
+            stick.addEventListener('mousedown', handleStart);
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', handleEnd);
         }
 
         function openEditCharacterModal() {
             tempModalGender = selectedGender;
             document.getElementById('editNameInput').value = playerCustomName;
-            
             const adminContainer = document.getElementById('adminSettingsContainer');
 
             if (!isAdminUser) {
-                // Jika Kolom D bukan "Full" / "Admin": Sembunyikan form edit nama & karakter, sisakan hanya tombol Logout di atas
                 adminContainer.classList.add('hidden');
             } else {
-                // Jika Kolom D bernilai "Full" / "Admin": Tampilkan form edit karakter
                 adminContainer.classList.remove('hidden');
                 selectModalGender(selectedGender);
             }
@@ -1508,35 +1182,27 @@
 
         function saveCharacterEdits() {
             if (!isAdminUser) return;
-
             const newName = document.getElementById('editNameInput').value.trim();
             if (newName) {
                 playerCustomName = newName;
                 document.getElementById('charNameDisplay').innerText = playerCustomName;
             }
-
             if (tempModalGender) {
                 selectedGender = tempModalGender;
                 document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
             }
-
             closeEditCharacterModal();
         }
 
-        // FUNGSI LOGOUT (Ditambahkan notifikasi di chat saat logout)
         function handleLogout() {
             const logoutName = playerCustomName || "Seseorang";
-            
             closeEditCharacterModal();
             currentUserAccount = null;
             isAdminUser = false;
             
-            // Sembunyikan Game Container & Tampilkan Layar Login
             document.getElementById('gameContainer').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('loginUsername').value = "";
-
-            // Tambahkan pesan ke chat box bahwa pengguna telah keluar
             addChatMessage("Sistem", `${logoutName} telah keluar (logout) dari permainan. 👋`, false);
         }
 
@@ -1544,32 +1210,24 @@
             document.getElementById('dialogModal').classList.add('hidden');
         }
 
-        // FUNGSI UNTUK OTOMATIS LAYAR LANDSCAPE & FULLSCREEN DI HP ANDROID
         function requestLandscapeAndFullscreen() {
             const docEl = document.documentElement;
-            
-            // Masuk Fullscreen
             if (docEl.requestFullscreen) {
                 docEl.requestFullscreen().catch(() => {});
             } else if (docEl.webkitRequestFullscreen) {
                 docEl.webkitRequestFullscreen();
             }
 
-            // Kunci Rotasi ke Landscape (Android Web API)
             if (screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
             }
         }
 
         window.onload = function() {
-            // Memuat database akun dari Google Spreadsheet secara otomatis
             fetchSpreadsheetUsers();
-
-            // Otomatis minta Fullscreen & Kunci Landscape saat aplikasi dibuka
             requestLandscapeAndFullscreen();
         };
 
-        // Event listener tambahan saat pengguna menyentuh/klik pertama kali untuk memastikan orientasi terkunci
         window.addEventListener('pointerdown', function initOrientation() {
             requestLandscapeAndFullscreen();
             window.removeEventListener('pointerdown', initOrientation);
