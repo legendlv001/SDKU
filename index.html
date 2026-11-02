@@ -34,26 +34,11 @@
             height: 100vh;
             max-width: 100vw;
             max-height: 100vh;
-            aspect-ratio: 16 / 9;
             display: flex;
             flex-direction: column;
             position: relative;
             overflow: hidden;
             background-color: #020617;
-        }
-
-        @media (min-aspect-ratio: 16/9) {
-            .game-viewport {
-                width: calc(100vh * (16 / 9));
-                height: 100vh;
-            }
-        }
-
-        @media (max-aspect-ratio: 16/9) {
-            .game-viewport {
-                width: 100vw;
-                height: calc(100vw * (9 / 16));
-            }
         }
 
         .btn-action-highlight {
@@ -74,31 +59,9 @@
         .animate-badge {
             animation: badge-bounce 0.5s ease-in-out infinite;
         }
-
-        #rotateNotice {
-            display: none;
-        }
-
-        @media screen and (orientation: portrait) and (max-width: 768px) {
-            #rotateNotice {
-                display: flex !important;
-            }
-        }
     </style>
 </head>
 <body>
-
-    <!-- OVERLAY PERINGATAN PUTAR HP KE LANDSCAPE -->
-    <div id="rotateNotice" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white">
-        <div class="w-20 h-20 mb-4 text-yellow-400 animate-bounce flex items-center justify-center bg-slate-900 rounded-3xl border-2 border-yellow-400">
-            <i class="fas fa-mobile-screen-button text-4xl transform rotate-90"></i>
-        </div>
-        <h2 class="text-xl font-extrabold text-yellow-400 mb-2">Putar Layar HP Kamu!</h2>
-        <p class="text-xs text-slate-300 mb-6 max-w-xs">Untuk pengalaman bermain terbaik, silakan putar HP kamu ke posisi <b>Miring / Landscape</b>.</p>
-        <button onclick="requestLandscapeAndFullscreen()" class="px-5 py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-2xl text-xs shadow-lg flex items-center gap-2">
-            <i class="fas fa-expand"></i> Kunci Layar Landscape
-        </button>
-    </div>
 
     <!-- SCREEN 0: LOGIN SCREEN -->
     <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
@@ -148,25 +111,46 @@
         <div class="relative flex-1 w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden">
             <canvas id="gameCanvas" class="block w-full h-full"></canvas>
 
-            <!-- MINI MAP DI KIRI ATAS DI BAWAH PROFIL -->
-            <div class="absolute top-2 left-2 z-30 w-24 h-16 md:w-28 md:h-20 bg-slate-900/95 rounded-xl border border-yellow-400/80 shadow-lg overflow-hidden shrink-0 flex flex-col">
-                <div class="bg-slate-800 text-[8px] font-bold text-yellow-400 px-1 py-0.5 text-center border-b border-slate-700">Mini Map</div>
-                <canvas id="miniMapCanvas" class="w-full flex-1 block"></canvas>
+            <!-- MINI MAP (POJOK KIRI ATAS DI BAWAH PROFIL / ATAU DI BAWAH KONTROL) -->
+            <div id="miniMapContainer" class="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 flex flex-col items-start">
+                <button id="miniMapToggleBtn" onclick="toggleMiniMap()" class="relative w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-slate-800 hover:bg-slate-700 border-2 border-yellow-400 text-yellow-400 shadow-2xl flex items-center justify-center text-base sm:text-xl transition-all hover:scale-105 active:scale-95">
+                    <i class="fas fa-map"></i>
+                </button>
             </div>
 
-            <!-- ANALOG PS-STYLE KECIL (TANPA PANAH) & TOMBOL AKSI BERDEMPETAN DI KIRI BAWAH -->
-            <div class="absolute bottom-2 left-2 z-30 flex items-end gap-0">
-                <div id="psAnalogStick" class="relative w-16 h-16 bg-gradient-to-b from-slate-700 to-slate-900 rounded-full border-2 border-slate-500 shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
-                    <div id="analogKnob" class="w-8 h-8 rounded-full bg-gradient-to-b from-slate-600 to-slate-800 border border-slate-400 shadow-inner flex items-center justify-center transform transition-transform duration-75">
-                        <div class="w-3 h-3 rounded-full bg-slate-500 shadow-sm flex items-center justify-center">
-                            <div class="w-1 h-1 rounded-full bg-yellow-400"></div>
+            <!-- POPUP MINI MAP DI TENGAH LAYAR SAAT DIBUKA -->
+            <div id="miniMapPopup" class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden" onclick="if(event.target === this) closeMiniMap()">
+                <div class="w-full max-w-md bg-slate-900 border-2 border-yellow-400 rounded-3xl p-5 shadow-2xl text-white flex flex-col" onmouseenter="pauseMiniMapTimer()" onmouseleave="resetMiniMapTimer()">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-700 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-map-location-dot text-yellow-400 text-lg"></i>
+                            <span class="font-bold text-sm sm:text-base text-yellow-400">Mini Map Sekolah</span>
+                        </div>
+                        <button onclick="closeMiniMap()" class="text-slate-400 hover:text-white text-base bg-slate-800 w-8 h-8 rounded-full flex items-center justify-center border border-slate-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="w-full h-64 sm:h-80 bg-slate-950 relative flex items-center justify-center rounded-2xl overflow-hidden border-2 border-slate-700">
+                        <canvas id="miniMapCanvas" class="w-full h-full block"></canvas>
+                    </div>
+                    <p class="text-[11px] text-slate-400 text-center mt-3">Peta akan menutup otomatis dalam 10 detik atau klik tombol X.</p>
+                </div>
+            </div>
+
+            <!-- ANALOG PS-STYLE DIPERBESAR & TOMBOL AKSI BERDEMPETAN DI KIRI BAWAH -->
+            <div class="absolute bottom-3 left-3 z-30 flex items-end gap-1">
+                <div id="psAnalogStick" class="relative w-20 h-20 bg-gradient-to-b from-slate-700 to-slate-900 rounded-full border-2 border-slate-500 shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
+                    <div id="analogKnob" class="w-10 h-10 rounded-full bg-gradient-to-b from-slate-600 to-slate-800 border border-slate-400 shadow-inner flex items-center justify-center transform transition-transform duration-75">
+                        <div class="w-4 h-4 rounded-full bg-slate-500 shadow-sm flex items-center justify-center">
+                            <div class="w-1.5 h-1.5 rounded-full bg-yellow-400"></div>
                         </div>
                     </div>
                 </div>
 
-                <button id="btnInteract" onclick="triggerInteraction()" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-[9px] shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
-                    <i class="fas fa-hand-pointer text-[10px]"></i>
-                    <span class="text-[8px] leading-none">AKSI</span>
+                <button id="btnInteract" onclick="triggerInteraction()" class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-[10px] shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
+                    <i class="fas fa-hand-pointer text-xs"></i>
+                    <span class="text-[9px] leading-none mt-0.5">AKSI</span>
                 </button>
             </div>
 
@@ -313,27 +297,16 @@
             }
         }
 
-        // KUMPULAN ASET IMAGES
-        // Sistem ini mendukung 4 GERAKAN / ARAH UTAMA per karakter (1 Foto 1 Gerakan):
-        // 1. DOWN  (Jalan/Menghadap ke depan/bawah)
-        // 2. UP    (Jalan/Menghadap ke belakang/atas)
-        // 3. LEFT  (Jalan/Menghadap ke kiri)
-        // 4. RIGHT (Jalan/Menghadap ke kanan)
         const ASSETS = {
             tree: new Image(),
-            
-            // 4 Gerakan Foto Terpisah Karakter Laki-laki (Ali):
             male_down: new Image(),
             male_up: new Image(),
             male_left: new Image(),
             male_right: new Image(),
-
-            // 4 Gerakan Foto Terpisah Karakter Perempuan (Aisyah):
             female_down: new Image(),
             female_up: new Image(),
             female_left: new Image(),
             female_right: new Image(),
-
             kelas: new Image(),
             perpus: new Image(),
             gor: new Image(),
@@ -343,18 +316,14 @@
         };
 
         ASSETS.tree.src = 'assets/tree.png';
-
-        // Path gambar individual 1 foto 1 gerakan:
         ASSETS.male_down.src = 'assets/male_down.png';
         ASSETS.male_up.src = 'assets/male_up.png';
         ASSETS.male_left.src = 'assets/male_left.png';
         ASSETS.male_right.src = 'assets/male_right.png';
-
         ASSETS.female_down.src = 'assets/female_down.png';
         ASSETS.female_up.src = 'assets/female_up.png';
         ASSETS.female_left.src = 'assets/female_left.png';
         ASSETS.female_right.src = 'assets/female_right.png';
-
         ASSETS.kelas.src = 'assets/kelas.png';
         ASSETS.perpus.src = 'assets/perpus.png';
         ASSETS.gor.src = 'assets/gor.png';
@@ -371,17 +340,14 @@
         };
 
         ASSETS.tree.onload = () => assetsLoaded.tree = true;
-
         ASSETS.male_down.onload = () => assetsLoaded.male_down = true;
         ASSETS.male_up.onload = () => assetsLoaded.male_up = true;
         ASSETS.male_left.onload = () => assetsLoaded.male_left = true;
         ASSETS.male_right.onload = () => assetsLoaded.male_right = true;
-
         ASSETS.female_down.onload = () => assetsLoaded.female_down = true;
         ASSETS.female_up.onload = () => assetsLoaded.female_up = true;
         ASSETS.female_left.onload = () => assetsLoaded.female_left = true;
         ASSETS.female_right.onload = () => assetsLoaded.female_right = true;
-
         ASSETS.kelas.onload = () => assetsLoaded.kelas = true;
         ASSETS.perpus.onload = () => assetsLoaded.perpus = true;
         ASSETS.gor.onload = () => assetsLoaded.gor = true;
@@ -397,6 +363,7 @@
         let walkTimer = 0;
         let tempModalGender = null;
         let nearbyBuilding = null;
+        let isGameStarted = false;
 
         function handleLogin(e) {
             e.preventDefault();
@@ -438,7 +405,11 @@
                 generateTrees();
                 setupGameEvents();
                 addChatMessage(playerCustomName, `Halo semuanya, ${playerCustomName} (${playerRole}) siap bergabung! 😊`, true);
-                requestAnimationFrame(gameLoop);
+                
+                if (!isGameStarted) {
+                    isGameStarted = true;
+                    requestAnimationFrame(gameLoop);
+                }
             } else {
                 errorMsg.innerText = `Nama "${inputUsername}" tidak terdaftar di Sheet Login!`;
                 errorMsg.classList.remove('hidden');
@@ -492,6 +463,12 @@
         let chatTimer = null;
         let isTypingOrHovered = false;
         const autoHideDelay = 5000;
+
+        let isMiniMapOpen = false;
+        let miniMapTimer = null;
+        let isMiniMapHovered = false;
+        const miniMapAutoHideDelay = 10000; // 10 detik
+
         let playerSpeechBubble = null;
 
         const trees = [];
@@ -533,7 +510,7 @@
         const MAP_HEIGHT = 1200;
 
         function getAdaptiveZoom() {
-            return 0.85;
+            return 0.85; // Skala zoom konsisten di semua devices (desktop & seluler)
         }
 
         const player = {
@@ -543,21 +520,16 @@
 
         const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false };
 
-        // RENDER KARAKTER: MURNI MENGGUNAKAN FOTO TERPISAH PER-GERAKAN ATAU VEKTOR FALLBACK
         function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
             c.save();
-
-            // Efek berayun naik-turun dan miring halus saat melangkah
             const isWalking = (dir !== 'idle');
             const bounceY = isWalking ? Math.sin(walkStep * 0.4) * 3 : 0;
             const tiltAngle = isWalking ? Math.sin(walkStep * 0.2) * 0.08 : 0;
             const drawY = y + bounceY;
 
-            // Ambil foto spesifik gerakan (male_down, male_up, male_left, male_right)
             const poseKey = `${gender}_${dir === 'idle' ? 'down' : dir}`;
             const hasPoseImage = ASSETS[poseKey] && assetsLoaded[poseKey];
 
-            // Draw Bayangan
             c.fillStyle = 'rgba(0,0,0,0.25)';
             c.beginPath();
             c.ellipse(x + width / 2, y + height - 2, width * 0.32, 6, 0, 0, Math.PI * 2);
@@ -568,17 +540,13 @@
             const localX = -width / 2;
             const localY = -height / 2;
 
-            // Jika foto per gerakan tersedia di folder assets/
             if (hasPoseImage) {
-                const img = ASSETS[poseKey];
-                c.drawImage(img, localX, localY, width, height);
+                c.drawImage(ASSETS[poseKey], localX, localY, width, height);
                 c.restore();
                 return;
             }
 
-            // Fallback Vector Rendering jika foto belum disiapkan di folder
             const isFemale = (gender === 'female');
-
             if (isFemale) {
                 c.fillStyle = '#b91c1c';
                 c.fillRect(localX + width * 0.25, localY + height * 0.45, width * 0.5, height * 0.43);
@@ -597,11 +565,8 @@
             c.restore();
         }
 
-        // Render Vektor Khusus Taman (Jika foto/aset taman tidak termuat)
         function drawGardenVector(c, bx, by, width, height) {
             c.save();
-            
-            // Rumput Dasar Taman
             c.fillStyle = '#4ade80';
             c.beginPath();
             c.roundRect(bx, by, width, height, 24);
@@ -610,7 +575,6 @@
             c.lineWidth = 5;
             c.stroke();
 
-            // Jalan Setapak Batu Oval
             c.fillStyle = '#e2e8f0';
             const pathPoints = [
                 {x: bx + 40, y: by + height - 30},
@@ -623,7 +587,6 @@
                 c.fill();
             });
 
-            // Bangku Taman
             const benchX = bx + width * 0.25;
             const benchY = by + height * 0.3;
             c.fillStyle = '#78350f';
@@ -632,7 +595,6 @@
             c.fillRect(benchX + 5, benchY + 24, 8, 12);
             c.fillRect(benchX + 67, benchY + 24, 8, 12);
 
-            // Bunga-Bunga Dekoratif
             const flowerColors = ['#f43f5e', '#ec4899', '#a855f7', '#3b82f6', '#f59e0b'];
             const flowerPositions = [
                 {x: bx + 50, y: by + 50},
@@ -656,7 +618,6 @@
                 c.arc(fp.x, fp.y, 5, 0, Math.PI * 2);
                 c.fill();
             });
-
             c.restore();
         }
 
@@ -688,9 +649,8 @@
                 ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                const imgAsset = ASSETS[b.id];
                 if (assetsLoaded[b.id]) {
-                    ctx.drawImage(imgAsset, bx, by, b.width, b.height);
+                    ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
                 } else {
                     if (b.id === 'taman' || b.isZone) {
                         drawGardenVector(ctx, bx, by, b.width, b.height);
@@ -969,6 +929,43 @@
             if (chatTimer) clearTimeout(chatTimer);
         }
 
+        function pauseMiniMapTimer() {
+            isMiniMapHovered = true;
+            if (miniMapTimer) {
+                clearTimeout(miniMapTimer);
+                miniMapTimer = null;
+            }
+        }
+
+        function resetMiniMapTimer() {
+            isMiniMapHovered = false;
+            if (miniMapTimer) clearTimeout(miniMapTimer);
+            if (isMiniMapOpen) {
+                miniMapTimer = setTimeout(() => {
+                    if (!isMiniMapHovered) {
+                        closeMiniMap();
+                    }
+                }, miniMapAutoHideDelay);
+            }
+        }
+
+        function toggleMiniMap() {
+            if (isMiniMapOpen) closeMiniMap();
+            else openMiniMap();
+        }
+
+        function openMiniMap() {
+            isMiniMapOpen = true;
+            document.getElementById('miniMapPopup').classList.remove('hidden');
+            resetMiniMapTimer();
+        }
+
+        function closeMiniMap() {
+            isMiniMapOpen = false;
+            document.getElementById('miniMapPopup').classList.add('hidden');
+            if (miniMapTimer) clearTimeout(miniMapTimer);
+        }
+
         function updateChatBadge() {
             const badge = document.getElementById('chatBadge');
             if (!badge) return;
@@ -1028,8 +1025,10 @@
         function gameLoop() {
             updateGame();
 
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+            if (canvas.parentElement) {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            }
 
             const currentZoomScale = getAdaptiveZoom();
             const viewWidth = canvas.width / currentZoomScale;
@@ -1144,7 +1143,9 @@
                 }
             });
 
-            renderMiniMap();
+            if (isMiniMapOpen) {
+                renderMiniMap();
+            }
             requestAnimationFrame(gameLoop);
         }
 
@@ -1155,7 +1156,7 @@
 
             let isDragging = false;
             let centerPos = { x: 0, y: 0 };
-            const maxRadius = 22;
+            const maxRadius = 26;
 
             const handleStart = (e) => {
                 e.preventDefault();
@@ -1259,6 +1260,7 @@
             closeEditCharacterModal();
             currentUserAccount = null;
             isAdminUser = false;
+            isGameStarted = false;
             
             document.getElementById('gameContainer').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
@@ -1276,10 +1278,6 @@
                 docEl.requestFullscreen().catch(() => {});
             } else if (docEl.webkitRequestFullscreen) {
                 docEl.webkitRequestFullscreen();
-            }
-
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(() => {});
             }
         }
 
