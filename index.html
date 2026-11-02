@@ -465,7 +465,7 @@
             { id: 'gor', name: 'Gedung Olahraga', icon: '🏀', x: 1100, y: 100, width: 420, height: 250, color: '#fed7aa', wallColor: '#f97316', roofColor: '#9a3412', dialogTitle: 'Gedung Olahraga (GOR)', dialogText: 'Area serbaguna untuk main basket dan bulu tangkis.', actionLabel: 'Olah Raga' },
             { id: 'mading', name: 'Mading Sekolah', icon: '📌', x: 1600, y: 150, width: 260, height: 180, color: '#fef3c7', wallColor: '#d97706', roofColor: '#78350f', dialogTitle: 'Mading Sekolah', dialogText: 'Papan informasi pengumuman lomba dan karya siswa.', actionLabel: 'Baca Pengumuman' },
             { id: 'warung', name: 'Warung Sekolah', icon: '🍜', x: 160, y: 800, width: 340, height: 250, color: '#fbcfe8', wallColor: '#ec4899', roofColor: '#9d174d', dialogTitle: 'Warung & Kantin Sekolah', dialogText: 'Aroma jajanan lezat seperti mi goreng dan es teh manis.', actionLabel: 'Beli Jajanan' },
-            { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, color: '#86efac', isZone: true, dialogTitle: 'Taman Bunga Sekolah', dialogText: 'Taman asri dengan bunga warna-warni untuk bersantai.', actionLabel: 'Bersantai' }
+            { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga Sekolah', dialogText: 'Taman asri dengan bunga warna-warni untuk bersantai.', actionLabel: 'Bersantai' }
         ];
 
         function generateTrees() {
@@ -505,7 +505,6 @@
 
         const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false };
 
-        // RENDER KARAKTER DARI SPRITESHEET YANG SUDAH DIPISAH PER FRAME
         function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
             c.save();
             const imgAsset = (gender === 'female') ? ASSETS.female : ASSETS.male;
@@ -517,27 +516,22 @@
                 const isSpritesheet = sheetW > 500;
 
                 if (isSpritesheet) {
-                    // Sprite asli tersusun rapat: 10 kolom x 4 baris.
-                    // Jangan menambahkan GAP karena ukuran gambar sudah terbagi
-                    // rata menjadi 10 frame mendatar dan 4 frame tegak.
                     const COLS = 10;
                     const ROWS = 4;
                     const cellWidth = sheetW / COLS;
                     const cellHeight = sheetH / ROWS;
 
-                    let rowIndex = 3; // Baris 4: tampak depan
-                    if (dir === 'right') rowIndex = 0; // Baris 1: menghadap kanan
-                    else if (dir === 'left') rowIndex = 1; // Baris 2: menghadap kiri
-                    else if (dir === 'up') rowIndex = 2; // Baris 3: tampak belakang
-                    else if (dir === 'down') rowIndex = 3; // Baris 4: tampak depan
+                    let rowIndex = 3;
+                    if (dir === 'right') rowIndex = 0;
+                    else if (dir === 'left') rowIndex = 1;
+                    else if (dir === 'up') rowIndex = 2;
+                    else if (dir === 'down') rowIndex = 3;
 
                     let colIndex = 0;
                     if (dir !== 'idle') {
                         colIndex = Math.floor(walkStep * 0.15) % COLS;
                     }
 
-                    // Batas setiap frame dihitung langsung dari ukuran gambar asli.
-                    // Inset 1 px hanya untuk menghindari garis tepi akibat pembulatan.
                     const inset = 0;
                     const cropX = colIndex * cellWidth + inset;
                     const cropY = rowIndex * cellHeight + inset;
@@ -549,7 +543,6 @@
                     c.ellipse(x + width / 2, y + height - 2, width * 0.32, 6, 0, 0, Math.PI * 2);
                     c.fill();
 
-                    // Batasi gambar pada kotak karakter.
                     c.beginPath();
                     c.rect(x, y, width, height);
                     c.clip();
@@ -565,7 +558,7 @@
                 return;
             }
 
-            // Fallback Vector Drawing
+            // Fallback Vector Drawing untuk Karakter
             c.fillStyle = 'rgba(0,0,0,0.25)';
             c.beginPath();
             c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2);
@@ -590,6 +583,69 @@
                 c.roundRect(x + width * 0.25, charY, width * 0.5, 14, 4);
                 c.fill();
             }
+            c.restore();
+        }
+
+        // Render Vektor Khusus Taman (Jika foto/aset taman tidak termuat)
+        function drawGardenVector(c, bx, by, width, height) {
+            c.save();
+            
+            // Rumput Dasar Taman
+            c.fillStyle = '#4ade80';
+            c.beginPath();
+            c.roundRect(bx, by, width, height, 24);
+            c.fill();
+            c.strokeStyle = '#22c55e';
+            c.lineWidth = 5;
+            c.stroke();
+
+            // Jalan Setapak Batu Oval
+            c.fillStyle = '#e2e8f0';
+            const pathPoints = [
+                {x: bx + 40, y: by + height - 30},
+                {x: bx + width / 2, y: by + height / 2},
+                {x: bx + width - 50, y: by + 40}
+            ];
+            pathPoints.forEach(p => {
+                c.beginPath();
+                c.ellipse(p.x, p.y, 25, 15, 0, 0, Math.PI * 2);
+                c.fill();
+            });
+
+            // Bangku Taman
+            const benchX = bx + width * 0.25;
+            const benchY = by + height * 0.3;
+            c.fillStyle = '#78350f';
+            c.fillRect(benchX, benchY, 80, 24);
+            c.fillStyle = '#451a03';
+            c.fillRect(benchX + 5, benchY + 24, 8, 12);
+            c.fillRect(benchX + 67, benchY + 24, 8, 12);
+
+            // Bunga-Bunga Dekoratif
+            const flowerColors = ['#f43f5e', '#ec4899', '#a855f7', '#3b82f6', '#f59e0b'];
+            const flowerPositions = [
+                {x: bx + 50, y: by + 50},
+                {x: bx + 120, y: by + 65},
+                {x: bx + width - 60, y: by + height - 60},
+                {x: bx + width - 120, y: by + height - 40},
+                {x: bx + 70, y: by + height - 80},
+                {x: bx + width - 80, y: by + 80}
+            ];
+
+            flowerPositions.forEach((fp, index) => {
+                c.fillStyle = flowerColors[index % flowerColors.length];
+                for (let a = 0; a < 5; a++) {
+                    const angle = (a * Math.PI * 2) / 5;
+                    c.beginPath();
+                    c.arc(fp.x + Math.cos(angle) * 7, fp.y + Math.sin(angle) * 7, 5, 0, Math.PI * 2);
+                    c.fill();
+                }
+                c.fillStyle = '#fef08a';
+                c.beginPath();
+                c.arc(fp.x, fp.y, 5, 0, Math.PI * 2);
+                c.fill();
+            });
+
             c.restore();
         }
 
@@ -621,18 +677,12 @@
                 ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                if (b.isZone) {
-                    ctx.fillStyle = b.color;
-                    ctx.beginPath();
-                    ctx.roundRect(bx, by, b.width, b.height, 24);
-                    ctx.fill();
-                    ctx.strokeStyle = '#4ade80';
-                    ctx.lineWidth = 4;
-                    ctx.stroke();
+                const imgAsset = ASSETS[b.id];
+                if (assetsLoaded[b.id]) {
+                    ctx.drawImage(imgAsset, bx, by, b.width, b.height);
                 } else {
-                    const imgAsset = ASSETS[b.id];
-                    if (assetsLoaded[b.id]) {
-                        ctx.drawImage(imgAsset, bx, by, b.width, b.height);
+                    if (b.id === 'taman' || b.isZone) {
+                        drawGardenVector(ctx, bx, by, b.width, b.height);
                     } else {
                         ctx.fillStyle = b.roofColor;
                         ctx.beginPath();
@@ -721,7 +771,6 @@
                 miniMapCtx.fillStyle = b.roofColor || '#eab308';
                 miniMapCtx.fillRect(b.x * scaleX, b.y * scaleY, b.width * scaleX, b.height * scaleY);
 
-                // LABEL NAMA TEMPAT DI MINI MAP
                 miniMapCtx.save();
                 miniMapCtx.fillStyle = '#ffffff';
                 miniMapCtx.font = 'bold 7px Fredoka';
