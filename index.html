@@ -1125,7 +1125,12 @@
             const text = input.value.trim();
             if (text.length === 0) return;
 
-            addChatMessage(playerCustomName || "Saya", text, true);
+            // Panggil event kirim obrolan Firebase jika tersedia
+            if (window.sendFirebaseChat) {
+                window.sendFirebaseChat(playerCustomName || "Saya", text);
+            } else {
+                addChatMessage(playerCustomName || "Saya", text, true);
+            }
             input.value = "";
             resetChatTimer();
         }
@@ -1151,6 +1156,65 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawMap(cameraX, cameraY, currentZoomScale);
+
+            // RENDER KARAKTER PEMAIN LAIN DI PETA (Z-INDEX BOTTOM TO TOP)
+            if (window.otherPlayers) {
+                Object.keys(window.otherPlayers).forEach(id => {
+                    const pData = window.otherPlayers[id];
+                    if (!pData || pData.x === undefined || pData.y === undefined) return;
+
+                    ctx.save();
+                    ctx.scale(currentZoomScale, currentZoomScale);
+                    const oScreenX = pData.x - cameraX - player.width / 2;
+                    const oScreenY = pData.y - cameraY - player.height / 2;
+                    
+                    // Gambar Bayangan Pemain Lain
+                    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+                    ctx.beginPath();
+                    ctx.ellipse(oScreenX + player.width / 2, oScreenY + player.height - 2, player.width * 0.32, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Gambar Sprite Karakter Pemain Lain
+                    drawCharacterSprite(ctx, oScreenX, oScreenY, player.width, player.height, pData.gender || 'male', pData.direction || 'down', walkTimer);
+
+                    // Name Tag Pemain Lain (Warna Biru Cerah & Jelas)
+                    const oNameCenterX = pData.x - cameraX;
+                    const oNameY = oScreenY - 10;
+
+                    ctx.font = 'bold 12px Fredoka';
+                    const oNameText = pData.name || "Pemain";
+                    const oRoleText = pData.role || "SISWA";
+                    
+                    const oNameWidth = ctx.measureText(oNameText).width;
+                    ctx.font = 'bold 9px Fredoka';
+                    const oRoleWidth = oRoleText ? ctx.measureText(oRoleText).width : 0;
+                    const oMaxTextWidth = Math.max(oNameWidth, oRoleWidth);
+                    const oNameBoxW = oMaxTextWidth + 20;
+                    const oNameBoxH = oRoleText ? 28 : 18;
+
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                    ctx.beginPath();
+                    ctx.roundRect(oNameCenterX - oNameBoxW / 2, oNameY - oNameBoxH, oNameBoxW, oNameBoxH, 8);
+                    ctx.fill();
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.font = 'bold 12px Fredoka';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(oNameText, oNameCenterX, oNameY - oNameBoxH + 3);
+
+                    if (oRoleText) {
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.font = 'bold 9px Fredoka';
+                        ctx.fillText(oRoleText, oNameCenterX, oNameY - oNameBoxH + 16);
+                    }
+
+                    ctx.restore();
+                });
+            }
 
             trees.forEach(tree => {
                 if (tree.y <= player.y) {
@@ -1384,10 +1448,10 @@
         };
     </script>
 
-    <!-- INTEGRASI FIREBASE REALTIME ONLINE (PLAYER MOVEMENT & ONLINE STATUS) -->
+    <!-- INTEGRASI FIREBASE REALTIME ONLINE (PLAYER MOVEMENT, CHAT, & ONLINE LIST) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, push, onValue, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDDPcwN1blpYQ6fsknQbZMsort-bAOASW8",
@@ -1404,38 +1468,37 @@
 
         let myPlayerRef = null;
         let myPlayerId = null;
-        let otherPlayers = {};
+        window.otherPlayers = {};
+        window.onlinePlayersList = [];
 
-        // Pantau seluruh pemain yang sedang terhubung ke Firebase Realtime Database
+        // 1. MONITORING PEMAIN ONLINE REALTIME
         const playersRef = ref(db, 'players');
         onValue(playersRef, (snapshot) => {
             const data = snapshot.val() || {};
             const currentPlayersList = [];
+            window.otherPlayers = {};
 
-            // Bersihkan objek pemain lain
-            otherPlayers = {};
+            Object.entries(data).forEach(([id, p]) => {
+                if (!p) return;
 
-            Object.keys(data).forEach(id => {
-                const playerData = data[id];
-                if (myPlayerId && id === myPlayerId) {
-                    currentPlayersList.push({
-                        name: playerCustomName || playerData.name,
-                        gender: selectedGender || playerData.gender,
-                        role: playerRole || playerData.role,
-                        isMe: true
-                    });
-                } else {
-                    otherPlayers[id] = playerData;
-                    currentPlayersList.push({
-                        name: playerData.name || 'Pemain Lain',
-                        gender: playerData.gender || 'male',
-                        role: playerData.role || 'SISWA',
-                        isMe: false
-                    });
+                const isMe = (myPlayerId && id === myPlayerId);
+                const pName = p.name || 'Pemain Tanpa Nama';
+                const pGender = p.gender || 'male';
+                const pRole = p.role || 'SISWA';
+
+                currentPlayersList.push({
+                    id: id,
+                    name: pName,
+                    gender: pGender,
+                    role: pRole,
+                    isMe: isMe
+                });
+
+                if (!isMe) {
+                    window.otherPlayers[id] = p;
                 }
             });
 
-            // Update variabel & indikator UI Online
             window.onlinePlayersList = currentPlayersList;
             
             const countText = document.getElementById('onlineCountText');
@@ -1443,21 +1506,56 @@
                 countText.innerText = `${currentPlayersList.length} Online`;
             }
 
-            // Jika modal sedang terbuka, perbarui isinya
-            if (document.getElementById('onlinePlayersModal') && !document.getElementById('onlinePlayersModal').classList.contains('hidden')) {
+            // Perbarui tampilan pop-up jika sedang terbuka
+            const modal = document.getElementById('onlinePlayersModal');
+            if (modal && !modal.classList.contains('hidden')) {
                 window.updateOnlineCount();
             }
         });
 
-        // Patch fungsi updateOnlineCount agar membaca dari list Firebase Realtime
+        // 2. MONITORING OBROLAN (REALTIME CHAT)
+        const chatsRef = ref(db, 'chats');
+        onValue(chatsRef, (snapshot) => {
+            const chats = snapshot.val() || {};
+            const chatContainer = document.getElementById('chatMessages');
+            if (!chatContainer) return;
+
+            chatContainer.innerHTML = '';
+            Object.keys(chats).forEach(key => {
+                const msg = chats[key];
+                if (msg && msg.sender && msg.text) {
+                    const isPlayer = (msg.sender === playerCustomName);
+                    addChatMessage(msg.sender, msg.text, isPlayer);
+                }
+            });
+        });
+
+        // Fungsi Mengirim Chat ke Firebase
+        window.sendFirebaseChat = function(sender, text) {
+            const newChatRef = push(ref(db, 'chats'));
+            set(newChatRef, {
+                sender: sender,
+                text: text,
+                timestamp: Date.now()
+            });
+        };
+
+        // Render UI Daftar Pemain Online di Modal
         window.updateOnlineCount = function() {
             const listContainer = document.getElementById('onlinePlayersList');
-            if (!listContainer || !window.onlinePlayersList) return;
+            if (!listContainer) return;
 
-            listContainer.innerHTML = window.onlinePlayersList.map(p => `
+            const listData = window.onlinePlayersList || [];
+
+            if (listData.length === 0) {
+                listContainer.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">Belum ada pemain lain online.</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = listData.map(p => `
                 <div class="flex items-center justify-between bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-2xl">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center text-sm shadow">
+                        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center text-sm shadow shrink-0">
                             ${p.gender === 'female' ? '🧕' : '👦'}
                         </div>
                         <div>
@@ -1467,7 +1565,7 @@
                             <div class="text-[10px] text-slate-300 font-medium">${p.role}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60 shrink-0">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         Online
                     </div>
@@ -1475,34 +1573,32 @@
             `).join('');
         };
 
-        // Inisialisasi koneksi pemain ke Firebase saat login berhasil
+        // Inisialisasi Player di Firebase saat login
         const origHandleLogin = window.handleLogin;
         window.handleLogin = function(e) {
             origHandleLogin(e);
             if (currentUserAccount && isGameStarted) {
-                myPlayerId = playerCustomName.replace(/[^a-zA-Z0-9]/g, "_");
+                const safeName = playerCustomName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+                myPlayerId = `user_${safeName}_${Date.now().toString().slice(-5)}`;
                 myPlayerRef = ref(db, `players/${myPlayerId}`);
 
-                // Daftarkan aksi hapus data otomatis jika pemain disconnect / tutup browser
                 onDisconnect(myPlayerRef).remove();
 
-                // Simpan posisi awal di Firebase
                 set(myPlayerRef, {
                     name: playerCustomName,
                     gender: selectedGender,
                     role: playerRole,
-                    x: player.x,
-                    y: player.y,
+                    x: Math.round(player.x),
+                    y: Math.round(player.y),
                     direction: player.direction
                 });
             }
         };
 
-        // Sync pergerakan lokal ke Firebase dan Render Pemain Lain di Canvas
+        // Loop Sinkronisasi Koordinat Player Saat Ini
         const origGameLoop = window.gameLoop;
         window.gameLoop = function() {
             if (myPlayerRef && isGameStarted) {
-                // Upload koordinat pemain kita sendiri secara realtime ke Firebase
                 set(myPlayerRef, {
                     name: playerCustomName,
                     gender: selectedGender,
@@ -1514,71 +1610,8 @@
             }
 
             origGameLoop();
-
-            // Gambar semua pemain lain yang sedang online di map
-            if (isGameStarted && window.ctx) {
-                const currentZoomScale = getAdaptiveZoom();
-                const viewWidth = canvas.width / currentZoomScale;
-                const viewHeight = canvas.height / currentZoomScale;
-
-                let cameraX = player.x - viewWidth / 2;
-                let cameraY = player.y - viewHeight / 2;
-                cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
-                cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
-
-                Object.keys(otherPlayers).forEach(id => {
-                    const pData = otherPlayers[id];
-                    if (!pData || !pData.x || !pData.y) return;
-
-                    ctx.save();
-                    ctx.scale(currentZoomScale, currentZoomScale);
-                    const oScreenX = pData.x - cameraX - player.width / 2;
-                    const oScreenY = pData.y - cameraY - player.height / 2;
-                    
-                    // Gambar Sprite Karakter Pemain Lain
-                    drawCharacterSprite(ctx, oScreenX, oScreenY, player.width, player.height, pData.gender || 'male', pData.direction || 'down', walkTimer);
-
-                    // Name Tag Pemain Lain (Warna Biru Cerah)
-                    const oNameCenterX = pData.x - cameraX;
-                    const oNameY = oScreenY - 10;
-
-                    ctx.font = 'bold 12px Fredoka';
-                    const oNameText = pData.name || "Pemain";
-                    const oRoleText = pData.role || "";
-                    
-                    const oNameWidth = ctx.measureText(oNameText).width;
-                    ctx.font = 'bold 9px Fredoka';
-                    const oRoleWidth = oRoleText ? ctx.measureText(oRoleText).width : 0;
-                    const oMaxTextWidth = Math.max(oNameWidth, oRoleWidth);
-                    const oNameBoxW = oMaxTextWidth + 20;
-                    const oNameBoxH = oRoleText ? 28 : 18;
-
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-                    ctx.beginPath();
-                    ctx.roundRect(oNameCenterX - oNameBoxW / 2, oNameY - oNameBoxH, oNameBoxW, oNameBoxH, 8);
-                    ctx.fill();
-                    ctx.strokeStyle = '#38bdf8';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#38bdf8';
-                    ctx.font = 'bold 12px Fredoka';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'top';
-                    ctx.fillText(oNameText, oNameCenterX, oNameY - oNameBoxH + 3);
-
-                    if (oRoleText) {
-                        ctx.fillStyle = '#cbd5e1';
-                        ctx.font = 'bold 9px Fredoka';
-                        ctx.fillText(oRoleText, oNameCenterX, oNameY - oNameBoxH + 16);
-                    }
-
-                    ctx.restore();
-                });
-            }
         };
 
-        // Hapus data dari Firebase ketika Logout
         const origHandleLogout = window.handleLogout;
         window.handleLogout = function() {
             if (myPlayerRef) {
