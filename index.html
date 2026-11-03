@@ -1403,6 +1403,7 @@
         const db = getDatabase(app);
 
         let myPlayerRef = null;
+        let myPlayerId = null;
         let otherPlayers = {};
 
         // Pantau seluruh pemain yang sedang terhubung ke Firebase Realtime Database
@@ -1416,7 +1417,7 @@
 
             Object.keys(data).forEach(id => {
                 const playerData = data[id];
-                if (myPlayerRef && id === myPlayerRef.key) {
+                if (myPlayerId && id === myPlayerId) {
                     currentPlayersList.push({
                         name: playerCustomName || playerData.name,
                         gender: selectedGender || playerData.gender,
@@ -1440,6 +1441,11 @@
             const countText = document.getElementById('onlineCountText');
             if (countText) {
                 countText.innerText = `${currentPlayersList.length} Online`;
+            }
+
+            // Jika modal sedang terbuka, perbarui isinya
+            if (document.getElementById('onlinePlayersModal') && !document.getElementById('onlinePlayersModal').classList.contains('hidden')) {
+                window.updateOnlineCount();
             }
         });
 
@@ -1474,8 +1480,8 @@
         window.handleLogin = function(e) {
             origHandleLogin(e);
             if (currentUserAccount && isGameStarted) {
-                const playerId = playerCustomName.replace(/[^a-zA-Z0-9]/g, "_") + "_" + Math.floor(Math.random() * 10000);
-                myPlayerRef = ref(db, `players/${playerId}`);
+                myPlayerId = playerCustomName.replace(/[^a-zA-Z0-9]/g, "_");
+                myPlayerRef = ref(db, `players/${myPlayerId}`);
 
                 // Daftarkan aksi hapus data otomatis jika pemain disconnect / tutup browser
                 onDisconnect(myPlayerRef).remove();
@@ -1532,7 +1538,7 @@
                     // Gambar Sprite Karakter Pemain Lain
                     drawCharacterSprite(ctx, oScreenX, oScreenY, player.width, player.height, pData.gender || 'male', pData.direction || 'down', walkTimer);
 
-                    // Name Tag Pemain Lain
+                    // Name Tag Pemain Lain (Warna Biru Cerah)
                     const oNameCenterX = pData.x - cameraX;
                     const oNameY = oScreenY - 10;
 
@@ -1578,6 +1584,7 @@
             if (myPlayerRef) {
                 remove(myPlayerRef);
                 myPlayerRef = null;
+                myPlayerId = null;
             }
             origHandleLogout();
         };
