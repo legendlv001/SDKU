@@ -405,14 +405,20 @@
         let onlinePlayersList = [];
 
         function updateOnlineCount() {
-            // Hanya memasukkan pemain yang sedang benar-benar login di perangkat ini
+            // Gunakan fungsi update online Firebase jika sudah terinisialisasi
+            if (window.renderFirebaseOnlineModal) {
+                window.renderFirebaseOnlineModal();
+                return;
+            }
+
             if (!playerCustomName) {
                 onlinePlayersList = [];
             } else {
                 onlinePlayersList = [{
                     name: playerCustomName,
                     gender: selectedGender,
-                    role: playerRole || "SISWA"
+                    role: playerRole || "SISWA",
+                    isMe: true
                 }];
             }
             
@@ -423,27 +429,31 @@
         }
 
         function openOnlinePlayersModal() {
-            updateOnlineCount();
-            const listContainer = document.getElementById('onlinePlayersList');
-            if (!listContainer) return;
-
-            listContainer.innerHTML = onlinePlayersList.map(p => `
-                <div class="flex items-center justify-between bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-2xl">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center text-sm shadow">
-                            ${p.gender === 'female' ? '🧕' : '👦'}
+            if (window.renderFirebaseOnlineModal) {
+                window.renderFirebaseOnlineModal();
+            } else {
+                updateOnlineCount();
+                const listContainer = document.getElementById('onlinePlayersList');
+                if (listContainer) {
+                    listContainer.innerHTML = onlinePlayersList.map(p => `
+                        <div class="flex items-center justify-between bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-2xl">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center text-sm shadow">
+                                    ${p.gender === 'female' ? '🧕' : '👦'}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-xs text-yellow-400 leading-tight">${p.name} <span class="text-[9px] text-emerald-400 font-semibold">(Anda)</span></div>
+                                    <div class="text-[10px] text-slate-300 font-medium">${p.role}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                Online
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-bold text-xs text-yellow-400 leading-tight">${p.name} <span class="text-[9px] text-emerald-400 font-semibold">(Anda)</span></div>
-                            <div class="text-[10px] text-slate-300 font-medium">${p.role}</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        Online
-                    </div>
-                </div>
-            `).join('');
+                    `).join('');
+                }
+            }
 
             document.getElementById('onlinePlayersModal').classList.remove('hidden');
         }
@@ -1481,7 +1491,7 @@
             Object.entries(data).forEach(([id, p]) => {
                 if (!p) return;
 
-                const isMe = (myPlayerId && id === myPlayerId);
+                const isMe = (myPlayerId && id === myPlayerId) || (p.name === playerCustomName);
                 const pName = p.name || 'Pemain Tanpa Nama';
                 const pGender = p.gender || 'male';
                 const pRole = p.role || 'SISWA';
@@ -1509,7 +1519,7 @@
             // Perbarui tampilan pop-up jika sedang terbuka
             const modal = document.getElementById('onlinePlayersModal');
             if (modal && !modal.classList.contains('hidden')) {
-                window.updateOnlineCount();
+                window.renderFirebaseOnlineModal();
             }
         });
 
@@ -1540,8 +1550,8 @@
             });
         };
 
-        // Render UI Daftar Pemain Online di Modal
-        window.updateOnlineCount = function() {
+        // Render UI Daftar Pemain Online di Modal khusus Firebase
+        window.renderFirebaseOnlineModal = function() {
             const listContainer = document.getElementById('onlinePlayersList');
             if (!listContainer) return;
 
