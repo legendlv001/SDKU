@@ -1383,5 +1383,204 @@
             fetchSpreadsheetUsers();
         };
     </script>
+
+    <!-- INTEGRASI FIREBASE REALTIME ONLINE (PLAYER MOVEMENT & ONLINE STATUS) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDDPcwN1blpYQ6fsknQbZMsort-bAOASW8",
+            authDomain: "sd-ku-fa156.firebaseapp.com",
+            databaseURL: "https://sd-ku-fa156-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sd-ku-fa156",
+            storageBucket: "sd-ku-fa156.firebasestorage.app",
+            messagingSenderId: "504435998356",
+            appId: "1:504435998356:web:ea0bd8ce43a4dba0913e81"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let myPlayerRef = null;
+        let otherPlayers = {};
+
+        // Pantau seluruh pemain yang sedang terhubung ke Firebase Realtime Database
+        const playersRef = ref(db, 'players');
+        onValue(playersRef, (snapshot) => {
+            const data = snapshot.val() || {};
+            const currentPlayersList = [];
+
+            // Bersihkan objek pemain lain
+            otherPlayers = {};
+
+            Object.keys(data).forEach(id => {
+                const playerData = data[id];
+                if (myPlayerRef && id === myPlayerRef.key) {
+                    currentPlayersList.push({
+                        name: playerCustomName || playerData.name,
+                        gender: selectedGender || playerData.gender,
+                        role: playerRole || playerData.role,
+                        isMe: true
+                    });
+                } else {
+                    otherPlayers[id] = playerData;
+                    currentPlayersList.push({
+                        name: playerData.name || 'Pemain Lain',
+                        gender: playerData.gender || 'male',
+                        role: playerData.role || 'SISWA',
+                        isMe: false
+                    });
+                }
+            });
+
+            // Update variabel & indikator UI Online
+            window.onlinePlayersList = currentPlayersList;
+            
+            const countText = document.getElementById('onlineCountText');
+            if (countText) {
+                countText.innerText = `${currentPlayersList.length} Online`;
+            }
+        });
+
+        // Patch fungsi updateOnlineCount agar membaca dari list Firebase Realtime
+        window.updateOnlineCount = function() {
+            const listContainer = document.getElementById('onlinePlayersList');
+            if (!listContainer || !window.onlinePlayersList) return;
+
+            listContainer.innerHTML = window.onlinePlayersList.map(p => `
+                <div class="flex items-center justify-between bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-2xl">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center text-sm shadow">
+                            ${p.gender === 'female' ? '🧕' : '👦'}
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-yellow-400 leading-tight">
+                                ${p.name} ${p.isMe ? '<span class="text-[9px] text-emerald-400 font-semibold">(Anda)</span>' : ''}
+                            </div>
+                            <div class="text-[10px] text-slate-300 font-medium">${p.role}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Online
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        // Inisialisasi koneksi pemain ke Firebase saat login berhasil
+        const origHandleLogin = window.handleLogin;
+        window.handleLogin = function(e) {
+            origHandleLogin(e);
+            if (currentUserAccount && isGameStarted) {
+                const playerId = playerCustomName.replace(/[^a-zA-Z0-9]/g, "_") + "_" + Math.floor(Math.random() * 10000);
+                myPlayerRef = ref(db, `players/${playerId}`);
+
+                // Daftarkan aksi hapus data otomatis jika pemain disconnect / tutup browser
+                onDisconnect(myPlayerRef).remove();
+
+                // Simpan posisi awal di Firebase
+                set(myPlayerRef, {
+                    name: playerCustomName,
+                    gender: selectedGender,
+                    role: playerRole,
+                    x: player.x,
+                    y: player.y,
+                    direction: player.direction
+                });
+            }
+        };
+
+        // Sync pergerakan lokal ke Firebase dan Render Pemain Lain di Canvas
+        const origGameLoop = window.gameLoop;
+        window.gameLoop = function() {
+            if (myPlayerRef && isGameStarted) {
+                // Upload koordinat pemain kita sendiri secara realtime ke Firebase
+                set(myPlayerRef, {
+                    name: playerCustomName,
+                    gender: selectedGender,
+                    role: playerRole,
+                    x: Math.round(player.x),
+                    y: Math.round(player.y),
+                    direction: player.direction
+                });
+            }
+
+            origGameLoop();
+
+            // Gambar semua pemain lain yang sedang online di map
+            if (isGameStarted && window.ctx) {
+                const currentZoomScale = getAdaptiveZoom();
+                const viewWidth = canvas.width / currentZoomScale;
+                const viewHeight = canvas.height / currentZoomScale;
+
+                let cameraX = player.x - viewWidth / 2;
+                let cameraY = player.y - viewHeight / 2;
+                cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, cameraX));
+                cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, cameraY));
+
+                Object.keys(otherPlayers).forEach(id => {
+                    const pData = otherPlayers[id];
+                    if (!pData || !pData.x || !pData.y) return;
+
+                    ctx.save();
+                    ctx.scale(currentZoomScale, currentZoomScale);
+                    const oScreenX = pData.x - cameraX - player.width / 2;
+                    const oScreenY = pData.y - cameraY - player.height / 2;
+                    
+                    // Gambar Sprite Karakter Pemain Lain
+                    drawCharacterSprite(ctx, oScreenX, oScreenY, player.width, player.height, pData.gender || 'male', pData.direction || 'down', walkTimer);
+
+                    // Name Tag Pemain Lain
+                    const oNameCenterX = pData.x - cameraX;
+                    const oNameY = oScreenY - 10;
+
+                    ctx.font = 'bold 12px Fredoka';
+                    const oNameText = pData.name || "Pemain";
+                    const oRoleText = pData.role || "";
+                    
+                    const oNameWidth = ctx.measureText(oNameText).width;
+                    ctx.font = 'bold 9px Fredoka';
+                    const oRoleWidth = oRoleText ? ctx.measureText(oRoleText).width : 0;
+                    const oMaxTextWidth = Math.max(oNameWidth, oRoleWidth);
+                    const oNameBoxW = oMaxTextWidth + 20;
+                    const oNameBoxH = oRoleText ? 28 : 18;
+
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                    ctx.beginPath();
+                    ctx.roundRect(oNameCenterX - oNameBoxW / 2, oNameY - oNameBoxH, oNameBoxW, oNameBoxH, 8);
+                    ctx.fill();
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.font = 'bold 12px Fredoka';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(oNameText, oNameCenterX, oNameY - oNameBoxH + 3);
+
+                    if (oRoleText) {
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.font = 'bold 9px Fredoka';
+                        ctx.fillText(oRoleText, oNameCenterX, oNameY - oNameBoxH + 16);
+                    }
+
+                    ctx.restore();
+                });
+            }
+        };
+
+        // Hapus data dari Firebase ketika Logout
+        const origHandleLogout = window.handleLogout;
+        window.handleLogout = function() {
+            if (myPlayerRef) {
+                remove(myPlayerRef);
+                myPlayerRef = null;
+            }
+            origHandleLogout();
+        };
+    </script>
 </body>
 </html>
