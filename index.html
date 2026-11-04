@@ -133,18 +133,18 @@
             <!-- ANALOG PS-STYLE DIPERBESAR & TOMBOL AKSI DI KIRI BAWAH -->
             <div class="absolute bottom-3 left-3 z-30 flex items-end gap-3">
                 <!-- ANALOG STICK DIPERBESAR -->
-                <div id="psAnalogStick" class="relative w-20 h-20 bg-gradient-to-b from-slate-700 to-slate-900 rounded-full border-2 border-slate-500 shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
-                    <div id="analogKnob" class="w-10 h-10 rounded-full bg-gradient-to-b from-slate-600 to-slate-800 border border-slate-400 shadow-inner flex items-center justify-center transform transition-transform duration-75">
-                        <div class="w-4 h-4 rounded-full bg-slate-500 shadow-sm flex items-center justify-center">
-                            <div class="w-1.5 h-1.5 rounded-full bg-yellow-400"></div>
+                <div id="psAnalogStick" class="relative w-28 h-28 bg-gradient-to-b from-slate-700 to-slate-900 rounded-full border-4 border-slate-500 shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
+                    <div id="analogKnob" class="w-14 h-14 rounded-full bg-gradient-to-b from-slate-600 to-slate-800 border-2 border-slate-400 shadow-inner flex items-center justify-center transform transition-transform duration-75">
+                        <div class="w-6 h-6 rounded-full bg-slate-500 shadow-sm flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- TOMBOL AKSI DIPERBESAR -->
-                <button id="btnInteract" onclick="triggerInteraction()" class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
-                    <i class="fas fa-hand-pointer text-sm mb-0.5"></i>
-                    <span class="text-[9px] font-black leading-none">AKSI</span>
+                <button id="btnInteract" onclick="triggerInteraction()" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
+                    <i class="fas fa-hand-pointer text-base sm:text-lg mb-0.5"></i>
+                    <span class="text-[10px] font-black leading-none">AKSI</span>
                 </button>
             </div>
 
@@ -401,6 +401,42 @@
         let nearbyBuilding = null;
         let isGameStarted = false;
 
+        // INACTIVITY / IDLE TIMER (10 MENIT AUTO LOGOUT)
+        let idleTimer = null;
+        const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 menit dalam milidetik
+
+        function resetIdleTimer() {
+            if (!isGameStarted) return;
+            if (idleTimer) clearTimeout(idleTimer);
+            
+            idleTimer = setTimeout(() => {
+                triggerAutoLogout();
+            }, IDLE_TIMEOUT_MS);
+        }
+
+        function triggerAutoLogout() {
+            if (!isGameStarted) return;
+            
+            // Tampilkan pesan pemberitahuan
+            const errorMsg = document.getElementById('loginErrorMsg');
+            if (errorMsg) {
+                errorMsg.innerText = "Anda telah dikeluarkan otomatis dari permainan karena tidak ada aktivitas (inaktif) selama 10 menit.";
+                errorMsg.classList.remove('hidden');
+            }
+
+            // Eksekusi fungsi logout
+            handleLogout();
+        }
+
+        function setupInactivityListeners() {
+            const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'click', 'scroll'];
+            activityEvents.forEach(eventType => {
+                window.addEventListener(eventType, () => {
+                    resetIdleTimer();
+                }, { passive: true });
+            });
+        }
+
         // DAFTAR PEMAIN ONLINE (HANYA PEMAIN AKTIF)
         let onlinePlayersList = [];
 
@@ -553,6 +589,8 @@
             });
 
             setupTouchAnalogStick();
+            setupInactivityListeners();
+            resetIdleTimer();
         }
 
         let isChatOpen = false;
@@ -1041,7 +1079,12 @@
                 default: actionText = `Sedang berada di ${b.name}`;
             }
 
-            addChatMessage(playerCustomName, actionText, true);
+            // Kirim aksi bangunan ke Firebase Chat
+            if (window.sendFirebaseChat) {
+                window.sendFirebaseChat(playerCustomName, actionText);
+            } else {
+                addChatMessage(playerCustomName, actionText, true);
+            }
         }
 
         function pauseChatTimer() {
@@ -1076,6 +1119,14 @@
             unreadCount = 0;
             updateChatBadge();
             resetChatTimer();
+
+            // Scroll otomatis ke posisi paling bawah saat kotak chat dibuka
+            setTimeout(() => {
+                const chatMessages = document.getElementById('chatMessages');
+                if (chatMessages) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }, 50);
         }
 
         function closeChat() {
@@ -1124,9 +1175,8 @@
                 resetChatTimer();
             }
 
-            if (isPlayer) {
-                playerSpeechBubble = { text: text, timer: Date.now() + 4000 };
-            }
+            // PENGISIAN SPEECH BUBBLE DARI LOKAL DIHAPUS 
+            // AGAR TIDAK TERDUPLIKASI SAAT FIREBASE CHAT LISTENER DIPANGGIL
         }
 
         function sendChatMessage() {
@@ -1220,6 +1270,49 @@
                         ctx.fillStyle = '#cbd5e1';
                         ctx.font = 'bold 9px Fredoka';
                         ctx.fillText(oRoleText, oNameCenterX, oNameY - oNameBoxH + 16);
+                    }
+
+                    // Render Speech Bubble Pemain Lain (Validasi Khusus ID Pengirim)
+                    const playerBubble = (window.otherPlayersBubbles && window.otherPlayersBubbles[id] && (id === pData.id)) ? window.otherPlayersBubbles[id] : null;
+                    if (playerBubble && Date.now() < playerBubble.timer) {
+                        const obText = playerBubble.text;
+                        const oBubbleX = pData.x - cameraX;
+                        const oBubbleY = oNameY - oNameBoxH - 12;
+
+                        ctx.font = 'bold 13px Fredoka';
+                        const obTextWidth = ctx.measureText(obText).width;
+                        const obPadding = 12;
+                        const obBoxWidth = Math.max(70, obTextWidth + obPadding * 2);
+                        const obBoxHeight = 28;
+
+                        ctx.save();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.strokeStyle = '#38bdf8';
+                        ctx.lineWidth = 2.5;
+                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                        ctx.shadowBlur = 6;
+
+                        ctx.beginPath();
+                        ctx.roundRect(oBubbleX - obBoxWidth / 2, oBubbleY - obBoxHeight, obBoxWidth, obBoxHeight, 10);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.moveTo(oBubbleX - 6, oBubbleY);
+                        ctx.lineTo(oBubbleX, oBubbleY + 7);
+                        ctx.lineTo(oBubbleX + 6, oBubbleY);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(oBubbleX - 5, oBubbleY - 2, 10, 3);
+
+                        ctx.fillStyle = '#1e293b';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(obText, oBubbleX, oBubbleY - obBoxHeight / 2);
+                        ctx.restore();
                     }
 
                     ctx.restore();
@@ -1337,7 +1430,7 @@
 
             let isDragging = false;
             let centerPos = { x: 0, y: 0 };
-            const maxRadius = 28;
+            const maxRadius = 40;
 
             const handleStart = (e) => {
                 e.preventDefault();
@@ -1363,10 +1456,10 @@
 
                 knob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
 
-                keys.ArrowLeft = deltaX < -6;
-                keys.ArrowRight = deltaX > 6;
-                keys.ArrowUp = deltaY < -6;
-                keys.ArrowDown = deltaY > 6;
+                keys.ArrowLeft = deltaX < -8;
+                keys.ArrowRight = deltaX > 8;
+                keys.ArrowUp = deltaY < -8;
+                keys.ArrowDown = deltaY > 8;
                 player.isMovingToTarget = false;
             };
 
@@ -1443,6 +1536,11 @@
             isAdminUser = false;
             isGameStarted = false;
             
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+                idleTimer = null;
+            }
+
             document.getElementById('gameContainer').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('loginUsername').value = "";
@@ -1480,8 +1578,10 @@
         let myPlayerId = null;
         window.otherPlayers = {};
         window.onlinePlayersList = [];
+        window.otherPlayersBubbles = {};
+        let lastProcessedChatTimestamp = Date.now();
 
-        // 1. MONITORING PEMAIN ONLINE REALTIME
+        // 1. MONITORING PEMAIN ONLINE REALTIME & RESET CHAT SAAT 0 ONLINE
         const playersRef = ref(db, 'players');
         onValue(playersRef, (snapshot) => {
             const data = snapshot.val() || {};
@@ -1510,6 +1610,11 @@
             });
 
             window.onlinePlayersList = currentPlayersList;
+
+            // RESET CHAT OTOMATIS BILA TIDAK ADA PEMAIN ONLINE SAMA SEKALI
+            if (currentPlayersList.length === 0) {
+                set(ref(db, 'chats'), null);
+            }
             
             const countText = document.getElementById('onlineCountText');
             if (countText) {
@@ -1523,7 +1628,7 @@
             }
         });
 
-        // 2. MONITORING OBROLAN (REALTIME CHAT)
+        // 2. MONITORING OBROLAN (REALTIME CHAT & SPEECH BUBBLES)
         const chatsRef = ref(db, 'chats');
         onValue(chatsRef, (snapshot) => {
             const chats = snapshot.val() || {};
@@ -1534,16 +1639,58 @@
             Object.keys(chats).forEach(key => {
                 const msg = chats[key];
                 if (msg && msg.sender && msg.text) {
-                    const isPlayer = (msg.sender === playerCustomName);
-                    addChatMessage(msg.sender, msg.text, isPlayer);
+                    const isPlayer = (msg.senderId && myPlayerId && msg.senderId === myPlayerId) || (msg.sender === playerCustomName);
+                    
+                    // Render pesan di dalam obrolan
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = `flex flex-col ${isPlayer ? 'items-end' : 'items-start'}`;
+
+                    const senderSpan = document.createElement('span');
+                    senderSpan.className = 'text-[10px] font-bold text-slate-400 mb-0.5 px-1';
+                    senderSpan.innerText = msg.sender;
+
+                    const bubbleDiv = document.createElement('div');
+                    bubbleDiv.className = `px-3 py-1.5 rounded-2xl max-w-[85%] text-xs ${
+                        isPlayer ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-200 text-slate-800 rounded-bl-none font-medium'
+                    }`;
+                    bubbleDiv.innerText = msg.text;
+
+                    msgDiv.appendChild(senderSpan);
+                    msgDiv.appendChild(bubbleDiv);
+                    chatContainer.appendChild(msgDiv);
+
+                    // Tambahkan notifikasi angka hanya jika pesan BARU masuk setelah login & chat box tertutup
+                    if (msg.timestamp && msg.timestamp > lastProcessedChatTimestamp && !isPlayer && !isChatOpen) {
+                        unreadCount++;
+                        updateChatBadge();
+                    }
+
+                    // Validasi pesan baru (< 4 detik): Gelembung DIPASANG DENGAN KETAT HANYA KEPADA PENGIRIM ASLI
+                    if (msg.senderId && msg.timestamp && (Date.now() - msg.timestamp < 4000)) {
+                        if (msg.senderId === myPlayerId) {
+                            playerSpeechBubble = {
+                                text: msg.text,
+                                timer: msg.timestamp + 4000
+                            };
+                        } else if (window.otherPlayers && window.otherPlayers[msg.senderId]) {
+                            window.otherPlayersBubbles[msg.senderId] = {
+                                text: msg.text,
+                                timer: msg.timestamp + 4000
+                            };
+                        }
+                    }
                 }
             });
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            lastProcessedChatTimestamp = Date.now();
         });
 
         // Fungsi Mengirim Chat ke Firebase
         window.sendFirebaseChat = function(sender, text) {
             const newChatRef = push(ref(db, 'chats'));
             set(newChatRef, {
+                senderId: myPlayerId || 'unknown',
                 sender: sender,
                 text: text,
                 timestamp: Date.now()
@@ -1555,27 +1702,25 @@
             const listContainer = document.getElementById('onlinePlayersList');
             if (!listContainer) return;
 
-            const listData = window.onlinePlayersList || [];
-
-            if (listData.length === 0) {
-                listContainer.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">Belum ada pemain lain online.</div>`;
+            if (window.onlinePlayersList.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">Belum ada pemain lain...</div>';
                 return;
             }
 
-            listContainer.innerHTML = listData.map(p => `
+            listContainer.innerHTML = window.onlinePlayersList.map(p => `
                 <div class="flex items-center justify-between bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-2xl">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center text-sm shadow shrink-0">
+                        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center text-sm shadow">
                             ${p.gender === 'female' ? '🧕' : '👦'}
                         </div>
                         <div>
                             <div class="font-bold text-xs text-yellow-400 leading-tight">
                                 ${p.name} ${p.isMe ? '<span class="text-[9px] text-emerald-400 font-semibold">(Anda)</span>' : ''}
                             </div>
-                            <div class="text-[10px] text-slate-300 font-medium">${p.role}</div>
+                            <div class="text-[10px] text-slate-300 font-medium">${p.role || 'SISWA'}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60 shrink-0">
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         Online
                     </div>
@@ -1583,53 +1728,48 @@
             `).join('');
         };
 
-        // Inisialisasi Player di Firebase saat login
-        const origHandleLogin = window.handleLogin;
+        // 3. SINKRONISASI GERAKAN & UPDATE POSISI PEMAIN
+        const originalHandleLogin = window.handleLogin;
         window.handleLogin = function(e) {
-            origHandleLogin(e);
-            if (currentUserAccount && isGameStarted) {
-                const safeName = playerCustomName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-                myPlayerId = `user_${safeName}_${Date.now().toString().slice(-5)}`;
-                myPlayerRef = ref(db, `players/${myPlayerId}`);
+            if (originalHandleLogin) originalHandleLogin(e);
 
+            if (playerCustomName) {
+                const safeNameKey = playerCustomName.replace(/[^a-zA-Z0-9]/g, "_");
+                myPlayerId = safeNameKey + "_" + Date.now().toString().slice(-4);
+                myPlayerRef = ref(db, 'players/' + myPlayerId);
+
+                // Hapus data saat terputus/logout
                 onDisconnect(myPlayerRef).remove();
 
-                set(myPlayerRef, {
-                    name: playerCustomName,
-                    gender: selectedGender,
-                    role: playerRole,
-                    x: Math.round(player.x),
-                    y: Math.round(player.y),
-                    direction: player.direction
-                });
+                // Kirim pesan login ke Firebase chat
+                window.sendFirebaseChat(playerCustomName, `Halo semuanya, ${playerCustomName} (${playerRole}) siap bergabung! 😊`);
+
+                // Sync posisi berkala ke Firebase
+                setInterval(() => {
+                    if (myPlayerRef && isGameStarted) {
+                        set(myPlayerRef, {
+                            id: myPlayerId,
+                            name: playerCustomName,
+                            gender: selectedGender,
+                            role: playerRole || 'SISWA',
+                            x: Math.round(player.x),
+                            y: Math.round(player.y),
+                            direction: player.direction,
+                            lastSeen: Date.now()
+                        });
+                    }
+                }, 100);
             }
         };
 
-        // Loop Sinkronisasi Koordinat Player Saat Ini
-        const origGameLoop = window.gameLoop;
-        window.gameLoop = function() {
-            if (myPlayerRef && isGameStarted) {
-                set(myPlayerRef, {
-                    name: playerCustomName,
-                    gender: selectedGender,
-                    role: playerRole,
-                    x: Math.round(player.x),
-                    y: Math.round(player.y),
-                    direction: player.direction
-                });
-            }
-
-            origGameLoop();
-        };
-
-        const origHandleLogout = window.handleLogout;
+        // Pembersihan saat Logout
+        const originalHandleLogout = window.handleLogout;
         window.handleLogout = function() {
             if (myPlayerRef) {
                 remove(myPlayerRef);
                 myPlayerRef = null;
-                myPlayerId = null;
             }
-            origHandleLogout();
+            if (originalHandleLogout) originalHandleLogout();
         };
     </script>
 </body>
