@@ -56,9 +56,34 @@
         .animate-badge {
             animation: badge-bounce 0.5s ease-in-out infinite;
         }
+
+        /* OVERLAY PERINGATAN MODES LANDSCAPE UNTUK HP */
+        #rotateNotice {
+            display: none;
+        }
+
+        @media screen and (max-width: 900px) and (orientation: portrait) {
+            #rotateNotice {
+                display: flex !important;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- OVERLAY INSTRUKSI PUTAR LAYAR HP KE LANDSCAPE -->
+    <div id="rotateNotice" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white">
+        <div class="w-20 h-20 mb-4 rounded-3xl bg-yellow-400 text-slate-950 flex items-center justify-center text-4xl shadow-2xl animate-bounce">
+            📱
+        </div>
+        <h2 class="text-xl md:text-2xl font-extrabold text-yellow-400 mb-2">Putar Layar HP Anda</h2>
+        <p class="text-xs md:text-sm text-slate-300 max-w-xs leading-relaxed mb-4">
+            Untuk pengalaman bermain petualangan yang terbaik dan luas, silakan putar HP Anda ke posisi **Landscape (Mendatar)**.
+        </p>
+        <div class="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-xl text-xs font-semibold text-yellow-300 border border-slate-700">
+            <i class="fas fa-rotate text-sm"></i> Mode Landscape
+        </div>
+    </div>
 
     <!-- SCREEN 0: LOGIN SCREEN -->
     <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
@@ -505,6 +530,11 @@
             
             if (!inputUsername) return;
 
+            // Coba kunci orientasi ke landscape di layar sentuh/HP jika didukung browser
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+
             const cleanInput = inputUsername.replace(/\s+/g, ' ').toLowerCase();
             const matchedUser = USER_DATABASE.find(user => 
                 user.name.trim().replace(/\s+/g, ' ').toLowerCase() === cleanInput
@@ -641,7 +671,18 @@
         const MAP_WIDTH = 2000;
         const MAP_HEIGHT = 1200;
 
+        // ZOOM DIBUAT DINAMIS AGAR TAMPILAN HP BISA LUAS SEPERTI DESKTOP (FOTO 3)
         function getAdaptiveZoom() {
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
+
+            // Jika di HP / Layar Kecil (width < 900px)
+            if (screenW < 900 || screenH < 500) {
+                // Skala zoom diperkecil (0.45 - 0.55) agar pandangan sangat luas seperti di Komputer
+                return Math.max(0.42, Math.min(0.55, screenW / 1400));
+            }
+
+            // Layar Komputer / Laptop
             return 0.85;
         }
 
