@@ -364,6 +364,7 @@
             warung: new Image(),
             mading: new Image(),
             taman: new Image(),
+            bis: new Image(),
             male_down: new Image(),
             male_up: new Image(),
             male_left: new Image(),
@@ -375,7 +376,7 @@
         };
 
         let assetsLoaded = {
-            tree: false, kelas: false, perpus: false, gor: false, warung: false, mading: false, taman: false,
+            tree: false, kelas: false, perpus: false, gor: false, warung: false, mading: false, taman: false, bis: false,
             male_down: false, male_up: false, male_left: false, male_right: false,
             female_down: false, female_up: false, female_left: false, female_right: false
         };
@@ -387,6 +388,7 @@
         ASSETS.warung.src = 'assets/warung.png';
         ASSETS.mading.src = 'assets/mading.png';
         ASSETS.taman.src = 'assets/taman.png';
+        ASSETS.bis.src = 'assets/bis.png';
 
         ASSETS.male_down.src = 'assets/male_down.png';
         ASSETS.male_up.src = 'assets/male_up.png';
@@ -405,6 +407,7 @@
         ASSETS.warung.onload = () => assetsLoaded.warung = true;
         ASSETS.mading.onload = () => assetsLoaded.mading = true;
         ASSETS.taman.onload = () => assetsLoaded.taman = true;
+        ASSETS.bis.onload = () => assetsLoaded.bis = true;
 
         ASSETS.male_down.onload = () => assetsLoaded.male_down = true;
         ASSETS.male_up.onload = () => assetsLoaded.male_up = true;
@@ -642,7 +645,8 @@
             { id: 'gor', name: 'Gedung Olahraga', icon: '🏀', x: 1100, y: 100, width: 420, height: 250, color: '#fed7aa', wallColor: '#f97316', roofColor: '#9a3412', dialogTitle: 'Gedung Olahraga (GOR)', dialogText: 'Area serbaguna untuk main basket dan bulu tangkis.', actionLabel: 'Olah Raga' },
             { id: 'mading', name: 'Mading Sekolah', icon: '📌', x: 1600, y: 150, width: 260, height: 180, color: '#fef3c7', wallColor: '#d97706', roofColor: '#78350f', dialogTitle: 'Mading Sekolah', dialogText: 'Papan informasi pengumuman lomba dan karya siswa.', actionLabel: 'Baca Pengumuman' },
             { id: 'warung', name: 'Warung Sekolah', icon: '🍜', x: 160, y: 800, width: 340, height: 250, color: '#fbcfe8', wallColor: '#ec4899', roofColor: '#9d174d', dialogTitle: 'Warung & Kantin Sekolah', dialogText: 'Aroma jajanan lezat seperti mi goreng dan es teh manis.', actionLabel: 'Beli Jajanan' },
-            { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga Sekolah', dialogText: 'Taman asri dengan bunga warna-warni untuk bersantai.', actionLabel: 'Bersantai' }
+            { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga Sekolah', dialogText: 'Taman asri dengan bunga warna-warni untuk bersantai.', actionLabel: 'Bersantai' },
+            { id: 'bis', name: 'Bis Sekolah', icon: '🚌', x: 800, y: 820, width: 360, height: 200, color: '#fde047', wallColor: '#eab308', roofColor: '#ca8a04', dialogTitle: 'Bis Sekolah Kuning', dialogText: 'Bis sekolah kuning yang siap mengantar siswa berangkat dan pulang sekolah dengan aman.', actionLabel: 'Naik Bis Sekolah' }
         ];
 
         function generateTrees() {
@@ -1117,6 +1121,7 @@
                 case 'mading': actionText = "Wah, pengumuman lombanya menarik sekali! 📌"; break;
                 case 'warung': actionText = "Nyam nyam, jajanan warungnya enak sekali! 🍜"; break;
                 case 'taman': actionText = "Udaranya sejuk sekali bersantai di taman! 🌻"; break;
+                case 'bis': actionText = "Asyik! Aku sedang naik Bis Sekolah keliling area SD! 🚌💨"; break;
                 default: actionText = `Sedang berada di ${b.name}`;
             }
 
