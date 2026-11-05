@@ -401,9 +401,9 @@
         let nearbyBuilding = null;
         let isGameStarted = false;
 
-        // INACTIVITY / IDLE TIMER (10 MENIT AUTO LOGOUT)
+        // INACTIVITY / IDLE TIMER (1 MENIT AUTO LOGOUT)
         let idleTimer = null;
-        const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 menit dalam milidetik
+        const IDLE_TIMEOUT_MS = 1 * 60 * 1000; // 1 menit dalam milidetik
 
         function resetIdleTimer() {
             if (!isGameStarted) return;
@@ -420,7 +420,7 @@
             // Tampilkan pesan pemberitahuan
             const errorMsg = document.getElementById('loginErrorMsg');
             if (errorMsg) {
-                errorMsg.innerText = "Anda telah dikeluarkan otomatis dari permainan karena tidak ada aktivitas (inaktif) selama 10 menit.";
+                errorMsg.innerText = "Anda telah dikeluarkan otomatis dari permainan karena tidak ada aktivitas (inaktif/AFK) selama 1 menit.";
                 errorMsg.classList.remove('hidden');
             }
 
@@ -1581,15 +1581,25 @@
         window.otherPlayersBubbles = {};
         let lastProcessedChatTimestamp = Date.now();
 
-        // 1. MONITORING PEMAIN ONLINE REALTIME & RESET CHAT SAAT 0 ONLINE
+        // 1. MONITORING PEMAIN ONLINE REALTIME & FILTER PEMAIN INAKTIF (>5 DETIK)
         const playersRef = ref(db, 'players');
         onValue(playersRef, (snapshot) => {
             const data = snapshot.val() || {};
             const currentPlayersList = [];
             window.otherPlayers = {};
+            const now = Date.now();
 
             Object.entries(data).forEach(([id, p]) => {
                 if (!p) return;
+
+                // Abaikan/hapus pemain yang sudah tidak aktif (tidak update lastSeen > 5 detik)
+                if (p.lastSeen && (now - p.lastSeen > 5000)) {
+                    // Hapus data pemain hantu dari database jika kita adalah pemain aktif
+                    if (myPlayerId) {
+                        remove(ref(db, 'players/' + id));
+                    }
+                    return;
+                }
 
                 const isMe = (myPlayerId && id === myPlayerId) || (p.name === playerCustomName);
                 const pName = p.name || 'Pemain Tanpa Nama';
