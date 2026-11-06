@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -435,7 +434,7 @@
                     { id: 'mading', name: 'Mading Sekolah', icon: '📌', x: 1600, y: 150, width: 260, height: 180, color: '#fef3c7', wallColor: '#d97706', roofColor: '#78350f', dialogTitle: 'Mading Sekolah', dialogText: 'Papan informasi pengumuman lomba dan karya siswa.', actionLabel: 'Baca Pengumuman' },
                     { id: 'warung', name: 'Warung Sekolah', icon: '🍜', x: 160, y: 800, width: 340, height: 250, color: '#fbcfe8', wallColor: '#ec4899', roofColor: '#9d174d', dialogTitle: 'Warung & Kantin Sekolah', dialogText: 'Aroma jajanan lezat seperti mi goreng dan es teh manis.', actionLabel: 'Beli Jajanan' },
                     { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga Sekolah', dialogText: 'Taman asri dengan bunga warna-warni untuk bersantai.', actionLabel: 'Bersantai' },
-                    { id: 'bis', name: 'Bis Sekolah (Ke Pantai)', icon: '🚌', x: 800, y: 820, width: 360, height: 200, color: '#fde047', wallColor: '#eab308', roofColor: '#ca8a04', isPortal: true, targetLocation: 2, dialogTitle: 'Bis Sekolah Menuju Pantai', dialogText: 'Bis kuning sekolah siap mengantar Anda bertamasya ke Area Pantai yang indah!', actionLabel: 'Naik Bis ke Pantai' }
+                    { id: 'bis', name: 'Bis Sekolah (Ke Pantai)', icon: '🚌', x: 800, y: 820, width: 360, height: 200, isPortal: true, targetLocation: 2, dialogTitle: 'Bis Sekolah Menuju Pantai', dialogText: 'Bis kuning sekolah siap mengantar Anda bertamasya ke Area Pantai yang indah!', actionLabel: 'Naik Bis ke Pantai' }
                 ]
             },
             2: {
@@ -448,7 +447,7 @@
                         name: 'Bis Sekolah (Kembali ke Sekolah)', 
                         icon: '🚌', 
                         x: 60, 
-                        y: 70, 
+                        y: 120, 
                         width: 220, 
                         height: 140, 
                         isPortal: true, 
@@ -599,8 +598,14 @@
                 locationIndicatorBadge.innerHTML = `<i class="fas fa-map-pin text-${targetLocId === 1 ? 'indigo' : 'cyan'}-400"></i> <span>${config.name}</span>`;
             }
 
-            player.x = 1000;
-            player.y = 600;
+            if (targetLocId === 2) {
+                player.x = 280;
+                player.y = 180;
+            } else {
+                player.x = 1000;
+                player.y = 600;
+            }
+
             player.targetX = null;
             player.targetY = null;
             player.isMovingToTarget = false;
@@ -798,26 +803,12 @@
                 const by = b.y - cameraY;
 
                 if (b.isPortal) {
-                    if (currentWorldLocation === 2) {
-                        const imgAsset = ASSETS.bis;
-                        if (assetsLoaded.bis) {
-                            ctx.drawImage(imgAsset, bx, by, b.width, b.height);
-                        } else {
-                            ctx.fillStyle = '#fde047';
-                            ctx.fillRect(bx, by, b.width, b.height);
-                        }
+                    const imgAsset = ASSETS.bis;
+                    if (assetsLoaded.bis) {
+                        ctx.drawImage(imgAsset, bx, by, b.width, b.height);
                     } else {
-                        ctx.fillStyle = b.color;
-                        ctx.beginPath();
-                        ctx.roundRect(bx, by, b.width, b.height, 24);
-                        ctx.fill();
-                        ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 4;
-                        ctx.stroke();
-
-                        if (assetsLoaded.bis) {
-                            ctx.drawImage(ASSETS.bis, bx + 20, by + 20, b.width - 40, b.height - 40);
-                        }
+                        ctx.fillStyle = '#fde047';
+                        ctx.fillRect(bx, by, b.width, b.height);
                     }
                 } else {
                     ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -1211,6 +1202,7 @@
             const viewWidth = canvas.width / currentZoomScale;
             const viewHeight = canvas.height / currentZoomScale;
 
+            // KAMERA DINAMIS: Mengikuti pergerakan pemain & dibatasi dalam ukuran map
             let cameraX = player.x - viewWidth / 2;
             let cameraY = player.y - viewHeight / 2;
 
