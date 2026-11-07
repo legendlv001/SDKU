@@ -118,12 +118,13 @@ function generateTrees() {
             trees.push({ x: tx, y: ty, size: 35 + Math.random() * 20, trunkHeight: 25 + Math.random() * 10, isKelapa: false });
         }
     } else if (currentWorldLocation === 2) {
+        // Posisi pohon kelapa disesuaikan di area pasir terbuka (luar area parkir & jalan)
         const kelapaPositions = [
-            { x: 320, y: 300, size: 45 },
-            { x: 550, y: 220, size: 50 },
-            { x: 750, y: 450, size: 48 },
-            { x: 420, y: 620, size: 52 },
-            { x: 920, y: 520, size: 46 }
+            { x: 380, y: 140, size: 45 },  // Di sebelah kanan atas luar pagar parkiran
+            { x: 420, y: 380, size: 50 },  // Di area pasir terbuka tengah-atas
+            { x: 680, y: 360, size: 48 },  // Di area pasir sebelum tikungan jalan
+            { x: 860, y: 550, size: 52 },  // Di sekitar pasir mendekati dermaga
+            { x: 320, y: 640, size: 46 }   // Di pasir bagian bawah/pantai pasir kiri
         ];
         kelapaPositions.forEach(pos => {
             trees.push({ x: pos.x, y: pos.y, size: pos.size, trunkHeight: 30, isKelapa: true });
