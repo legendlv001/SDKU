@@ -9,31 +9,46 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
     const spriteKey = `${gender}_sprite`, imgAsset = ASSETS[spriteKey], isLoaded = assetsLoaded[spriteKey];
 
     if (isLoaded && imgAsset && imgAsset.width > 0) {
+        // Pembulatan presisi koordinat agar sprite tidak bergetar (jittering)
+        const renderX = Math.round(x);
+        const renderY = Math.round(y);
+
         // Bayangan di kaki
         c.fillStyle = 'rgba(0,0,0,0.3)'; 
         c.beginPath(); 
-        c.ellipse(x + width / 2, y + height - 4, width * 0.35, 6, 0, 0, Math.PI * 2); 
+        c.ellipse(renderX + width / 2, renderY + height - 4, width * 0.35, 6, 0, 0, Math.PI * 2); 
         c.fill();
 
-        // Row Index Sprite Sheet:
-        // Row 0 = Down (Bawah)
-        // Row 1 = Left (Kiri)
-        // Row 2 = Right (Kanan)
-        // Row 3 = Up (Atas)
+        // Pemetaan Row Index Sprite Sheet:
+        // Row 0 = Bawah (Down)
+        // Row 1 = Atas (Up)
+        // Row 2 = Kiri (Left)   -> Ditukar ke Row 2
+        // Row 3 = Kanan (Right) -> Ditukar ke Row 3
         let rowIndex = 0;
         if (currentDir === 'down') rowIndex = 0;
-        else if (currentDir === 'left') rowIndex = 1;
-        else if (currentDir === 'right') rowIndex = 2;
-        else if (currentDir === 'up') rowIndex = 3;
+        else if (currentDir === 'up') rowIndex = 1;
+        else if (currentDir === 'left') rowIndex = 2;
+        else if (currentDir === 'right') rowIndex = 3;
 
         let colIndex = 0;
         if (dir !== 'idle') {
             const stepVal = typeof walkStep === 'number' ? walkStep : 0;
-            colIndex = Math.floor((stepVal * 0.25) % 5);
+            colIndex = Math.floor(stepVal * 0.12) % 5;
         }
+        
         const frameWidth = imgAsset.width / 5, frameHeight = imgAsset.height / 4;
         
-        c.drawImage(imgAsset, colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight, x, y, width, height);
+        c.drawImage(
+            imgAsset, 
+            colIndex * frameWidth, 
+            rowIndex * frameHeight, 
+            frameWidth, 
+            frameHeight, 
+            renderX, 
+            renderY, 
+            width, 
+            height
+        );
         c.restore(); 
         return;
     }
@@ -67,7 +82,12 @@ function updateGame() {
         } else {
             dx = diffX / dist; dy = diffY / dist;
             nextX = player.x + dx * player.speed; nextY = player.y + dy * player.speed;
-            player.direction = (Math.abs(diffX) > Math.abs(diffY)) ? ((diffX > 0) ? 'right' : 'left') : ((diffY > 0) ? 'down' : 'up');
+            
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                player.direction = (diffX > 0) ? 'right' : 'left';
+            } else {
+                player.direction = (diffY > 0) ? 'down' : 'up';
+            }
             currentWalkTimer++;
         }
     } else {
@@ -78,8 +98,15 @@ function updateGame() {
 
         if (dx !== 0 || dy !== 0) {
             const len = Math.hypot(dx, dy);
-            nextX = player.x + (dx / len) * player.speed; nextY = player.y + (dy / len) * player.speed;
-            player.direction = (Math.abs(dx) > Math.abs(dy)) ? ((dx > 0) ? 'right' : 'left') : ((dy > 0) ? 'down' : 'up');
+            nextX = player.x + (dx / len) * player.speed; 
+            nextY = player.y + (dy / len) * player.speed;
+            
+            if (Math.abs(dy) >= Math.abs(dx)) {
+                player.direction = (dy > 0) ? 'down' : 'up';
+            } else {
+                player.direction = (dx > 0) ? 'right' : 'left';
+            }
+
             currentWalkTimer++;
         } else {
             player.direction = 'idle'; currentWalkTimer = 0;
