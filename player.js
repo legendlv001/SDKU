@@ -1,4 +1,4 @@
-const player = { x: 1000, y: 600, speed: 2.8, width: 48, height: 68, direction: 'down', targetX: null, targetY: null, isMovingToTarget: false };
+const player = { x: 1000, y: 600, speed: 3.5, width: 48, height: 68, direction: 'down', targetX: null, targetY: null, isMovingToTarget: false };
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false };
 
 let isChatOpen = false, unreadCount = 0, chatTimer = null, isTypingOrHovered = false;
@@ -9,32 +9,48 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
     const spriteKey = `${gender}_sprite`, imgAsset = ASSETS[spriteKey], isLoaded = assetsLoaded[spriteKey];
 
     if (isLoaded && imgAsset && imgAsset.width > 0) {
-        c.fillStyle = 'rgba(0,0,0,0.28)'; c.beginPath(); c.ellipse(x + width / 2, y + height - 2, width * 0.35, 6, 0, 0, Math.PI * 2); c.fill();
-        c.translate(x + width / 2, y + height / 2);
+        // Bayangan di kaki
+        c.fillStyle = 'rgba(0,0,0,0.3)'; 
+        c.beginPath(); 
+        c.ellipse(x + width / 2, y + height - 4, width * 0.35, 6, 0, 0, Math.PI * 2); 
+        c.fill();
+
+        // Row Index Sprite Sheet:
+        // Row 0 = Down (Bawah)
+        // Row 1 = Left (Kiri)
+        // Row 2 = Right (Kanan)
+        // Row 3 = Up (Atas)
         let rowIndex = 0;
-        if (currentDir === 'up') rowIndex = 1;
-        else if (currentDir === 'left') rowIndex = 2;
-        else if (currentDir === 'right') rowIndex = 3;
+        if (currentDir === 'down') rowIndex = 0;
+        else if (currentDir === 'left') rowIndex = 1;
+        else if (currentDir === 'right') rowIndex = 2;
+        else if (currentDir === 'up') rowIndex = 3;
 
         let colIndex = 0;
         if (dir !== 'idle') {
             const stepVal = typeof walkStep === 'number' ? walkStep : 0;
-            colIndex = Math.floor((stepVal * 0.2) % 5);
+            colIndex = Math.floor((stepVal * 0.25) % 5);
         }
         const frameWidth = imgAsset.width / 5, frameHeight = imgAsset.height / 4;
-        c.drawImage(imgAsset, colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight, -width / 2, -height / 2, width, height);
-        c.restore(); return;
+        
+        c.drawImage(imgAsset, colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight, x, y, width, height);
+        c.restore(); 
+        return;
     }
 
-    c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(x + width / 2, y + height - 3, width * 0.35, 6, 0, 0, Math.PI * 2); c.fill();
-    c.translate(x + width / 2, y + height / 2);
-    const isFemale = (gender === 'female'), drawX = -width / 2, drawY = -height / 2;
+    // Fallback jika belum ter-load
+    c.fillStyle = 'rgba(0,0,0,0.3)'; 
+    c.beginPath(); 
+    c.ellipse(x + width / 2, y + height - 4, width * 0.35, 6, 0, 0, Math.PI * 2); 
+    c.fill();
+
+    const isFemale = (gender === 'female');
     if (isFemale) {
-        c.fillStyle = '#b91c1c'; c.fillRect(drawX + width * 0.25, drawY + height * 0.45, width * 0.5, height * 0.43);
-        c.fillStyle = '#ffffff'; c.beginPath(); c.roundRect(drawX + width * 0.12, drawY, width * 0.76, height * 0.42, 18); c.fill();
+        c.fillStyle = '#b91c1c'; c.fillRect(x + width * 0.25, y + height * 0.45, width * 0.5, height * 0.43);
+        c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x + width * 0.5, y + height * 0.25, width * 0.3, 0, Math.PI * 2); c.fill();
     } else {
-        c.fillStyle = '#ffffff'; c.fillRect(drawX + width * 0.25, drawY + height * 0.3, width * 0.5, height * 0.25);
-        c.fillStyle = '#1e293b'; c.beginPath(); c.roundRect(drawX + width * 0.25, drawY, width * 0.5, 14, 4); c.fill();
+        c.fillStyle = '#ffffff'; c.fillRect(x + width * 0.25, y + height * 0.3, width * 0.5, height * 0.25);
+        c.fillStyle = '#1e293b'; c.fillRect(x + width * 0.25, y, width * 0.5, 14);
     }
     c.restore();
 }
@@ -95,10 +111,10 @@ function updateGame() {
 
 function toggleChat() { if (isChatOpen) closeChat(); else openChat(); }
 function openChat() {
-    isChatOpen = true; document.getElementById('chatBoxPopup').classList.remove('hidden'); unreadCount = 0; updateChatBadge(); resetChatTimer();
+    isChatOpen = true; document.getElementById('chatBoxPopup').classList.remove('hidden'); unreadCount = 0; updateChatBadge();
     setTimeout(() => { const chatMessages = document.getElementById('chatMessages'); if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight; }, 50);
 }
-function closeChat() { isChatOpen = false; document.getElementById('chatBoxPopup').classList.add('hidden'); if (chatTimer) clearTimeout(chatTimer); }
+function closeChat() { isChatOpen = false; document.getElementById('chatBoxPopup').classList.add('hidden'); }
 function updateChatBadge() {
     const badge = document.getElementById('chatBadge'); if (!badge) return;
     if (unreadCount > 0) { badge.innerText = unreadCount > 99 ? '99+' : unreadCount; badge.classList.remove('hidden'); }
@@ -112,12 +128,12 @@ function addChatMessage(sender, text, isPlayer = false) {
     bubbleDiv.className = `px-3 py-1.5 rounded-2xl max-w-[85%] text-xs ${isPlayer ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-200 text-slate-800 rounded-bl-none font-medium'}`;
     bubbleDiv.innerText = text;
     msgDiv.appendChild(senderSpan); msgDiv.appendChild(bubbleDiv); chatMessages.appendChild(msgDiv); chatMessages.scrollTop = chatMessages.scrollHeight;
-    if (!isChatOpen) { unreadCount++; updateChatBadge(); } else { resetChatTimer(); }
+    if (!isChatOpen) { unreadCount++; updateChatBadge(); }
 }
 function sendChatMessage() {
     const input = document.getElementById('chatInput'); if (!input) return;
     const text = input.value.trim(); if (text.length === 0) return;
     if (window.sendFirebaseChat) window.sendFirebaseChat(playerCustomName || "Saya", text);
     else addChatMessage(playerCustomName || "Saya", text, true);
-    input.value = ""; resetChatTimer();
+    input.value = "";
 }

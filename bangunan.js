@@ -47,14 +47,23 @@ function generateTrees() {
 }
 
 function drawMap(cameraX, cameraY, zoomScale) {
-    ctx.save(); ctx.scale(zoomScale, zoomScale);
+    const canvas = document.getElementById('gameCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    ctx.save(); 
+    ctx.scale(zoomScale, zoomScale);
+    
     if (typeof currentWorldLocation !== 'undefined' && currentWorldLocation === 2) {
         if (assetsLoaded.beach_bg) ctx.drawImage(ASSETS.beach_bg, -cameraX, -cameraY, MAP_WIDTH, MAP_HEIGHT);
         else { ctx.fillStyle = '#38bdf8'; ctx.fillRect(0, 0, canvas.width / zoomScale, canvas.height / zoomScale); }
     } else {
         const tileSize = 100;
-        const startCol = Math.floor(cameraX / tileSize), endCol = startCol + Math.ceil((canvas.width / zoomScale) / tileSize) + 1;
-        const startRow = Math.floor(cameraY / tileSize), endRow = startRow + Math.ceil((canvas.height / zoomScale) / tileSize) + 1;
+        const startCol = Math.max(0, Math.floor(cameraX / tileSize));
+        const endCol = startCol + Math.ceil((canvas.width / zoomScale) / tileSize) + 1;
+        const startRow = Math.max(0, Math.floor(cameraY / tileSize));
+        const endRow = startRow + Math.ceil((canvas.height / zoomScale) / tileSize) + 1;
+        
         for (let c = startCol; c <= endCol; c++) {
             for (let r = startRow; r <= endRow; r++) {
                 ctx.fillStyle = (c + r) % 2 === 0 ? '#15803d' : '#166534';
@@ -62,27 +71,50 @@ function drawMap(cameraX, cameraY, zoomScale) {
             }
         }
     }
+
     currentBuildings.forEach(b => {
         const bx = b.x - cameraX, by = b.y - cameraY;
         if (b.isPortal) {
             if (assetsLoaded.bis) ctx.drawImage(ASSETS.bis, bx, by, b.width, b.height);
             else { ctx.fillStyle = '#fde047'; ctx.fillRect(bx, by, b.width, b.height); }
         } else {
-            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; 
+            ctx.beginPath(); 
+            ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2); 
+            ctx.fill();
+
             if (b.isZone && assetsLoaded.taman) ctx.drawImage(ASSETS.taman, bx, by, b.width, b.height);
             else if (assetsLoaded[b.id]) ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
             else { ctx.fillStyle = b.roofColor || '#d97706'; ctx.fillRect(bx, by, b.width, b.height); }
         }
-        ctx.save(); ctx.font = 'bold 14px Fredoka';
-        const labelText = `${b.icon} ${b.name}`, textWidth = ctx.measureText(labelText).width, signX = bx + b.width / 2, signY = by - 22;
-        ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.roundRect(signX - (textWidth + 20) / 2, signY - 12, textWidth + 20, 24, 12); ctx.fill();
-        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(labelText, signX, signY); ctx.restore();
+
+        ctx.save(); 
+        ctx.font = 'bold 14px Fredoka, sans-serif';
+        const labelText = `${b.icon} ${b.name}`;
+        const textWidth = ctx.measureText(labelText).width;
+        const signX = bx + b.width / 2;
+        const signY = by - 22;
+
+        ctx.fillStyle = '#0f172a'; 
+        ctx.fillRect(signX - (textWidth + 20) / 2, signY - 12, textWidth + 20, 24);
+        ctx.strokeStyle = '#38bdf8'; 
+        ctx.lineWidth = 2; 
+        ctx.strokeRect(signX - (textWidth + 20) / 2, signY - 12, textWidth + 20, 24);
+        
+        ctx.fillStyle = '#ffffff'; 
+        ctx.textAlign = 'center'; 
+        ctx.textBaseline = 'middle'; 
+        ctx.fillText(labelText, signX, signY); 
+        ctx.restore();
     });
     ctx.restore();
 }
 
 function drawTree(tree, cameraX, cameraY, zoomScale) {
+    const canvas = document.getElementById('gameCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
     ctx.save(); ctx.scale(zoomScale, zoomScale);
     const tx = tree.x - cameraX, ty = tree.y - cameraY;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'; ctx.beginPath(); ctx.ellipse(tx, ty + 2, tree.size * 0.85, tree.size * 0.35, 0, 0, Math.PI * 2); ctx.fill();
