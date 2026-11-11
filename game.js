@@ -4,7 +4,7 @@
 const SPREADSHEET_ID = "1J4ePsSEV8xE3VCR-10Avf3W8FOQ-R1xSqWO-4IMzyWc", SHEET_NAME = "Login";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
-// Firebase Config Asli dari Console Anda
+// Firebase Config Asli
 const firebaseConfig = {
   apiKey: "AIzaSyDDPcwN1blpYQ6fsknQbZMsort-bAOASW8",
   authDomain: "sd-ku-fa156.firebaseapp.com",
@@ -82,17 +82,13 @@ function setupInactivityListeners() {
 function initFirebaseSync() {
     if (!db || !playerCustomName) return;
 
-    // Bersihkan karakter spasi/simbol untuk kunci database
     const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
     myPlayerRef = db.ref('players/' + safeKey);
-
-    // Hapus data otomatis saat pemain menutup halaman/disconnect
     myPlayerRef.onDisconnect().remove();
 
-    // Pantau pergerakan semua pemain online
     db.ref('players').on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        delete data[safeKey]; // Hapus data diri sendiri dari daftar pemain lain
+        delete data[safeKey]; 
         window.otherPlayers = data;
     });
 }
@@ -207,6 +203,8 @@ function setupGameEvents() {
             player.targetX = camX + canvasX;
             player.targetY = camY + canvasY;
             player.isMovingToTarget = true;
+
+            if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
         };
         gameCanvasElem.addEventListener('click', handleCanvasPointer);
     }
@@ -225,6 +223,9 @@ function getAdaptiveZoom() {
     return Math.max(0.4, Math.min(2.2, baseZoom + userZoomModifier));
 }
 
+// ==========================================
+// GAME LOOP (PERBAIKAN POSISI TENGAH & KAMERA PRESISI)
+// ==========================================
 function gameLoop() {
     if (!isGameStarted) return;
     const canvas = document.getElementById('gameCanvas');
@@ -241,32 +242,59 @@ function gameLoop() {
     const viewWidth = canvas.width / currentZoomScale;
     const viewHeight = canvas.height / currentZoomScale;
 
-    let cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, player.x - viewWidth / 2));
-    let cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, player.y - viewHeight / 2));
+    // Pembulatan Math.round agar pergerakan kamera stabil dan bebas getar
+    let cameraX = Math.round(Math.max(0, Math.min(MAP_WIDTH - viewWidth, player.x - viewWidth / 2)));
+    let cameraY = Math.round(Math.max(0, Math.min(MAP_HEIGHT - viewHeight, player.y - viewHeight / 2)));
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (typeof drawMap === 'function') drawMap(cameraX, cameraY, currentZoomScale);
 
     const activeWalkTimer = typeof walkTimer !== 'undefined' ? walkTimer : (window.walkTimer || 0);
 
+    // Menggambar Pemain Lain (Multiplayer) Tepat di Titik Tengah
     if (window.otherPlayers) {
         Object.keys(window.otherPlayers).forEach(id => {
             const pData = window.otherPlayers[id];
             if (!pData || (pData.location || 1) !== currentWorldLocation) return;
             ctx.save(); ctx.scale(currentZoomScale, currentZoomScale);
-            drawCharacterSprite(ctx, pData.x - cameraX - player.width / 2, pData.y - cameraY - player.height, player.width, player.height, pData.gender || 'male', pData.direction || 'down', activeWalkTimer);
+            drawCharacterSprite(
+                ctx, 
+                pData.x - cameraX - player.width / 2, 
+                pData.y - cameraY - player.height / 2, 
+                player.width, 
+                player.height, 
+                pData.gender || 'male', 
+                pData.direction || 'down', 
+                activeWalkTimer, 
+                pData.name, 
+                pData.role
+            );
             ctx.restore();
         });
     }
 
+    // Menggambar Pohon di belakang pemain
     if (typeof trees !== 'undefined' && typeof drawTree === 'function') {
         trees.forEach(tree => { if (tree.y <= player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
+    // Menggambar Karakter Utama (Diri Sendiri) Tepat 100% di Tengah Layar
     ctx.save(); ctx.scale(currentZoomScale, currentZoomScale);
-    drawCharacterSprite(ctx, player.x - cameraX - player.width / 2, player.y - cameraY - player.height, player.width, player.height, selectedGender, player.direction, activeWalkTimer);
+    drawCharacterSprite(
+        ctx, 
+        player.x - cameraX - player.width / 2, 
+        player.y - cameraY - player.height / 2, 
+        player.width, 
+        player.height, 
+        selectedGender, 
+        player.direction, 
+        activeWalkTimer, 
+        playerCustomName, 
+        playerRole
+    );
     ctx.restore();
 
+    // Menggambar Pohon di depan pemain
     if (typeof trees !== 'undefined' && typeof drawTree === 'function') {
         trees.forEach(tree => { if (tree.y > player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
@@ -299,6 +327,8 @@ function setupTouchAnalogStick() {
         keys.ArrowLeft = deltaX < -8; keys.ArrowRight = deltaX > 8; 
         keys.ArrowUp = deltaY < -8; keys.ArrowDown = deltaY > 8;
         player.isMovingToTarget = false;
+
+        if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
     };
     const handleEnd = () => { 
         if (!isDragging) return; 
@@ -332,6 +362,7 @@ function openMiniMap() {
     isMiniMapOpen = true;
     const popup = document.getElementById('miniMapPopup');
     if (popup) popup.classList.remove('hidden');
+    if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
 }
 function closeMiniMap() {
     isMiniMapOpen = false;

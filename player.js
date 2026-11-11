@@ -2,28 +2,48 @@ const player = { x: 1000, y: 600, speed: 3.5, width: 48, height: 68, direction: 
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false };
 
 let isChatOpen = false, unreadCount = 0, chatTimer = null, isTypingOrHovered = false;
+let autoCloseUITimer = null; 
 
-function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
+// Reset Timer Auto-Minimize UI (5 Detik)
+function resetUIAutoCloseTimer() {
+    if (autoCloseUITimer) clearTimeout(autoCloseUITimer);
+    
+    const chatInput = document.getElementById('chatInput');
+    if (document.activeElement === chatInput) return;
+
+    autoCloseUITimer = setTimeout(() => {
+        if (isChatOpen) closeChat();
+        if (typeof isMiniMapOpen !== 'undefined' && isMiniMapOpen) {
+            if (typeof closeMiniMap === 'function') closeMiniMap();
+        }
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.addEventListener('input', () => { resetUIAutoCloseTimer(); });
+        chatInput.addEventListener('focus', () => { if (autoCloseUITimer) clearTimeout(autoCloseUITimer); });
+        chatInput.addEventListener('blur', () => { resetUIAutoCloseTimer(); });
+    }
+});
+
+window.playerChatBubbles = window.playerChatBubbles || {};
+
+function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, charName, charRole) {
     c.save();
     let currentDir = (dir === 'idle') ? 'down' : dir;
     const spriteKey = `${gender}_sprite`, imgAsset = ASSETS[spriteKey], isLoaded = assetsLoaded[spriteKey];
 
+    let renderX = Math.round(x);
+    let renderY = Math.round(y);
+
     if (isLoaded && imgAsset && imgAsset.width > 0) {
-        // Pembulatan presisi koordinat agar sprite tidak bergetar (jittering)
-        const renderX = Math.round(x);
-        const renderY = Math.round(y);
-
-        // Bayangan di kaki
-        c.fillStyle = 'rgba(0,0,0,0.3)'; 
-        c.beginPath(); 
-        c.ellipse(renderX + width / 2, renderY + height - 4, width * 0.35, 6, 0, 0, Math.PI * 2); 
-        c.fill();
-
         // Pemetaan Row Index Sprite Sheet:
         // Row 0 = Bawah (Down)
         // Row 1 = Atas (Up)
-        // Row 2 = Kiri (Left)   -> Ditukar ke Row 2
-        // Row 3 = Kanan (Right) -> Ditukar ke Row 3
+        // Row 2 = Kiri (Left)
+        // Row 3 = Kanan (Right)
         let rowIndex = 0;
         if (currentDir === 'down') rowIndex = 0;
         else if (currentDir === 'up') rowIndex = 1;
@@ -35,6 +55,18 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
             const stepVal = typeof walkStep === 'number' ? walkStep : 0;
             colIndex = Math.floor(stepVal * 0.12) % 5;
         }
+
+        // KOREKSI OFFSET: Mengunci sprite agar tidak bergeser maju/mundur saat animasi jalan
+        if (currentDir === 'left' || currentDir === 'right') {
+            // Mengoreksi pergeseran horizontal kecil pada sprite sheet
+            renderX += (currentDir === 'left') ? 1 : -1;
+        }
+
+        // Bayangan di telapak kaki (tepat di lantai bawah sprite)
+        c.fillStyle = 'rgba(0,0,0,0.3)'; 
+        c.beginPath(); 
+        c.ellipse(renderX + width / 2, renderY + height - 2, width * 0.32, 5, 0, 0, Math.PI * 2); 
+        c.fill();
         
         const frameWidth = imgAsset.width / 5, frameHeight = imgAsset.height / 4;
         
@@ -49,24 +81,88 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep) {
             width, 
             height
         );
-        c.restore(); 
-        return;
-    }
-
-    // Fallback jika belum ter-load
-    c.fillStyle = 'rgba(0,0,0,0.3)'; 
-    c.beginPath(); 
-    c.ellipse(x + width / 2, y + height - 4, width * 0.35, 6, 0, 0, Math.PI * 2); 
-    c.fill();
-
-    const isFemale = (gender === 'female');
-    if (isFemale) {
-        c.fillStyle = '#b91c1c'; c.fillRect(x + width * 0.25, y + height * 0.45, width * 0.5, height * 0.43);
-        c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x + width * 0.5, y + height * 0.25, width * 0.3, 0, Math.PI * 2); c.fill();
     } else {
-        c.fillStyle = '#ffffff'; c.fillRect(x + width * 0.25, y + height * 0.3, width * 0.5, height * 0.25);
-        c.fillStyle = '#1e293b'; c.fillRect(x + width * 0.25, y, width * 0.5, 14);
+        // Fallback
+        c.fillStyle = 'rgba(0,0,0,0.3)'; 
+        c.beginPath(); 
+        c.ellipse(renderX + width / 2, renderY + height - 2, width * 0.35, 6, 0, 0, Math.PI * 2); 
+        c.fill();
+
+        const isFemale = (gender === 'female');
+        if (isFemale) {
+            c.fillStyle = '#b91c1c'; c.fillRect(renderX + width * 0.25, renderY + height * 0.45, width * 0.5, height * 0.43);
+            c.fillStyle = '#ffffff'; c.beginPath(); c.arc(renderX + width * 0.5, renderY + height * 0.25, width * 0.3, 0, Math.PI * 2); c.fill();
+        } else {
+            c.fillStyle = '#ffffff'; c.fillRect(renderX + width * 0.25, renderY + height * 0.3, width * 0.5, height * 0.25);
+            c.fillStyle = '#1e293b'; c.fillRect(renderX + width * 0.25, renderY, width * 0.5, 14);
+        }
     }
+
+    // --- NAMA (PUTIH) & JABATAN (KUNING) TRANSPARAN ---
+    const displayName = charName || (typeof playerCustomName !== 'undefined' ? playerCustomName : '');
+    const displayRole = charRole || (typeof playerRole !== 'undefined' ? playerRole : '');
+
+    if (displayName) {
+        c.textAlign = 'center';
+
+        // 1. Nama Karakter (Putih Bold 12px)
+        c.font = 'bold 12px Fredoka, sans-serif';
+        c.fillStyle = 'rgba(0,0,0,0.85)';
+        c.fillText(displayName, renderX + width / 2 + 1, renderY - 14 + 1);
+        c.fillStyle = '#ffffff';
+        c.fillText(displayName, renderX + width / 2, renderY - 14);
+
+        // 2. Jabatan Karakter (Kuning 9px)
+        if (displayRole) {
+            c.font = '500 9px Fredoka, sans-serif';
+            c.fillStyle = 'rgba(0,0,0,0.85)';
+            c.fillText(displayRole, renderX + width / 2 + 1, renderY - 4 + 1);
+            c.fillStyle = '#facc15';
+            c.fillText(displayRole, renderX + width / 2, renderY - 4);
+        }
+    }
+
+    // --- BUBBLE CHAT MELAYANG ---
+    if (displayName && window.playerChatBubbles && window.playerChatBubbles[displayName]) {
+        const chatData = window.playerChatBubbles[displayName];
+        const now = Date.now();
+        
+        if (now - chatData.time < 4500) {
+            c.font = 'bold 10px Fredoka, sans-serif';
+            const textWidth = c.measureText(chatData.text).width;
+            const bubbleWidth = Math.min(Math.max(textWidth + 14, 40), 160);
+            const bubbleHeight = 20;
+            const bubbleX = renderX + width / 2 - bubbleWidth / 2;
+            const bubbleY = renderY - 42;
+
+            c.fillStyle = '#ffffff';
+            c.beginPath();
+            c.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 8);
+            c.fill();
+            c.strokeStyle = '#6366f1';
+            c.lineWidth = 1.5;
+            c.stroke();
+
+            c.beginPath();
+            c.moveTo(renderX + width / 2 - 4, bubbleY + bubbleHeight);
+            c.lineTo(renderX + width / 2, bubbleY + bubbleHeight + 4);
+            c.lineTo(renderX + width / 2 + 4, bubbleY + bubbleHeight);
+            c.fillStyle = '#ffffff';
+            c.fill();
+
+            c.fillStyle = '#0f172a';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            
+            let printText = chatData.text;
+            if (textWidth > 145) printText = chatData.text.substring(0, 18) + '...';
+            c.fillText(printText, renderX + width / 2, bubbleY + bubbleHeight / 2);
+            c.textBaseline = 'alphabetic';
+        } else {
+            delete window.playerChatBubbles[displayName];
+        }
+    }
+
     c.restore();
 }
 
@@ -89,6 +185,7 @@ function updateGame() {
                 player.direction = (diffY > 0) ? 'down' : 'up';
             }
             currentWalkTimer++;
+            resetUIAutoCloseTimer();
         }
     } else {
         if (keys.ArrowUp || keys.w) dy -= 1;
@@ -108,6 +205,7 @@ function updateGame() {
             }
 
             currentWalkTimer++;
+            resetUIAutoCloseTimer();
         } else {
             player.direction = 'idle'; currentWalkTimer = 0;
         }
@@ -139,6 +237,7 @@ function updateGame() {
 function toggleChat() { if (isChatOpen) closeChat(); else openChat(); }
 function openChat() {
     isChatOpen = true; document.getElementById('chatBoxPopup').classList.remove('hidden'); unreadCount = 0; updateChatBadge();
+    resetUIAutoCloseTimer();
     setTimeout(() => { const chatMessages = document.getElementById('chatMessages'); if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight; }, 50);
 }
 function closeChat() { isChatOpen = false; document.getElementById('chatBoxPopup').classList.add('hidden'); }
@@ -156,6 +255,11 @@ function addChatMessage(sender, text, isPlayer = false) {
     bubbleDiv.innerText = text;
     msgDiv.appendChild(senderSpan); msgDiv.appendChild(bubbleDiv); chatMessages.appendChild(msgDiv); chatMessages.scrollTop = chatMessages.scrollHeight;
     if (!isChatOpen) { unreadCount++; updateChatBadge(); }
+
+    if (sender) {
+        window.playerChatBubbles = window.playerChatBubbles || {};
+        window.playerChatBubbles[sender] = { text: text, time: Date.now() };
+    }
 }
 function sendChatMessage() {
     const input = document.getElementById('chatInput'); if (!input) return;
@@ -163,4 +267,5 @@ function sendChatMessage() {
     if (window.sendFirebaseChat) window.sendFirebaseChat(playerCustomName || "Saya", text);
     else addChatMessage(playerCustomName || "Saya", text, true);
     input.value = "";
+    resetUIAutoCloseTimer();
 }
