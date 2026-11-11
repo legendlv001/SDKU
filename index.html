@@ -29,7 +29,7 @@
 
     <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
         <div class="bg-slate-900 border-2 border-yellow-400/85 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl text-white">
-            <div class="w-16 h-16 mx-auto mb-3 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-3xl font-black shadow-lg">🎮</div>
+            <div class="w-16 h-16 mx-auto mb-3 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-3xl font-black shadow-lg">🏫</div>
             <h1 class="text-2xl md:text-3xl font-extrabold text-yellow-400 mb-1">OpenWorld Multi-Lokasi</h1>
             <p class="text-xs md:text-sm text-slate-300 mb-6">Masukkan Nama terdaftar untuk mulai menjelajah.</p>
             <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
@@ -185,6 +185,12 @@
         </div>
     </div>
 
+    <!-- Firebase App (Core SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <!-- Firebase Realtime Database -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <!-- Script Game Lokal -->
     <script src="bangunan.js"></script>
     <script src="player.js"></script>
     <script src="game.js"></script>

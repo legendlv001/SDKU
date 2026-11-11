@@ -18,6 +18,7 @@ const firebaseConfig = {
 // Inisialisasi Firebase & Realtime Database
 let db = null;
 let myPlayerRef = null;
+let chatRefQuery = null;
 window.otherPlayers = {};
 
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
@@ -84,14 +85,161 @@ function initFirebaseSync() {
 
     const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
     myPlayerRef = db.ref('players/' + safeKey);
+
+    // Hapus player dan catat timestamp saat terputus/close browser
     myPlayerRef.onDisconnect().remove();
+    db.ref('lastActiveTime').onDisconnect().set(Date.now());
+
+    // LISTEN KICK FROM ADMIN
+    const myKickRef = db.ref('kickedPlayers/' + safeKey);
+    myKickRef.on('value', (snapshot) => {
+        if (snapshot.exists() && snapshot.val() === true) {
+            myKickRef.remove();
+            alert("Anda telah dikeluarkan dari permainan oleh Admin.");
+            handleLogout();
+        }
+    });
 
     db.ref('players').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         delete data[safeKey]; 
         window.otherPlayers = data;
+        updateOnlinePlayersList(data);
     });
 }
+
+// ==========================================
+// REALTIME CHAT & RESET AUTOMATIC (10 MINS)
+// ==========================================
+function initFirebaseChatSync() {
+    if (!db) return;
+
+    const chatMessagesContainer = document.getElementById('chatMessages');
+    if (chatMessagesContainer) chatMessagesContainer.innerHTML = '';
+
+    const otherList = Object.values(window.otherPlayers || {});
+    
+    // Jika room kosong (tidak ada player online lain saat login)
+    if (otherList.length === 0) {
+        db.ref('lastActiveTime').once('value', (snapshot) => {
+            const lastActive = snapshot.val();
+            const TEN_MINUTES_MS = 10 * 60 * 1000; // 10 Menit
+
+            // Jika sepi sudah lebih dari 10 menit, hapus riwayat chat di Firebase
+            if (lastActive && (Date.now() - lastActive > TEN_MINUTES_MS)) {
+                db.ref('chats').remove();
+            }
+            startListeningChat();
+        });
+    } else {
+        startListeningChat();
+    }
+}
+
+function startListeningChat() {
+    if (chatRefQuery) chatRefQuery.off();
+
+    // Mengambil timestamp login agar chat lama tidak dimuat ulang
+    const loginTimestamp = Date.now() - 1000;
+
+    // Hanya dengarkan pesan yang dibuat sejak player login
+    chatRefQuery = db.ref('chats').orderByChild('timestamp').startAt(loginTimestamp);
+    
+    chatRefQuery.on('child_added', (snapshot) => {
+        const msgData = snapshot.val();
+        if (!msgData || !msgData.sender || !msgData.text) return;
+
+        const isSelf = (msgData.sender === playerCustomName);
+        if (typeof addChatMessage === 'function') {
+            addChatMessage(msgData.sender, msgData.text, isSelf);
+        }
+    });
+}
+
+// Kirim pesan ke Realtime Database Firebase
+window.sendFirebaseChat = function(senderName, messageText) {
+    if (!db || !messageText) return;
+    
+    const chatRef = db.ref('chats');
+    chatRef.push({
+        sender: senderName || playerCustomName || "Anonim",
+        text: messageText,
+        timestamp: Date.now()
+    });
+};
+
+function updateOnlinePlayersList(otherPlayersData) {
+    const listElem = document.getElementById('onlinePlayersList');
+    const onlineCountText = document.getElementById('onlineCountText');
+    if (!listElem) return;
+
+    const otherList = Object.values(otherPlayersData || {});
+    const totalOnline = otherList.length + 1; // Termasuk player sendiri
+
+    if (onlineCountText) {
+        onlineCountText.innerText = `${totalOnline} Online`;
+    }
+
+    listElem.innerHTML = '';
+    
+    // 1. Player sendiri (Anda)
+    const selfItem = document.createElement('div');
+    selfItem.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800 border border-yellow-400/50';
+    selfItem.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span class="text-base">${selectedGender === 'female' ? '🧕' : '👦'}</span>
+            <div>
+                <div class="text-xs font-bold text-yellow-400">${playerCustomName} <span class="text-[9px] text-slate-400">(Anda ${isAdminUser ? '- ADMIN' : ''})</span></div>
+                <div class="text-[10px] text-slate-300">${playerRole}</div>
+            </div>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40">Aktif</span>
+    `;
+    listElem.appendChild(selfItem);
+
+    // 2. Player lain
+    otherList.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800/80 border border-slate-700';
+        
+        // Tombol Kick khusus jika Admin
+        const kickButtonHTML = isAdminUser 
+            ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
+            : `<span class="text-[10px] text-slate-400">${p.location === 2 ? '🏖️ Pantai' : '🏫 Sekolah'}</span>`;
+
+        item.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="text-base">${p.gender === 'female' ? '🧕' : '👦'}</span>
+                <div>
+                    <div class="text-xs font-bold text-white">${p.name}</div>
+                    <div class="text-[10px] text-slate-400">${p.role || 'SISWA'}</div>
+                </div>
+            </div>
+            ${kickButtonHTML}
+        `;
+        listElem.appendChild(item);
+    });
+}
+
+// Fungsi eksekusi Kick oleh Admin
+window.kickPlayerByAdmin = function(targetPlayerName) {
+    if (!isAdminUser || !db || !targetPlayerName) return;
+
+    if (confirm(`Apakah Anda yakin ingin mengeluarkan "${targetPlayerName}" dari game?`)) {
+        const safeKey = targetPlayerName.replace(/[.#$\[\]]/g, "_");
+        
+        // 1. Sinyal kick ke Firebase
+        db.ref('kickedPlayers/' + safeKey).set(true);
+
+        // 2. Hapus player dari daftar online
+        db.ref('players/' + safeKey).remove();
+
+        // 3. Pengumuman sistem di chat
+        if (typeof window.sendFirebaseChat === 'function') {
+            window.sendFirebaseChat("Sistem", `📢 ${targetPlayerName} telah dikeluarkan dari game oleh Admin ${playerCustomName}.`);
+        }
+    }
+};
 
 function updateMyPositionToFirebase() {
     if (!myPlayerRef || !isGameStarted) return;
@@ -126,7 +274,7 @@ function handleLogin(e) {
         playerCustomName = matchedUser.name;
         selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
         playerRole = matchedUser.role || 'SISWA';
-        isAdminUser = ((matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
+        isAdminUser = (matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
 
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('gameContainer').classList.remove('hidden');
@@ -139,13 +287,15 @@ function handleLogin(e) {
         
         isGameStarted = true;
         initFirebaseSync();
+        initFirebaseChatSync();
         requestAnimationFrame(gameLoop);
 
         setupGameEvents();
         resetIdleTimer();
-        
-        if (typeof addChatMessage === 'function') {
-            addChatMessage(playerCustomName, `Halo semuanya, ${playerCustomName} siap menjelajah!`, true);
+
+        // Kirim salam online realtime ke Firebase
+        if (typeof window.sendFirebaseChat === 'function') {
+            window.sendFirebaseChat(playerCustomName, `Halo semuanya, ${playerCustomName} baru saja online!`);
         }
     } else {
         if (errorMsg) {
@@ -224,7 +374,7 @@ function getAdaptiveZoom() {
 }
 
 // ==========================================
-// GAME LOOP (PERBAIKAN POSISI TENGAH & KAMERA PRESISI)
+// GAME LOOP
 // ==========================================
 function gameLoop() {
     if (!isGameStarted) return;
@@ -242,7 +392,6 @@ function gameLoop() {
     const viewWidth = canvas.width / currentZoomScale;
     const viewHeight = canvas.height / currentZoomScale;
 
-    // Pembulatan Math.round agar pergerakan kamera stabil dan bebas getar
     let cameraX = Math.round(Math.max(0, Math.min(MAP_WIDTH - viewWidth, player.x - viewWidth / 2)));
     let cameraY = Math.round(Math.max(0, Math.min(MAP_HEIGHT - viewHeight, player.y - viewHeight / 2)));
 
@@ -251,7 +400,7 @@ function gameLoop() {
 
     const activeWalkTimer = typeof walkTimer !== 'undefined' ? walkTimer : (window.walkTimer || 0);
 
-    // Menggambar Pemain Lain (Multiplayer) Tepat di Titik Tengah
+    // Menggambar Pemain Lain
     if (window.otherPlayers) {
         Object.keys(window.otherPlayers).forEach(id => {
             const pData = window.otherPlayers[id];
@@ -278,7 +427,7 @@ function gameLoop() {
         trees.forEach(tree => { if (tree.y <= player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
-    // Menggambar Karakter Utama (Diri Sendiri) Tepat 100% di Tengah Layar
+    // Menggambar Pemain Utama
     ctx.save(); ctx.scale(currentZoomScale, currentZoomScale);
     drawCharacterSprite(
         ctx, 
@@ -449,15 +598,34 @@ function saveCharacterEdits() {
 
 function openOnlinePlayersModal() { document.getElementById('onlinePlayersModal').classList.remove('hidden'); }
 function closeOnlinePlayersModal() { document.getElementById('onlinePlayersModal').classList.add('hidden'); }
+
 function handleLogout() { 
     isGameStarted = false; 
+
+    // Sembunyikan semua modal saat logout
+    if (typeof closeEditCharacterModal === 'function') closeEditCharacterModal();
+    if (typeof closeOnlinePlayersModal === 'function') closeOnlinePlayersModal();
+    if (typeof closeModal === 'function') closeModal();
+
     if (myPlayerRef) {
         myPlayerRef.remove();
         myPlayerRef = null;
     }
+
+    // Catat waktu logout di Firebase
+    if (db) {
+        db.ref('lastActiveTime').set(Date.now());
+    }
+
+    if (chatRefQuery) {
+        chatRefQuery.off();
+        chatRefQuery = null;
+    }
     if (idleTimer) clearTimeout(idleTimer);
+
     document.getElementById('gameContainer').classList.add('hidden'); 
     document.getElementById('loginScreen').classList.remove('hidden'); 
 }
+
 function closeModal() { document.getElementById('dialogModal').classList.add('hidden'); }
 window.onload = function() { fetchSpreadsheetUsers(); };
