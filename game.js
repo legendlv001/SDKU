@@ -32,15 +32,19 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 }
 
 let USER_DATABASE = [
-    { name: "Admin", gender: "L", role: "ADMIN", status: "Full" }, 
-    { name: "Ali", gender: "L", role: "SISWA", status: "Full" }, 
-    { name: "Aisyah", gender: "P", role: "SISWI", status: "User" }
+    { name: "Admin", gender: "L", role: "ADMIN", status: "Full", points: 100 }, 
+    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50 }, 
+    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50 }
 ];
 
 let isDatabaseReady = false;
+let playerPoints = 0;
 
 const loadingGif = new Image();
 loadingGif.src = 'assets/loading.gif';
+
+const poinIconImg = new Image();
+poinIconImg.src = 'assets/poin.png';
 
 // Kontrol Pop-up Loading Login
 function showLoginLoading(text) {
@@ -54,6 +58,109 @@ function hideLoginLoading() {
     const popup = document.getElementById('loginLoadingPopup');
     if (popup) popup.classList.add('hidden');
 }
+
+// ==========================================
+// SISTEM POIN & TAMPILAN POIN (FIREBASE)
+// ==========================================
+function updatePointsDisplay() {
+    const headerPoin = document.getElementById('headerPoinDisplay');
+    const modalPoin = document.getElementById('modalPoinDisplay');
+    const shopPoin = document.getElementById('shopPoinBalance');
+
+    if (headerPoin) headerPoin.innerText = playerPoints;
+    if (modalPoin) modalPoin.innerText = playerPoints;
+    if (shopPoin) shopPoin.innerText = playerPoints;
+}
+
+function initPlayerPointsSync(sheetDefaultPoints) {
+    playerPoints = parseInt(sheetDefaultPoints, 10) || 0;
+    updatePointsDisplay();
+
+    if (!db || !playerCustomName) return;
+    const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
+    const pointsRef = db.ref('playerPoints/' + safeKey);
+
+    pointsRef.once('value', (snapshot) => {
+        if (snapshot.exists() && typeof snapshot.val().points === 'number') {
+            playerPoints = snapshot.val().points;
+        } else {
+            pointsRef.set({
+                name: playerCustomName,
+                points: playerPoints,
+                updatedAt: Date.now()
+            });
+        }
+        updatePointsDisplay();
+    });
+}
+
+function savePlayerPointsToFirebase() {
+    updatePointsDisplay();
+    if (!db || !playerCustomName) return;
+    const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
+    db.ref('playerPoints/' + safeKey).update({
+        name: playerCustomName,
+        points: playerPoints,
+        updatedAt: Date.now()
+    });
+}
+
+// ==========================================
+// KONTROL FULLSCREEN & KUNCI LANDSCAPE
+// ==========================================
+window.forceFullscreenAndLandscape = async function() {
+    const docEl = document.documentElement;
+    const icon = document.getElementById('fullscreenIcon');
+
+    try {
+        const requestFS = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+        if (requestFS && !document.fullscreenElement && !document.webkitFullscreenElement) {
+            await requestFS.call(docEl);
+        }
+        if (icon) {
+            icon.classList.remove('fa-expand');
+            icon.classList.add('fa-compress');
+        }
+    } catch (err) {
+        console.warn("Fullscreen dibatasi browser:", err);
+    }
+
+    try {
+        if (screen.orientation && screen.orientation.lock) {
+            await screen.orientation.lock('landscape');
+        }
+    } catch (err) {
+        console.warn("Orientation lock tidak didukung perangkat ini:", err);
+    }
+};
+
+window.toggleFullScreen = function() {
+    const doc = window.document;
+    const icon = document.getElementById('fullscreenIcon');
+
+    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+        forceFullscreenAndLandscape();
+    } else {
+        const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+        if (cancelFullScreen) {
+            cancelFullScreen.call(doc).then(() => {
+                if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
+            }).catch(() => {});
+        }
+    }
+};
+
+document.addEventListener('fullscreenchange', () => {
+    const icon = document.getElementById('fullscreenIcon');
+    if (!icon) return;
+    if (document.fullscreenElement) {
+        icon.classList.remove('fa-expand');
+        icon.classList.add('fa-compress');
+    } else {
+        icon.classList.remove('fa-compress');
+        icon.classList.add('fa-expand');
+    }
+});
 
 async function fetchSpreadsheetUsers() {
     const errorMsg = document.getElementById('loginErrorMsg');
@@ -73,11 +180,13 @@ async function fetchSpreadsheetUsers() {
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
                 if (cols[0] && cols[0].toLowerCase() !== "nama") {
+                    const parsedPoints = parseInt((cols[4] || "0").replace(/[^0-9-]/g, ''), 10);
                     fetchedUsers.push({ 
                         name: cols[0], 
                         gender: (cols[1] || "L").toUpperCase(), 
                         role: (cols[2] || "SISWA").toUpperCase(), 
-                        status: cols[3] || "User" 
+                        status: cols[3] || "User",
+                        points: isNaN(parsedPoints) ? 0 : parsedPoints
                     });
                 }
             }
@@ -334,6 +443,8 @@ function handleLogin(e) {
         if (errorMsg) errorMsg.classList.add('hidden');
         showLoginLoading("Memasuki dunia game...");
 
+        forceFullscreenAndLandscape();
+
         setTimeout(() => {
             hideLoginLoading();
 
@@ -342,6 +453,10 @@ function handleLogin(e) {
             selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
             playerRole = matchedUser.role || 'SISWA';
             isAdminUser = (matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
+
+            initPlayerPointsSync(matchedUser.points);
+
+            document.body.classList.add('game-active');
 
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('gameContainer').classList.remove('hidden');
@@ -446,7 +561,7 @@ const MAP_WIDTH = 2000, MAP_HEIGHT = 1200;
 function changeZoom(delta) { userZoomModifier = Math.max(-0.4, Math.min(0.8, userZoomModifier + delta)); }
 function getAdaptiveZoom() {
     const screenW = window.innerWidth, screenH = window.innerHeight;
-    let baseZoom = (screenW < 900 || screenH < 500) ? Math.max(0.75, Math.min(0.95, screenW / 900)) : 1.35;
+    let baseZoom = (screenW < 900 || screenH < 500) ? Math.max(0.6, Math.min(0.8, screenW / 1150)) : 1.25;
     return Math.max(0.4, Math.min(2.2, baseZoom + userZoomModifier));
 }
 
@@ -529,13 +644,14 @@ function gameLoop() {
 function setupTouchAnalogStick() {
     const stick = document.getElementById('psAnalogStick'), knob = document.getElementById('analogKnob');
     if (!stick || !knob) return;
-    let isDragging = false, centerPos = { x: 0, y: 0 }, maxRadius = 40;
+    let isDragging = false, centerPos = { x: 0, y: 0 }, maxRadius = 35;
 
     const handleStart = (e) => { 
         e.preventDefault(); 
         isDragging = true; 
         const rect = stick.getBoundingClientRect(); 
         centerPos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }; 
+        maxRadius = rect.width * 0.36;
         handleMove(e); 
     };
     const handleMove = (e) => {
@@ -546,8 +662,8 @@ function setupTouchAnalogStick() {
         if (dist > maxRadius) { deltaX = (deltaX / dist) * maxRadius; deltaY = (deltaY / dist) * maxRadius; }
         knob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
 
-        keys.ArrowLeft = deltaX < -8; keys.ArrowRight = deltaX > 8; 
-        keys.ArrowUp = deltaY < -8; keys.ArrowDown = deltaY > 8;
+        keys.ArrowLeft = deltaX < -6; keys.ArrowRight = deltaX > 6; 
+        keys.ArrowUp = deltaY < -6; keys.ArrowDown = deltaY > 6;
         player.isMovingToTarget = false;
 
         if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
@@ -568,8 +684,110 @@ function setupTouchAnalogStick() {
 }
 
 // ==========================================
-// INTERAKSI DENGAN SPREADSHEET BANGUNAN
+// INTERAKSI DENGAN SPREADSHEET BANGUNAN & TOKO
 // ==========================================
+let currentShopItems = [];
+let pendingRedeemItem = null;
+
+function renderShopItemsList() {
+    const modalContent = document.getElementById('modalContent');
+    if (!modalContent) return;
+
+    let html = `
+        <div class="flex items-center justify-between bg-amber-950/80 border border-amber-500/40 px-3.5 py-2 rounded-xl mb-3">
+            <span class="text-xs font-bold text-amber-200">Poin Anda Saat Ini:</span>
+            <div class="flex items-center gap-1.5">
+                <img src="assets/poin.png" alt="Poin" class="w-4 h-4 object-contain coin-spin" />
+                <span id="shopPoinBalance" class="text-sm font-extrabold text-amber-400">${playerPoints}</span>
+            </div>
+        </div>
+        <div id="shopFeedbackBanner" class="hidden mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center"></div>
+    `;
+
+    if (currentShopItems.length === 0) {
+        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada barang yang dijual di Toko saat ini.</div>`;
+    } else {
+        html += `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left pr-1">`;
+        currentShopItems.forEach((item, idx) => {
+            const canAfford = playerPoints >= item.cost;
+            const btnClass = canAfford
+                ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
+                : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
+
+            html += `
+                <div class="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-xl">
+                    <div class="pr-2">
+                        <div class="text-xs md:text-sm font-bold text-white">${item.name}</div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <img src="assets/poin.png" alt="Poin" class="w-3.5 h-3.5 object-contain coin-spin" />
+                            <span class="text-xs font-extrabold text-amber-400">${item.cost} Poin</span>
+                        </div>
+                    </div>
+                    <button onclick="promptRedeemShopItem(${idx})" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">
+                        ${canAfford ? 'Tukar' : 'Poin Kurang'}
+                    </button>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
+
+    modalContent.innerHTML = html;
+}
+
+window.promptRedeemShopItem = function(itemIndex) {
+    const item = currentShopItems[itemIndex];
+    if (!item || playerPoints < item.cost) return;
+
+    pendingRedeemItem = item;
+    const textElem = document.getElementById('buyConfirmText');
+    if (textElem) {
+        textElem.innerHTML = `Tukarkan <strong class="text-amber-400">${item.cost} Poin</strong> untuk mendapatkan <strong class="text-white">${item.name}</strong>?`;
+    }
+    const modal = document.getElementById('buyConfirmModal');
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closeBuyConfirmModal = function() {
+    pendingRedeemItem = null;
+    const modal = document.getElementById('buyConfirmModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.executeRedeemItem = function() {
+    if (!pendingRedeemItem) return;
+    const item = pendingRedeemItem;
+    closeBuyConfirmModal();
+
+    if (playerPoints < item.cost) return;
+
+    playerPoints -= item.cost;
+    savePlayerPointsToFirebase();
+
+    renderShopItemsList();
+
+    const banner = document.getElementById('shopFeedbackBanner');
+    if (banner) {
+        banner.className = "mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center bg-emerald-950/90 border border-emerald-500 text-emerald-300";
+        banner.innerHTML = `✅ Berhasil menukarkan ${item.cost} Poin dengan <strong>${item.name}</strong>!`;
+        banner.classList.remove('hidden');
+    }
+
+    if (db) {
+        db.ref('redeemHistory').push({
+            player: playerCustomName,
+            item: item.name,
+            cost: item.cost,
+            remainingPoints: playerPoints,
+            timestamp: Date.now()
+        });
+    }
+
+    if (typeof window.sendFirebaseChat === 'function') {
+        window.sendFirebaseChat("Warung", `🛍️ ${playerCustomName} baru saja menukarkan ${item.cost} Poin dengan "${item.name}"!`);
+    }
+};
+
 async function triggerInteraction() {
     if (!nearbyBuilding) return;
     
@@ -589,7 +807,7 @@ async function triggerInteraction() {
             <span class="text-xs text-slate-300">Memuat data ${nearbyBuilding.name}...</span>
         </div>
     `;
-    modalActions.innerHTML = `<button onclick="closeModal()" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition">Tutup</button>`;
+    modalActions.innerHTML = `<button onclick="closeModal()" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
     document.getElementById('dialogModal').classList.remove('hidden');
 
     if (!nearbyBuilding.sheetName) {
@@ -604,7 +822,21 @@ async function triggerInteraction() {
         const csvText = await response.text();
         const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-        if (nearbyBuilding.sheetName === 'Perpus') {
+        if (nearbyBuilding.sheetName === 'Toko') {
+            currentShopItems = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                if (cols[0]) {
+                    const itemCost = parseInt((cols[1] || "0").replace(/[^0-9]/g, ''), 10);
+                    currentShopItems.push({
+                        name: cols[0],
+                        cost: isNaN(itemCost) ? 0 : itemCost
+                    });
+                }
+            }
+            renderShopItemsList();
+
+        } else if (nearbyBuilding.sheetName === 'Perpus') {
             let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
             let hasItems = false;
 
@@ -740,6 +972,7 @@ function renderMiniMap() {
 function openEditCharacterModal() {
     tempModalGender = selectedGender;
     document.getElementById('editNameInput').value = playerCustomName;
+    updatePointsDisplay();
     selectModalGender(selectedGender);
     document.getElementById('editCharModal').classList.remove('hidden');
 }
@@ -775,10 +1008,18 @@ function closeOnlinePlayersModal() { document.getElementById('onlinePlayersModal
 function handleLogout() { 
     isGameStarted = false; 
 
+    document.body.classList.remove('game-active');
+    try {
+        if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
+        }
+    } catch (e) {}
+
     if (typeof closeEditCharacterModal === 'function') closeEditCharacterModal();
     if (typeof closeOnlinePlayersModal === 'function') closeOnlinePlayersModal();
     if (typeof closeModal === 'function') closeModal();
     if (typeof closeKickConfirmModal === 'function') closeKickConfirmModal();
+    if (typeof closeBuyConfirmModal === 'function') closeBuyConfirmModal();
 
     if (myPlayerRef) {
         myPlayerRef.remove();

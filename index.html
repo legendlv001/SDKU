@@ -3,43 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Simulasi Open World Online - Sekolah & Pantai</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
         * { font-family: 'Fredoka', sans-serif; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
-        body { background-color: #0f172a; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; margin: 0; padding: 0; }
-        .game-viewport { width: 100vw; height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden; background-color: #020617; }
+        body { 
+            background-color: #0f172a; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100vw; 
+            height: 100vh; 
+            height: 100dvh; 
+            margin: 0; 
+            padding: 0; 
+        }
+        .game-viewport { 
+            width: 100vw; 
+            height: 100vh; 
+            height: 100dvh; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative; 
+            overflow: hidden; 
+            background-color: #020617; 
+        }
         .btn-action-highlight { animation: pulse-ring 1.5s infinite; }
         @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); } 70% { box-shadow: 0 0 0 14px rgba(250, 204, 21, 0); } 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
         @keyframes badge-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
         .animate-badge { animation: badge-bounce 0.5s ease-in-out infinite; }
+        
+        /* Animasi Koin Berputar Horizontal */
+        @keyframes coin-spin-horizontal {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(360deg); }
+        }
+        .coin-spin {
+            animation: coin-spin-horizontal 2.2s linear infinite;
+            transform-style: preserve-3d;
+        }
+        
+        /* Peringatan putar layar hanya muncul jika SUDAH masuk game (class game-active) namun orientasi masih portrait */
         #rotateNotice { display: none; }
-        @media screen and (max-width: 900px) and (orientation: portrait) { #rotateNotice { display: flex !important; } }
+        @media screen and (max-width: 900px) and (orientation: portrait) { 
+            body.game-active #rotateNotice { display: flex !important; } 
+        }
     </style>
 </head>
 <body>
+    <!-- Peringatan Putar Layar (Fallback jika HP tidak mendukung auto-rotate landscape) -->
     <div id="rotateNotice" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white">
         <div class="w-20 h-20 mb-4 rounded-3xl bg-yellow-400 text-slate-950 flex items-center justify-center text-4xl shadow-2xl animate-bounce">📱</div>
         <h2 class="text-xl md:text-2xl font-extrabold text-yellow-400 mb-2">Putar Layar HP Anda</h2>
         <p class="text-xs md:text-sm text-slate-300 max-w-xs leading-relaxed mb-4">Untuk pengalaman bermain petualangan yang terbaik dan luas, silakan putar HP Anda ke posisi <strong>Landscape (Mendatar)</strong>.</p>
-        <div class="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-xl text-xs font-semibold text-yellow-300 border border-slate-700"><i class="fas fa-rotate text-sm"></i> Mode Landscape</div>
+        <button onclick="forceFullscreenAndLandscape()" class="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg flex items-center gap-2 transition active:scale-95">
+            <i class="fas fa-rotate text-sm"></i> Aktifkan Fullscreen & Landscape
+        </button>
     </div>
 
     <!-- Layar Login -->
     <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
-        <div class="bg-slate-900 border-2 border-yellow-400/85 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl text-white">
-            <div class="w-16 h-16 mx-auto mb-3 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-3xl font-black shadow-lg">🏫</div>
-            <h1 class="text-2xl md:text-3xl font-extrabold text-yellow-400 mb-1">OpenWorld Multi-Lokasi</h1>
-            <p class="text-xs md:text-sm text-slate-300 mb-6">Masukkan Nama terdaftar untuk mulai menjelajah.</p>
-            <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
+        <div class="bg-slate-900 border-2 border-yellow-400/85 rounded-3xl p-5 md:p-8 max-w-md w-full text-center shadow-2xl text-white">
+            <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-2.5 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-2xl md:text-3xl font-black shadow-lg">🏫</div>
+            <h1 class="text-xl md:text-3xl font-extrabold text-yellow-400 mb-1">OpenWorld Multi-Lokasi</h1>
+            <p class="text-xs md:text-sm text-slate-300 mb-4 md:mb-6">Masukkan Nama terdaftar untuk mulai menjelajah.</p>
+            <form onsubmit="handleLogin(event)" class="space-y-3 md:space-y-4 text-left">
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Nama Lengkap (Sesuai Database):</label>
-                    <input type="text" id="loginUsername" required placeholder="Masukkan Nama..." class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="loginUsername" required placeholder="Masukkan Nama..." class="w-full px-4 py-2 md:py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
                 </div>
                 <div id="loginErrorMsg" class="hidden text-red-400 text-xs font-semibold bg-red-950/60 p-2.5 rounded-xl border border-red-800/80">Nama tidak terdaftar di database!</div>
-                <button type="submit" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl text-sm shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"><i class="fas fa-right-to-bracket"></i> Masuk Ke Permainan</button>
+                <button type="submit" class="w-full py-2.5 md:py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl text-sm shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"><i class="fas fa-right-to-bracket"></i> Masuk Ke Permainan</button>
             </form>
         </div>
     </div>
@@ -54,56 +94,74 @@
 
     <!-- Kontainer Utama Game -->
     <div id="gameContainer" class="game-viewport shadow-2xl hidden">
-        <div class="bg-slate-800/90 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 flex items-center justify-between border-b border-slate-700 z-10">
-            <div id="userProfileBadge" onclick="openEditCharacterModal()" class="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition group bg-slate-700/50 px-2.5 py-1 rounded-xl border border-slate-600/60" title="Profil Pengguna">
-                <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-yellow-400 text-slate-900 font-bold flex items-center justify-center shadow-md text-xs md:text-base group-hover:scale-105 transition-transform" id="avatarBadge">👦</div>
+        <!-- Header Bar -->
+        <div class="bg-slate-800/90 backdrop-blur-md text-white px-2.5 py-1 md:px-4 md:py-2 flex items-center justify-between border-b border-slate-700 z-10 shrink-0">
+            <!-- Profil & Poin Pojok Kiri Atas -->
+            <div id="userProfileBadge" onclick="openEditCharacterModal()" class="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-85 transition group bg-slate-700/50 px-2 py-0.5 md:px-2.5 md:py-1 rounded-xl border border-slate-600/60" title="Profil & Poin Pengguna">
+                <div class="w-6 h-6 md:w-9 md:h-9 rounded-full bg-yellow-400 text-slate-900 font-bold flex items-center justify-center shadow-md text-xs md:text-base group-hover:scale-105 transition-transform" id="avatarBadge">👦</div>
                 <div>
                     <div class="flex items-center gap-1.5">
-                        <h3 id="charNameDisplay" class="font-bold text-xs md:text-sm leading-tight text-yellow-400">Nama Karakter</h3>
-                        <i id="editIconIndicator" class="fas fa-pencil-alt text-[10px] text-yellow-300"></i>
+                        <h3 id="charNameDisplay" class="font-bold text-[11px] md:text-sm leading-tight text-yellow-400">Nama Karakter</h3>
+                        <i id="editIconIndicator" class="fas fa-pencil-alt text-[9px] md:text-[10px] text-yellow-300"></i>
                     </div>
-                    <p id="charRoleDisplay" class="text-[10px] text-slate-300 font-semibold leading-none mt-0.5">Jabatan</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <p id="charRoleDisplay" class="text-[9px] md:text-[10px] text-slate-300 font-semibold leading-none">Jabatan</p>
+                        <span class="text-slate-500 text-[9px] leading-none">•</span>
+                        <div class="flex items-center gap-1 bg-amber-950/80 border border-amber-500/40 px-1.5 py-0.5 rounded-md">
+                            <img src="assets/poin.png" alt="Poin" class="w-3 h-3 md:w-3.5 md:h-3.5 object-contain coin-spin" />
+                            <span id="headerPoinDisplay" class="text-[9px] md:text-[11px] font-extrabold text-amber-300 leading-none">0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <div id="locationIndicatorBadge" class="bg-indigo-950/80 border border-indigo-500/50 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-300 shadow-md flex items-center gap-1.5">
+
+            <div class="flex items-center gap-1.5 md:gap-2">
+                <div id="locationIndicatorBadge" class="bg-indigo-950/80 border border-indigo-500/50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-xl text-[10px] md:text-xs font-bold text-indigo-300 shadow-md flex items-center gap-1.5">
                     <i class="fas fa-map-pin text-indigo-400"></i>
                     <span id="currentLocationNameText">Lokasi : Sekolah</span>
                 </div>
-                <div onclick="openOnlinePlayersModal()" class="flex items-center gap-2 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-500/50 px-3 py-1.5 rounded-xl cursor-pointer transition active:scale-95 shadow-md">
-                    <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>
-                    <div class="text-xs font-bold text-emerald-400 flex items-center gap-1"><i class="fas fa-users text-[11px]"></i><span id="onlineCountText">1 Online</span></div>
+                <div onclick="openOnlinePlayersModal()" class="flex items-center gap-1.5 md:gap-2 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-500/50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-xl cursor-pointer transition active:scale-95 shadow-md">
+                    <span class="relative flex h-2 w-2 md:h-2.5 md:w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 md:h-2.5 md:w-2.5 bg-emerald-500"></span></span>
+                    <div class="text-[10px] md:text-xs font-bold text-emerald-400 flex items-center gap-1"><i class="fas fa-users text-[10px] md:text-[11px]"></i><span id="onlineCountText">1 Online</span></div>
                 </div>
             </div>
-            <div></div>
+
+            <!-- Tombol Fullscreen Manual di Kanan Atas -->
+            <button onclick="toggleFullScreen()" class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-700/80 hover:bg-slate-600 text-slate-200 flex items-center justify-center text-xs border border-slate-600 transition" title="Layar Penuh">
+                <i id="fullscreenIcon" class="fas fa-expand"></i>
+            </button>
         </div>
 
+        <!-- Area Canvas & Kontrol Mengambang -->
         <div class="relative flex-1 w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden">
             <canvas id="gameCanvas" class="block w-full h-full"></canvas>
             
-            <div class="absolute top-3 left-3 z-30 flex flex-col gap-2">
-                <button id="miniMapBtn" onclick="toggleMiniMap()" class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-800/90 hover:bg-slate-700 border-2 border-yellow-400 text-yellow-400 shadow-2xl flex flex-col items-center justify-center text-xs transition-all hover:scale-105 active:scale-95 backdrop-blur-md">
-                    <i class="fas fa-map-marked-alt text-base mb-0.5"></i>
-                    <span class="text-[8px] font-extrabold tracking-wider">PETA</span>
+            <!-- Tombol Peta & Zoom (Kiri Atas) -->
+            <div class="absolute top-2.5 left-2.5 md:top-3 md:left-3 z-30 flex flex-col gap-1.5 md:gap-2">
+                <button id="miniMapBtn" onclick="toggleMiniMap()" class="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-800/90 hover:bg-slate-700 border-2 border-yellow-400 text-yellow-400 shadow-2xl flex flex-col items-center justify-center text-xs transition-all hover:scale-105 active:scale-95 backdrop-blur-md">
+                    <i class="fas fa-map-marked-alt text-xs md:text-base mb-0.5"></i>
+                    <span class="text-[7px] md:text-[8px] font-extrabold tracking-wider">PETA</span>
                 </button>
-                <div class="flex flex-col gap-1 bg-slate-800/90 border-2 border-slate-600 rounded-2xl p-1 backdrop-blur-md shadow-2xl">
-                    <button onclick="changeZoom(0.15)" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-base transition-colors" title="Zoom In (+)"><i class="fas fa-plus"></i></button>
-                    <button onclick="changeZoom(-0.15)" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-base transition-colors" title="Zoom Out (-)"><i class="fas fa-minus"></i></button>
+                <div class="flex flex-col gap-1 bg-slate-800/90 border-2 border-slate-600 rounded-xl md:rounded-2xl p-0.5 md:p-1 backdrop-blur-md shadow-2xl">
+                    <button onclick="changeZoom(0.15)" class="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-xs md:text-base transition-colors" title="Zoom In (+)"><i class="fas fa-plus"></i></button>
+                    <button onclick="changeZoom(-0.15)" class="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-xs md:text-base transition-colors" title="Zoom Out (-)"><i class="fas fa-minus"></i></button>
                 </div>
             </div>
 
-            <div class="absolute bottom-3 left-3 z-30 flex items-end gap-3 pointer-events-auto">
-                <div id="psAnalogStick" class="relative w-28 h-28 bg-gradient-to-b from-slate-700 to-slate-900 rounded-full border-4 border-slate-500 shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
-                    <div id="analogKnob" class="w-14 h-14 rounded-full bg-gradient-to-b from-slate-600 to-slate-800 border-2 border-slate-400 shadow-inner flex items-center justify-center transform transition-transform duration-75">
-                        <div class="w-6 h-6 rounded-full bg-slate-500 shadow-sm flex items-center justify-center"><div class="w-2.5 h-2.5 rounded-full bg-yellow-400"></div></div>
+            <!-- Kontrol Analog & Tombol Aksi (Kiri Bawah) -->
+            <div class="absolute bottom-2.5 left-2.5 md:bottom-3 md:left-3 z-30 flex items-end gap-2 md:gap-3 pointer-events-auto">
+                <div id="psAnalogStick" class="relative w-20 h-20 md:w-28 md:h-28 bg-gradient-to-b from-slate-700/90 to-slate-900/90 rounded-full border-3 md:border-4 border-slate-500 shadow-2xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
+                    <div id="analogKnob" class="w-10 h-10 md:w-14 md:h-14 rounded-full bg-gradient-to-b from-slate-600 to-slate-800 border-2 border-slate-400 shadow-inner flex items-center justify-center transform transition-transform duration-75">
+                        <div class="w-4 h-4 md:w-6 md:h-6 rounded-full bg-slate-500 shadow-sm flex items-center justify-center"><div class="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400"></div></div>
                     </div>
                 </div>
-                <button id="btnInteract" onclick="triggerInteraction()" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
-                    <i class="fas fa-hand-pointer text-base sm:text-lg mb-0.5"></i>
-                    <span class="text-[10px] font-black leading-none">AKSI</span>
+                <button id="btnInteract" onclick="triggerInteraction()" class="w-14 h-14 md:w-20 md:h-20 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
+                    <i class="fas fa-hand-pointer text-sm md:text-lg mb-0.5"></i>
+                    <span class="text-[9px] md:text-[10px] font-black leading-none">AKSI</span>
                 </button>
             </div>
 
+            <!-- Pop-Up Peta Besar -->
             <div id="miniMapPopup" class="fixed inset-0 z-40 flex items-center justify-center p-4 pointer-events-none hidden">
                 <div class="bg-slate-900/95 backdrop-blur-md border-2 border-yellow-400 rounded-2xl w-80 sm:w-[28rem] shadow-2xl overflow-hidden flex flex-col pointer-events-auto transition-all duration-300">
                     <div class="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
@@ -111,53 +169,69 @@
                         <button onclick="closeMiniMap()" class="text-slate-400 hover:text-white text-xs"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="p-2 flex-1 flex items-center justify-center bg-slate-950">
-                        <canvas id="largeMapCanvas" class="w-full h-56 sm:h-64 block rounded-lg"></canvas>
+                        <canvas id="largeMapCanvas" class="w-full h-48 sm:h-64 block rounded-lg"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-40 flex flex-col items-end">
+            <!-- Tombol & Kotak Chat (Kanan Bawah) -->
+            <div class="absolute bottom-2.5 right-2.5 md:bottom-4 md:right-4 z-40 flex flex-col items-end">
                 <div id="chatBoxPopup" class="mb-2 sm:mb-3 w-64 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300">
                     <div class="bg-indigo-600 text-white px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between">
                         <div class="flex items-center gap-2"><i class="fas fa-comments text-yellow-300"></i><span class="font-bold text-xs">Obrolan Ruangan</span></div>
                         <button onclick="toggleChat()" class="text-white hover:text-slate-200 text-xs"><i class="fas fa-times"></i></button>
                     </div>
-                    <div id="chatMessages" class="p-2 sm:p-3 h-36 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs"></div>
+                    <div id="chatMessages" class="p-2 sm:p-3 h-32 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs"></div>
                     <div class="p-2 bg-slate-100 border-t flex gap-1">
                         <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onkeydown="if(event.key==='Enter') sendChatMessage()">
                         <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
-                <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95">
+                <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base md:text-xl transition-all hover:scale-105 active:scale-95">
                     <i class="fas fa-comment-dots"></i>
-                    <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
+                    <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] md:text-[10px] font-extrabold w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Dialog Bangunan -->
+    <!-- Modal Dialog Bangunan & Toko -->
     <div id="dialogModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-yellow-400">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h3 id="modalTitle" class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-school text-yellow-500"></i> Judul</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+        <div class="bg-slate-900 text-white rounded-3xl max-w-md w-full p-5 md:p-6 shadow-2xl border-2 border-yellow-400">
+            <div class="flex justify-between items-center mb-3 md:mb-4 border-b border-slate-700 pb-2">
+                <h3 id="modalTitle" class="text-base md:text-lg font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-school text-yellow-400"></i> Judul</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg"><i class="fas fa-times"></i></button>
             </div>
-            <div id="modalContent" class="text-slate-600 text-sm mb-6 leading-relaxed">Pesan interaksi...</div>
+            <div id="modalContent" class="text-slate-200 text-xs md:text-sm mb-4 md:mb-5 leading-relaxed">Pesan interaksi...</div>
             <div class="flex justify-end gap-3" id="modalActions">
-                <button onclick="closeModal()" class="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold rounded-xl transition">Tutup</button>
+                <button onclick="closeModal()" class="px-4 py-2 md:px-5 md:py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold rounded-xl text-xs md:text-sm transition">Tutup</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Edit Karakter -->
+    <!-- Modal Edit Karakter & Cek Poin -->
     <div id="editCharModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
                 <button onclick="handleLogout()" class="px-3 py-1 bg-red-600/90 hover:bg-red-600 text-white text-[11px] font-bold rounded-xl transition flex items-center gap-1.5 shadow-md"><i class="fas fa-right-from-bracket"></i> Logout</button>
-                <h3 class="text-sm md:text-base font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-user-pen text-yellow-400"></i> Pengaturan Profil</h3>
+                <h3 class="text-sm md:text-base font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-user-pen text-yellow-400"></i> Profil & Poin</h3>
                 <button onclick="closeEditCharacterModal()" class="text-slate-400 hover:text-white text-base"><i class="fas fa-times"></i></button>
             </div>
+
+            <!-- Info Saldo Poin Pengguna -->
+            <div class="w-full mb-3 p-3 rounded-2xl bg-gradient-to-r from-amber-950/90 to-slate-800 border border-amber-400/50 flex items-center justify-between shrink-0 shadow-inner">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center p-1.5">
+                        <img src="assets/poin.png" alt="Poin" class="w-full h-full object-contain coin-spin" />
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-amber-300 font-semibold uppercase tracking-wider">Saldo Poin Anda</div>
+                        <div class="text-base md:text-lg font-extrabold text-white leading-tight"><span id="modalPoinDisplay">0</span> <span class="text-xs font-bold text-amber-400">Poin</span></div>
+                    </div>
+                </div>
+                <span class="text-[10px] text-slate-300 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700">Tukar di Warung</span>
+            </div>
+
             <div id="adminSettingsContainer" class="w-full">
                 <div class="w-full mb-3 shrink-0">
                     <label class="block text-xs font-bold text-slate-300 mb-1">Nama Karakter:</label>
@@ -195,6 +269,21 @@
             </div>
             <div id="onlinePlayersList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
             <button onclick="closeOnlinePlayersModal()" class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-600 transition">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Pop-Up Konfirmasi Penukaran Poin di Toko -->
+    <div id="buyConfirmModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-amber-400 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-white text-center">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center p-2.5 shadow-inner">
+                <img src="assets/poin.png" alt="Poin" class="w-full h-full object-contain coin-spin" />
+            </div>
+            <h3 class="text-base font-extrabold text-amber-400 mb-1">Tukar Poin?</h3>
+            <p id="buyConfirmText" class="text-xs text-slate-300 mb-5 leading-relaxed">Konfirmasi penukaran barang...</p>
+            <div class="flex gap-2.5">
+                <button onclick="closeBuyConfirmModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-600 transition">Batal</button>
+                <button onclick="executeRedeemItem()" class="flex-1 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition">Ya, Tukar</button>
+            </div>
         </div>
     </div>
 
