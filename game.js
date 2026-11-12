@@ -42,18 +42,24 @@ let isDatabaseReady = false;
 const loadingGif = new Image();
 loadingGif.src = 'assets/loading.gif';
 
+// Kontrol Pop-up Loading Login
+function showLoginLoading(text) {
+    const popup = document.getElementById('loginLoadingPopup');
+    const textElem = document.getElementById('loginLoadingText');
+    if (textElem) textElem.innerText = text;
+    if (popup) popup.classList.remove('hidden');
+}
+
+function hideLoginLoading() {
+    const popup = document.getElementById('loginLoadingPopup');
+    if (popup) popup.classList.add('hidden');
+}
+
 async function fetchSpreadsheetUsers() {
     const errorMsg = document.getElementById('loginErrorMsg');
+    if (errorMsg) errorMsg.classList.add('hidden');
     
-    if (errorMsg) {
-        errorMsg.innerHTML = `
-            <div class="flex items-center justify-center gap-2 my-2">
-                <img src="assets/loading.gif" alt="Loading..." class="w-6 h-6 inline-block" />
-                <span class="text-xs text-yellow-400 font-medium">Mengunduh data akun dari Spreadsheet...</span>
-            </div>
-        `;
-        errorMsg.classList.remove('hidden');
-    }
+    showLoginLoading("Mengunduh data akun...");
 
     try {
         const response = await fetch(CSV_URL); 
@@ -81,18 +87,11 @@ async function fetchSpreadsheetUsers() {
         }
         
         isDatabaseReady = true;
-        if (errorMsg) {
-            errorMsg.innerHTML = `<span class="text-xs text-emerald-400 font-medium">✅ Data akun siap! Silakan masukkan nama.</span>`;
-            setTimeout(() => { 
-                if (isDatabaseReady) errorMsg.classList.add('hidden'); 
-            }, 2500);
-        }
+        hideLoginLoading();
     } catch (err) { 
         console.warn("Gagal memuat Spreadsheet, menggunakan Local DB fallback.", err); 
         isDatabaseReady = true;
-        if (errorMsg) {
-            errorMsg.innerHTML = `<span class="text-xs text-red-400 font-medium">⚠️ Gagal memuat online, menggunakan data lokal.</span>`;
-        }
+        hideLoginLoading();
     }
 }
 
@@ -285,15 +284,7 @@ function handleLogin(e) {
     if (!inputElem) return;
 
     if (!isDatabaseReady) {
-        if (errorMsg) {
-            errorMsg.innerHTML = `
-                <div class="flex items-center justify-center gap-2 my-2">
-                    <img src="assets/loading.gif" alt="Loading..." class="w-6 h-6 inline-block" />
-                    <span class="text-xs text-yellow-400 font-medium">Sedang menyiapkan data akun, tunggu sebentar...</span>
-                </div>
-            `;
-            errorMsg.classList.remove('hidden');
-        }
+        showLoginLoading("Sedang menyiapkan data akun, tunggu sebentar...");
         return;
     }
     
@@ -304,18 +295,12 @@ function handleLogin(e) {
     const matchedUser = USER_DATABASE.find(user => user.name.trim().replace(/\s+/g, ' ').toLowerCase() === cleanInput);
 
     if (matchedUser) {
-        if (errorMsg) {
-            errorMsg.innerHTML = `
-                <div class="flex items-center justify-center gap-2 my-2">
-                    <img src="assets/loading.gif" alt="Loading..." class="w-6 h-6 inline-block" />
-                    <span class="text-xs text-emerald-400 font-medium">Memasuki dunia game...</span>
-                </div>
-            `;
-            errorMsg.classList.remove('hidden');
-        }
+        if (errorMsg) errorMsg.classList.add('hidden');
+        showLoginLoading("Memasuki dunia game...");
 
         setTimeout(() => {
-            if (errorMsg) errorMsg.classList.add('hidden'); 
+            hideLoginLoading();
+
             currentUserAccount = matchedUser; 
             playerCustomName = matchedUser.name;
             selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
