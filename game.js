@@ -1,10 +1,14 @@
 // ==========================================
-// CONFIGURATION & DATABASE URL
+// CONFIGURATION, DATABASE & MAIN GAME LOOP
 // ==========================================
 const SPREADSHEET_ID = "1J4ePsSEV8xE3VCR-10Avf3W8FOQ-R1xSqWO-4IMzyWc", SHEET_NAME = "Login";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
-// Firebase Config Asli
+// Fungsi Memuat Sheet Bangunan Secara Asinkron
+function getSheetCsvUrl(sheetTitle) {
+    return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetTitle)}`;
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyDDPcwN1blpYQ6fsknQbZMsort-bAOASW8",
   authDomain: "sd-ku-fa156.firebaseapp.com",
@@ -15,7 +19,6 @@ const firebaseConfig = {
   appId: "1:504435998356:web:ea0bd8ce43a4dba0913e81"
 };
 
-// Inisialisasi Firebase & Realtime Database
 let db = null;
 let myPlayerRef = null;
 let chatRefQuery = null;
@@ -34,23 +37,62 @@ let USER_DATABASE = [
     { name: "Aisyah", gender: "P", role: "SISWI", status: "User" }
 ];
 
+let isDatabaseReady = false;
+
+const loadingGif = new Image();
+loadingGif.src = 'assets/loading.gif';
+
 async function fetchSpreadsheetUsers() {
+    const errorMsg = document.getElementById('loginErrorMsg');
+    
+    if (errorMsg) {
+        errorMsg.innerHTML = `
+            <div class="flex items-center justify-center gap-2 my-2">
+                <img src="assets/loading.gif" alt="Loading..." class="w-6 h-6 inline-block" />
+                <span class="text-xs text-yellow-400 font-medium">Mengunduh data akun dari Spreadsheet...</span>
+            </div>
+        `;
+        errorMsg.classList.remove('hidden');
+    }
+
     try {
         const response = await fetch(CSV_URL); 
-        if (!response.ok) return;
+        if (!response.ok) throw new Error("Gagal mengunduh CSV");
+        
         const csvText = await response.text(); 
         const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        if (lines.length <= 1) return;
-        const fetchedUsers = [];
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
-            if (cols[0] && cols[0].toLowerCase() !== "nama") {
-                fetchedUsers.push({ name: cols[0], gender: (cols[1] || "L").toUpperCase(), role: (cols[2] || "SISWA").toUpperCase(), status: cols[3] || "User" });
+        
+        if (lines.length > 1) {
+            const fetchedUsers = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
+                if (cols[0] && cols[0].toLowerCase() !== "nama") {
+                    fetchedUsers.push({ 
+                        name: cols[0], 
+                        gender: (cols[1] || "L").toUpperCase(), 
+                        role: (cols[2] || "SISWA").toUpperCase(), 
+                        status: cols[3] || "User" 
+                    });
+                }
+            }
+            if (fetchedUsers.length > 0) {
+                USER_DATABASE = fetchedUsers;
             }
         }
-        if (fetchedUsers.length > 0) USER_DATABASE = fetchedUsers;
+        
+        isDatabaseReady = true;
+        if (errorMsg) {
+            errorMsg.innerHTML = `<span class="text-xs text-emerald-400 font-medium">✅ Data akun siap! Silakan masukkan nama.</span>`;
+            setTimeout(() => { 
+                if (isDatabaseReady) errorMsg.classList.add('hidden'); 
+            }, 2500);
+        }
     } catch (err) { 
-        console.warn("Fallback DB.", err); 
+        console.warn("Gagal memuat Spreadsheet, menggunakan Local DB fallback.", err); 
+        isDatabaseReady = true;
+        if (errorMsg) {
+            errorMsg.innerHTML = `<span class="text-xs text-red-400 font-medium">⚠️ Gagal memuat online, menggunakan data lokal.</span>`;
+        }
     }
 }
 
@@ -86,11 +128,9 @@ function initFirebaseSync() {
     const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
     myPlayerRef = db.ref('players/' + safeKey);
 
-    // Hapus player dan catat timestamp saat terputus/close browser
     myPlayerRef.onDisconnect().remove();
     db.ref('lastActiveTime').onDisconnect().set(Date.now());
 
-    // LISTEN KICK FROM ADMIN
     const myKickRef = db.ref('kickedPlayers/' + safeKey);
     myKickRef.on('value', (snapshot) => {
         if (snapshot.exists() && snapshot.val() === true) {
@@ -108,9 +148,6 @@ function initFirebaseSync() {
     });
 }
 
-// ==========================================
-// REALTIME CHAT & RESET AUTOMATIC (10 MINS)
-// ==========================================
 function initFirebaseChatSync() {
     if (!db) return;
 
@@ -119,13 +156,11 @@ function initFirebaseChatSync() {
 
     const otherList = Object.values(window.otherPlayers || {});
     
-    // Jika room kosong (tidak ada player online lain saat login)
     if (otherList.length === 0) {
         db.ref('lastActiveTime').once('value', (snapshot) => {
             const lastActive = snapshot.val();
-            const TEN_MINUTES_MS = 10 * 60 * 1000; // 10 Menit
+            const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-            // Jika sepi sudah lebih dari 10 menit, hapus riwayat chat di Firebase
             if (lastActive && (Date.now() - lastActive > TEN_MINUTES_MS)) {
                 db.ref('chats').remove();
             }
@@ -139,10 +174,7 @@ function initFirebaseChatSync() {
 function startListeningChat() {
     if (chatRefQuery) chatRefQuery.off();
 
-    // Mengambil timestamp login agar chat lama tidak dimuat ulang
     const loginTimestamp = Date.now() - 1000;
-
-    // Hanya dengarkan pesan yang dibuat sejak player login
     chatRefQuery = db.ref('chats').orderByChild('timestamp').startAt(loginTimestamp);
     
     chatRefQuery.on('child_added', (snapshot) => {
@@ -156,7 +188,6 @@ function startListeningChat() {
     });
 }
 
-// Kirim pesan ke Realtime Database Firebase
 window.sendFirebaseChat = function(senderName, messageText) {
     if (!db || !messageText) return;
     
@@ -174,7 +205,7 @@ function updateOnlinePlayersList(otherPlayersData) {
     if (!listElem) return;
 
     const otherList = Object.values(otherPlayersData || {});
-    const totalOnline = otherList.length + 1; // Termasuk player sendiri
+    const totalOnline = otherList.length + 1;
 
     if (onlineCountText) {
         onlineCountText.innerText = `${totalOnline} Online`;
@@ -182,7 +213,6 @@ function updateOnlinePlayersList(otherPlayersData) {
 
     listElem.innerHTML = '';
     
-    // 1. Player sendiri (Anda)
     const selfItem = document.createElement('div');
     selfItem.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800 border border-yellow-400/50';
     selfItem.innerHTML = `
@@ -197,15 +227,13 @@ function updateOnlinePlayersList(otherPlayersData) {
     `;
     listElem.appendChild(selfItem);
 
-    // 2. Player lain
     otherList.forEach(p => {
         const item = document.createElement('div');
         item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800/80 border border-slate-700';
         
-        // Tombol Kick khusus jika Admin
         const kickButtonHTML = isAdminUser 
             ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
-            : `<span class="text-[10px] text-slate-400">${p.location === 2 ? '🏖️ Pantai' : '🏫 Sekolah'}</span>`;
+            : `<span class="text-[10px] text-slate-400">${p.location === 3 ? '🏫 Dalam Kelas' : (p.location === 2 ? '🏖️ Pantai' : '🏫 Sekolah')}</span>`;
 
         item.innerHTML = `
             <div class="flex items-center gap-2">
@@ -221,20 +249,14 @@ function updateOnlinePlayersList(otherPlayersData) {
     });
 }
 
-// Fungsi eksekusi Kick oleh Admin
 window.kickPlayerByAdmin = function(targetPlayerName) {
     if (!isAdminUser || !db || !targetPlayerName) return;
 
     if (confirm(`Apakah Anda yakin ingin mengeluarkan "${targetPlayerName}" dari game?`)) {
         const safeKey = targetPlayerName.replace(/[.#$\[\]]/g, "_");
-        
-        // 1. Sinyal kick ke Firebase
         db.ref('kickedPlayers/' + safeKey).set(true);
-
-        // 2. Hapus player dari daftar online
         db.ref('players/' + safeKey).remove();
 
-        // 3. Pengumuman sistem di chat
         if (typeof window.sendFirebaseChat === 'function') {
             window.sendFirebaseChat("Sistem", `📢 ${targetPlayerName} telah dikeluarkan dari game oleh Admin ${playerCustomName}.`);
         }
@@ -261,6 +283,19 @@ function handleLogin(e) {
     const inputElem = document.getElementById('loginUsername');
     const errorMsg = document.getElementById('loginErrorMsg');
     if (!inputElem) return;
+
+    if (!isDatabaseReady) {
+        if (errorMsg) {
+            errorMsg.innerHTML = `
+                <div class="flex items-center justify-center gap-2 my-2">
+                    <img src="assets/loading.gif" alt="Loading..." class="w-6 h-6 inline-block" />
+                    <span class="text-xs text-yellow-400 font-medium">Sedang menyiapkan data akun, tunggu sebentar...</span>
+                </div>
+            `;
+            errorMsg.classList.remove('hidden');
+        }
+        return;
+    }
     
     const inputUsername = inputElem.value.trim();
     if (!inputUsername) return;
@@ -269,37 +304,48 @@ function handleLogin(e) {
     const matchedUser = USER_DATABASE.find(user => user.name.trim().replace(/\s+/g, ' ').toLowerCase() === cleanInput);
 
     if (matchedUser) {
-        if (errorMsg) errorMsg.classList.add('hidden'); 
-        currentUserAccount = matchedUser; 
-        playerCustomName = matchedUser.name;
-        selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
-        playerRole = matchedUser.role || 'SISWA';
-        isAdminUser = (matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
-
-        document.getElementById('loginScreen').classList.add('hidden');
-        document.getElementById('gameContainer').classList.remove('hidden');
-        document.getElementById('charNameDisplay').innerText = playerCustomName;
-        document.getElementById('charRoleDisplay').innerText = playerRole;
-        document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
-
-        switchWorldLocation(1, false);
-        if (typeof generateTrees === 'function') generateTrees();
-        
-        isGameStarted = true;
-        initFirebaseSync();
-        initFirebaseChatSync();
-        requestAnimationFrame(gameLoop);
-
-        setupGameEvents();
-        resetIdleTimer();
-
-        // Kirim salam online realtime ke Firebase
-        if (typeof window.sendFirebaseChat === 'function') {
-            window.sendFirebaseChat(playerCustomName, `Halo semuanya, ${playerCustomName} baru saja online!`);
+        if (errorMsg) {
+            errorMsg.innerHTML = `
+                <div class="flex items-center justify-center gap-2 my-2">
+                    <img src="assets/loading.gif" alt="Loading..." class="w-6 h-6 inline-block" />
+                    <span class="text-xs text-emerald-400 font-medium">Memasuki dunia game...</span>
+                </div>
+            `;
+            errorMsg.classList.remove('hidden');
         }
+
+        setTimeout(() => {
+            if (errorMsg) errorMsg.classList.add('hidden'); 
+            currentUserAccount = matchedUser; 
+            playerCustomName = matchedUser.name;
+            selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
+            playerRole = matchedUser.role || 'SISWA';
+            isAdminUser = (matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
+
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+            document.getElementById('charNameDisplay').innerText = playerCustomName;
+            document.getElementById('charRoleDisplay').innerText = playerRole;
+            document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
+
+            switchWorldLocation(1, false);
+            if (typeof generateTrees === 'function') generateTrees();
+            
+            isGameStarted = true;
+            initFirebaseSync();
+            initFirebaseChatSync();
+            requestAnimationFrame(gameLoop);
+
+            setupGameEvents();
+            resetIdleTimer();
+
+            if (typeof window.sendFirebaseChat === 'function') {
+                window.sendFirebaseChat(playerCustomName, `Halo semuanya, ${playerCustomName} baru saja online!`);
+            }
+        }, 600);
     } else {
         if (errorMsg) {
-            errorMsg.innerText = `Nama "${inputUsername}" tidak terdaftar!`; 
+            errorMsg.innerHTML = `<span class="text-xs text-red-400 font-medium">Nama "${inputUsername}" tidak terdaftar!</span>`; 
             errorMsg.classList.remove('hidden');
         }
     }
@@ -310,10 +356,20 @@ function switchWorldLocation(targetLocId, showNotification = true) {
     if (typeof MAP_CONFIGS !== 'undefined' && MAP_CONFIGS[targetLocId]) {
         currentBuildings = MAP_CONFIGS[targetLocId].buildings;
         const locationIndicatorBadge = document.getElementById('locationIndicatorBadge');
-        if (locationIndicatorBadge) locationIndicatorBadge.innerHTML = `<i class="fas fa-map-pin text-${targetLocId === 1 ? 'indigo' : 'cyan'}-400"></i> <span>${MAP_CONFIGS[targetLocId].name}</span>`;
+        if (locationIndicatorBadge) locationIndicatorBadge.innerHTML = `<i class="fas fa-map-pin text-${targetLocId === 1 ? 'indigo' : (targetLocId === 2 ? 'cyan' : 'emerald')}-400"></i> <span>${MAP_CONFIGS[targetLocId].name}</span>`;
     }
-    player.x = (targetLocId === 2) ? 240 : 1000;
-    player.y = (targetLocId === 2) ? 240 : 600;
+
+    if (targetLocId === 3) {
+        player.x = 60;
+        player.y = 730;
+    } else if (targetLocId === 2) {
+        player.x = 240;
+        player.y = 240;
+    } else {
+        player.x = 390;
+        player.y = 380;
+    }
+
     player.targetX = null; player.targetY = null; player.isMovingToTarget = false;
     if (typeof generateTrees === 'function') generateTrees();
     updateMyPositionToFirebase();
@@ -400,7 +456,6 @@ function gameLoop() {
 
     const activeWalkTimer = typeof walkTimer !== 'undefined' ? walkTimer : (window.walkTimer || 0);
 
-    // Menggambar Pemain Lain
     if (window.otherPlayers) {
         Object.keys(window.otherPlayers).forEach(id => {
             const pData = window.otherPlayers[id];
@@ -422,12 +477,10 @@ function gameLoop() {
         });
     }
 
-    // Menggambar Pohon di belakang pemain
     if (typeof trees !== 'undefined' && typeof drawTree === 'function') {
         trees.forEach(tree => { if (tree.y <= player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
-    // Menggambar Pemain Utama
     ctx.save(); ctx.scale(currentZoomScale, currentZoomScale);
     drawCharacterSprite(
         ctx, 
@@ -443,7 +496,6 @@ function gameLoop() {
     );
     ctx.restore();
 
-    // Menggambar Pohon di depan pemain
     if (typeof trees !== 'undefined' && typeof drawTree === 'function') {
         trees.forEach(tree => { if (tree.y > player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
@@ -494,15 +546,118 @@ function setupTouchAnalogStick() {
     window.addEventListener('mouseup', handleEnd);
 }
 
-function triggerInteraction() {
+// ==========================================
+// INTERAKSI DENGAN SPREADSHEET BANGUNAN
+// ==========================================
+async function triggerInteraction() {
     if (!nearbyBuilding) return;
+    
     if (nearbyBuilding.isPortal) {
         switchWorldLocation(nearbyBuilding.targetLocation);
-    } else {
-        document.getElementById('modalTitle').innerHTML = `${nearbyBuilding.icon} ${nearbyBuilding.dialogTitle}`;
-        document.getElementById('modalContent').innerText = nearbyBuilding.dialogText;
-        document.getElementById('modalActions').innerHTML = `<button onclick="closeModal()" class="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold rounded-xl transition">${nearbyBuilding.actionLabel || 'Tutup'}</button>`;
-        document.getElementById('dialogModal').classList.remove('hidden');
+        return;
+    }
+
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    const modalActions = document.getElementById('modalActions');
+
+    modalTitle.innerHTML = `${nearbyBuilding.icon} ${nearbyBuilding.dialogTitle}`;
+    modalContent.innerHTML = `
+        <div class="flex flex-col items-center justify-center p-4">
+            <img src="assets/loading.gif" alt="Loading..." class="w-8 h-8 mb-2" />
+            <span class="text-xs text-slate-300">Memuat data ${nearbyBuilding.name}...</span>
+        </div>
+    `;
+    modalActions.innerHTML = `<button onclick="closeModal()" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition">Tutup</button>`;
+    document.getElementById('dialogModal').classList.remove('hidden');
+
+    if (!nearbyBuilding.sheetName) {
+        modalContent.innerText = nearbyBuilding.dialogText || "Tidak ada informasi.";
+        return;
+    }
+
+    try {
+        const response = await fetch(getSheetCsvUrl(nearbyBuilding.sheetName));
+        if (!response.ok) throw new Error("Gagal mengambil sheet");
+        
+        const csvText = await response.text();
+        const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        if (nearbyBuilding.sheetName === 'Perpus') {
+            // Sheet Perpus: Kolom A (Nama Kelas), Kolom B (Link Kelas)
+            let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
+            let hasItems = false;
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                if (cols[0]) {
+                    hasItems = true;
+                    const classTitle = cols[0];
+                    const classLink = cols[1] || "#";
+                    htmlHTML += `
+                        <a href="${classLink}" target="_blank" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-yellow-400 font-semibold text-xs transition">
+                            <span>📖 ${classTitle}</span>
+                            <i class="fas fa-external-link-alt text-[10px] text-slate-400"></i>
+                        </a>
+                    `;
+                }
+            }
+            htmlHTML += `</div>`;
+            
+            if (!hasItems) {
+                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-2">Belum ada koleksi buku / link kelas di Perpustakaan.</div>`;
+            } else {
+                modalContent.innerHTML = htmlHTML;
+            }
+
+        } else if (nearbyBuilding.sheetName === 'Info') {
+            // Sheet Info (Mading): Kolom A (Pengumuman)
+            let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
+            let hasItems = false;
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                if (cols[0]) {
+                    hasItems = true;
+                    htmlHTML += `
+                        <div class="p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 text-xs leading-relaxed">
+                            📌 ${cols[0]}
+                        </div>
+                    `;
+                }
+            }
+            htmlHTML += `</div>`;
+
+            if (!hasItems) {
+                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-2">Belum ada pengumuman baru di Mading.</div>`;
+            } else {
+                modalContent.innerHTML = htmlHTML;
+            }
+
+        } else {
+            // Sheet Toko, PJOK, Taman (Kosong/Belum ada data)
+            let hasItems = false;
+            let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                if (cols[0]) {
+                    hasItems = true;
+                    htmlHTML += `<div class="p-2.5 bg-slate-800 rounded-xl text-xs text-slate-200">• ${cols[0]}</div>`;
+                }
+            }
+            htmlHTML += `</div>`;
+
+            if (!hasItems) {
+                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada konten / informasi tersedia saat ini.</div>`;
+            } else {
+                modalContent.innerHTML = htmlHTML;
+            }
+        }
+
+    } catch (err) {
+        console.warn("Gagal membaca sheet gedung:", err);
+        modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada informasi / konten tersedia saat ini.</div>`;
     }
 }
 
@@ -525,7 +680,7 @@ function renderMiniMap() {
     largeMapCanvas.width = 400; 
     largeMapCanvas.height = 240;
 
-    mCtx.fillStyle = (currentWorldLocation === 2) ? '#0284c7' : '#15803d';
+    mCtx.fillStyle = (currentWorldLocation === 3) ? '#166534' : ((currentWorldLocation === 2) ? '#0284c7' : '#15803d');
     mCtx.fillRect(0, 0, largeMapCanvas.width, largeMapCanvas.height);
 
     const scaleX = largeMapCanvas.width / MAP_WIDTH;
@@ -602,7 +757,6 @@ function closeOnlinePlayersModal() { document.getElementById('onlinePlayersModal
 function handleLogout() { 
     isGameStarted = false; 
 
-    // Sembunyikan semua modal saat logout
     if (typeof closeEditCharacterModal === 'function') closeEditCharacterModal();
     if (typeof closeOnlinePlayersModal === 'function') closeOnlinePlayersModal();
     if (typeof closeModal === 'function') closeModal();
@@ -612,7 +766,6 @@ function handleLogout() {
         myPlayerRef = null;
     }
 
-    // Catat waktu logout di Firebase
     if (db) {
         db.ref('lastActiveTime').set(Date.now());
     }

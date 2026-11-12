@@ -39,11 +39,6 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, char
     let renderY = Math.round(y);
 
     if (isLoaded && imgAsset && imgAsset.width > 0) {
-        // Pemetaan Row Index Sprite Sheet:
-        // Row 0 = Bawah (Down)
-        // Row 1 = Atas (Up)
-        // Row 2 = Kiri (Left)
-        // Row 3 = Kanan (Right)
         let rowIndex = 0;
         if (currentDir === 'down') rowIndex = 0;
         else if (currentDir === 'up') rowIndex = 1;
@@ -56,13 +51,11 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, char
             colIndex = Math.floor(stepVal * 0.12) % 5;
         }
 
-        // KOREKSI OFFSET: Mengunci sprite agar tidak bergeser maju/mundur saat animasi jalan
         if (currentDir === 'left' || currentDir === 'right') {
-            // Mengoreksi pergeseran horizontal kecil pada sprite sheet
             renderX += (currentDir === 'left') ? 1 : -1;
         }
 
-        // Bayangan di telapak kaki (tepat di lantai bawah sprite)
+        // Bayangan di telapak kaki
         c.fillStyle = 'rgba(0,0,0,0.3)'; 
         c.beginPath(); 
         c.ellipse(renderX + width / 2, renderY + height - 2, width * 0.32, 5, 0, 0, Math.PI * 2); 
@@ -105,14 +98,12 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, char
     if (displayName) {
         c.textAlign = 'center';
 
-        // 1. Nama Karakter (Putih Bold 12px)
         c.font = 'bold 12px Fredoka, sans-serif';
         c.fillStyle = 'rgba(0,0,0,0.85)';
         c.fillText(displayName, renderX + width / 2 + 1, renderY - 14 + 1);
         c.fillStyle = '#ffffff';
         c.fillText(displayName, renderX + width / 2, renderY - 14);
 
-        // 2. Jabatan Karakter (Kuning 9px)
         if (displayRole) {
             c.font = '500 9px Fredoka, sans-serif';
             c.fillStyle = 'rgba(0,0,0,0.85)';
