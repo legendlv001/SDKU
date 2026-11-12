@@ -134,8 +134,8 @@ function initFirebaseSync() {
     myKickRef.on('value', (snapshot) => {
         if (snapshot.exists() && snapshot.val() === true) {
             myKickRef.remove();
-            alert("Anda telah dikeluarkan dari permainan oleh Admin.");
             handleLogout();
+            showKickedInfoModal("Anda telah dikeluarkan dari permainan oleh Admin.");
         }
     });
 
@@ -248,18 +248,54 @@ function updateOnlinePlayersList(otherPlayersData) {
     });
 }
 
+// ==========================================
+// POP-UP KONFIRMASI & INFO KICK
+// ==========================================
+let pendingKickTargetName = null;
+
 window.kickPlayerByAdmin = function(targetPlayerName) {
     if (!isAdminUser || !db || !targetPlayerName) return;
 
-    if (confirm(`Apakah Anda yakin ingin mengeluarkan "${targetPlayerName}" dari game?`)) {
-        const safeKey = targetPlayerName.replace(/[.#$\[\]]/g, "_");
-        db.ref('kickedPlayers/' + safeKey).set(true);
-        db.ref('players/' + safeKey).remove();
-
-        if (typeof window.sendFirebaseChat === 'function') {
-            window.sendFirebaseChat("Sistem", `📢 ${targetPlayerName} telah dikeluarkan dari game oleh Admin ${playerCustomName}.`);
-        }
+    pendingKickTargetName = targetPlayerName;
+    const textElem = document.getElementById('kickConfirmText');
+    if (textElem) {
+        textElem.innerHTML = `Apakah Anda yakin ingin mengeluarkan <strong class="text-yellow-400">${targetPlayerName}</strong> dari game?`;
     }
+    const modal = document.getElementById('kickConfirmModal');
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closeKickConfirmModal = function() {
+    pendingKickTargetName = null;
+    const modal = document.getElementById('kickConfirmModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.executeKickPlayer = function() {
+    if (!isAdminUser || !db || !pendingKickTargetName) return;
+
+    const targetPlayerName = pendingKickTargetName;
+    closeKickConfirmModal();
+
+    const safeKey = targetPlayerName.replace(/[.#$\[\]]/g, "_");
+    db.ref('kickedPlayers/' + safeKey).set(true);
+    db.ref('players/' + safeKey).remove();
+
+    if (typeof window.sendFirebaseChat === 'function') {
+        window.sendFirebaseChat("Sistem", `📢 ${targetPlayerName} telah dikeluarkan dari game oleh Admin ${playerCustomName}.`);
+    }
+};
+
+function showKickedInfoModal(message) {
+    const textElem = document.getElementById('kickedInfoText');
+    if (textElem && message) textElem.innerText = message;
+    const modal = document.getElementById('kickedInfoModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+window.closeKickedInfoModal = function() {
+    const modal = document.getElementById('kickedInfoModal');
+    if (modal) modal.classList.add('hidden');
 };
 
 function updateMyPositionToFirebase() {
@@ -569,7 +605,6 @@ async function triggerInteraction() {
         const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
         if (nearbyBuilding.sheetName === 'Perpus') {
-            // Sheet Perpus: Kolom A (Nama Kelas), Kolom B (Link Kelas)
             let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
             let hasItems = false;
 
@@ -596,7 +631,6 @@ async function triggerInteraction() {
             }
 
         } else if (nearbyBuilding.sheetName === 'Info') {
-            // Sheet Info (Mading): Kolom A (Pengumuman)
             let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
             let hasItems = false;
 
@@ -620,7 +654,6 @@ async function triggerInteraction() {
             }
 
         } else {
-            // Sheet Toko, PJOK, Taman (Kosong/Belum ada data)
             let hasItems = false;
             let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
 
@@ -745,6 +778,7 @@ function handleLogout() {
     if (typeof closeEditCharacterModal === 'function') closeEditCharacterModal();
     if (typeof closeOnlinePlayersModal === 'function') closeOnlinePlayersModal();
     if (typeof closeModal === 'function') closeModal();
+    if (typeof closeKickConfirmModal === 'function') closeKickConfirmModal();
 
     if (myPlayerRef) {
         myPlayerRef.remove();

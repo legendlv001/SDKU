@@ -136,6 +136,7 @@
         </div>
     </div>
 
+    <!-- Modal Dialog Bangunan -->
     <div id="dialogModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-yellow-400">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
@@ -149,6 +150,7 @@
         </div>
     </div>
 
+    <!-- Modal Edit Karakter -->
     <div id="editCharModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
@@ -184,6 +186,7 @@
         </div>
     </div>
 
+    <!-- Modal Pemain Online -->
     <div id="onlinePlayersModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-emerald-400/80 rounded-3xl max-w-sm w-full p-5 shadow-2xl text-white flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
@@ -192,6 +195,33 @@
             </div>
             <div id="onlinePlayersList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
             <button onclick="closeOnlinePlayersModal()" class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-600 transition">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Pop-Up Konfirmasi Kick (Khusus Admin) -->
+    <div id="kickConfirmModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-red-500 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-white text-center">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-red-500/20 border border-red-500/50 text-red-400 flex items-center justify-center text-2xl shadow-inner">
+                <i class="fas fa-user-xmark"></i>
+            </div>
+            <h3 class="text-base font-extrabold text-white mb-1">Keluarkan Pemain?</h3>
+            <p id="kickConfirmText" class="text-xs text-slate-300 mb-5 leading-relaxed">Apakah Anda yakin ingin mengeluarkan pemain ini?</p>
+            <div class="flex gap-2.5">
+                <button onclick="closeKickConfirmModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-600 transition">Batal</button>
+                <button onclick="executeKickPlayer()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-lg transition">Ya, Kick</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pop-Up Info Setelah Di-Kick (Untuk Pemain yang Dikeluarkan) -->
+    <div id="kickedInfoModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[80] flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-red-500 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-white text-center">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-red-500/20 border border-red-500/50 text-red-400 flex items-center justify-center text-2xl animate-bounce">
+                <i class="fas fa-ban"></i>
+            </div>
+            <h3 class="text-base font-extrabold text-red-400 mb-1">Akses Dihentikan</h3>
+            <p id="kickedInfoText" class="text-xs text-slate-300 mb-5 leading-relaxed">Anda telah dikeluarkan dari permainan oleh Admin.</p>
+            <button onclick="closeKickedInfoModal()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition">OK, Mengerti</button>
         </div>
     </div>
 
