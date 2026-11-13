@@ -110,16 +110,11 @@ function savePlayerPointsToFirebase() {
 // ==========================================
 window.forceFullscreenAndLandscape = async function() {
     const docEl = document.documentElement;
-    const icon = document.getElementById('fullscreenIcon');
 
     try {
         const requestFS = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
         if (requestFS && !document.fullscreenElement && !document.webkitFullscreenElement) {
             await requestFS.call(docEl);
-        }
-        if (icon) {
-            icon.classList.remove('fa-expand');
-            icon.classList.add('fa-compress');
         }
     } catch (err) {
         console.warn("Fullscreen dibatasi browser:", err);
@@ -134,33 +129,27 @@ window.forceFullscreenAndLandscape = async function() {
     }
 };
 
-window.toggleFullScreen = function() {
-    const doc = window.document;
-    const icon = document.getElementById('fullscreenIcon');
-
-    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-        forceFullscreenAndLandscape();
-    } else {
-        const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
-        if (cancelFullScreen) {
-            cancelFullScreen.call(doc).then(() => {
-                if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
-            }).catch(() => {});
-        }
+// ==========================================
+// FUNGSI SIMPAN SESI & BUKA HALAMAN HTML LOKAL
+// ==========================================
+window.navigateToLocalHtml = function(targetHtmlUrl) {
+    if (!targetHtmlUrl) return;
+    if (currentUserAccount) {
+        const updatedSession = {
+            ...currentUserAccount,
+            name: playerCustomName,
+            gender: (selectedGender === 'female') ? 'P' : 'L',
+            points: playerPoints
+        };
+        sessionStorage.setItem('activeUserSession', JSON.stringify(updatedSession));
+        sessionStorage.setItem('savedPlayerPosition', JSON.stringify({
+            x: player.x,
+            y: player.y,
+            location: currentWorldLocation
+        }));
     }
+    window.location.href = targetHtmlUrl;
 };
-
-document.addEventListener('fullscreenchange', () => {
-    const icon = document.getElementById('fullscreenIcon');
-    if (!icon) return;
-    if (document.fullscreenElement) {
-        icon.classList.remove('fa-expand');
-        icon.classList.add('fa-compress');
-    } else {
-        icon.classList.remove('fa-compress');
-        icon.classList.add('fa-expand');
-    }
-});
 
 async function fetchSpreadsheetUsers() {
     const errorMsg = document.getElementById('loginErrorMsg');
@@ -421,6 +410,49 @@ function updateMyPositionToFirebase() {
     });
 }
 
+// Fungsi Mulai Permainan (Dipakai saat Login maupun Resume Sesi)
+function startGameSession(matchedUser, savedPosition = null, isResume = false) {
+    currentUserAccount = matchedUser; 
+    playerCustomName = matchedUser.name;
+    selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
+    playerRole = matchedUser.role || 'SISWA';
+    isAdminUser = (matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
+
+    sessionStorage.setItem('activeUserSession', JSON.stringify(matchedUser));
+
+    initPlayerPointsSync(matchedUser.points);
+
+    document.body.classList.add('game-active');
+
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('gameContainer').classList.remove('hidden');
+    document.getElementById('charNameDisplay').innerText = playerCustomName;
+    document.getElementById('charRoleDisplay').innerText = playerRole;
+    document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
+
+    const targetLoc = (savedPosition && savedPosition.location) ? savedPosition.location : 1;
+    switchWorldLocation(targetLoc, false);
+
+    if (savedPosition && typeof savedPosition.x === 'number' && typeof savedPosition.y === 'number') {
+        player.x = savedPosition.x;
+        player.y = savedPosition.y;
+    }
+
+    if (typeof generateTrees === 'function') generateTrees();
+    
+    isGameStarted = true;
+    initFirebaseSync();
+    initFirebaseChatSync();
+    requestAnimationFrame(gameLoop);
+
+    setupGameEvents();
+    resetIdleTimer();
+
+    if (!isResume && typeof window.sendFirebaseChat === 'function') {
+        window.sendFirebaseChat(playerCustomName, `Halo semuanya, ${playerCustomName} baru saja online!`);
+    }
+}
+
 function handleLogin(e) {
     if (e && e.preventDefault) e.preventDefault();
     
@@ -447,37 +479,7 @@ function handleLogin(e) {
 
         setTimeout(() => {
             hideLoginLoading();
-
-            currentUserAccount = matchedUser; 
-            playerCustomName = matchedUser.name;
-            selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
-            playerRole = matchedUser.role || 'SISWA';
-            isAdminUser = (matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
-
-            initPlayerPointsSync(matchedUser.points);
-
-            document.body.classList.add('game-active');
-
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('gameContainer').classList.remove('hidden');
-            document.getElementById('charNameDisplay').innerText = playerCustomName;
-            document.getElementById('charRoleDisplay').innerText = playerRole;
-            document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
-
-            switchWorldLocation(1, false);
-            if (typeof generateTrees === 'function') generateTrees();
-            
-            isGameStarted = true;
-            initFirebaseSync();
-            initFirebaseChatSync();
-            requestAnimationFrame(gameLoop);
-
-            setupGameEvents();
-            resetIdleTimer();
-
-            if (typeof window.sendFirebaseChat === 'function') {
-                window.sendFirebaseChat(playerCustomName, `Halo semuanya, ${playerCustomName} baru saja online!`);
-            }
+            startGameSession(matchedUser, null, false);
         }, 600);
     } else {
         if (errorMsg) {
@@ -790,6 +792,12 @@ window.executeRedeemItem = function() {
 
 async function triggerInteraction() {
     if (!nearbyBuilding) return;
+
+    // Pindah halaman HTML jika bangunan memiliki targetUrl langsung (seperti Taman -> taman.html)
+    if (nearbyBuilding.targetUrl) {
+        navigateToLocalHtml(nearbyBuilding.targetUrl);
+        return;
+    }
     
     if (nearbyBuilding.isPortal) {
         switchWorldLocation(nearbyBuilding.targetLocation);
@@ -835,6 +843,40 @@ async function triggerInteraction() {
                 }
             }
             renderShopItemsList();
+
+        } else if (nearbyBuilding.sheetName === 'PJOK') {
+            // Sheet PJOK: Kolom A = Nama Aktivitas/HTML, Kolom B = Nama File HTML (satu folder dengan index.html)
+            let htmlList = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
+            let hasItems = false;
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                if (cols[0] && cols[1]) {
+                    hasItems = true;
+                    const activityTitle = cols[0];
+                    let htmlFile = cols[1];
+                    if (!htmlFile.toLowerCase().endsWith('.html') && !htmlFile.startsWith('http')) {
+                        htmlFile += '.html';
+                    }
+                    const safeUrl = htmlFile.replace(/'/g, "\\'");
+
+                    htmlList += `
+                        <button onclick="navigateToLocalHtml('${safeUrl}')" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-orange-500/40 hover:border-yellow-400 rounded-xl text-yellow-400 font-bold text-xs transition cursor-pointer w-full text-left active:scale-95">
+                            <span>🏀 ${activityTitle}</span>
+                            <span class="px-2.5 py-1 bg-orange-500/20 text-orange-300 rounded-lg text-[10px] flex items-center gap-1">
+                                Buka <i class="fas fa-play text-[9px]"></i>
+                            </span>
+                        </button>
+                    `;
+                }
+            }
+            htmlList += `</div>`;
+
+            if (!hasItems) {
+                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada kegiatan / permainan PJOK tersedia saat ini.</div>`;
+            } else {
+                modalContent.innerHTML = htmlList;
+            }
 
         } else if (nearbyBuilding.sheetName === 'Perpus') {
             let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
@@ -996,6 +1038,12 @@ function saveCharacterEdits() {
     if (newName) playerCustomName = newName;
     if (tempModalGender) selectedGender = tempModalGender;
 
+    if (currentUserAccount) {
+        currentUserAccount.name = playerCustomName;
+        currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
+        sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+    }
+
     document.getElementById('charNameDisplay').innerText = playerCustomName;
     document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
     closeEditCharacterModal();
@@ -1007,6 +1055,9 @@ function closeOnlinePlayersModal() { document.getElementById('onlinePlayersModal
 
 function handleLogout() { 
     isGameStarted = false; 
+
+    sessionStorage.removeItem('activeUserSession');
+    sessionStorage.removeItem('savedPlayerPosition');
 
     document.body.classList.remove('game-active');
     try {
@@ -1041,4 +1092,24 @@ function handleLogout() {
 }
 
 function closeModal() { document.getElementById('dialogModal').classList.add('hidden'); }
-window.onload = function() { fetchSpreadsheetUsers(); };
+
+window.onload = async function() { 
+    await fetchSpreadsheetUsers(); 
+
+    // Cek apakah pemain kembali dari halaman lokal (seperti taman.html atau file HTML dari GOR)
+    const savedSessionRaw = sessionStorage.getItem('activeUserSession');
+    if (savedSessionRaw) {
+        try {
+            const savedUser = JSON.parse(savedSessionRaw);
+            const savedPosRaw = sessionStorage.getItem('savedPlayerPosition');
+            const savedPos = savedPosRaw ? JSON.parse(savedPosRaw) : null;
+            sessionStorage.removeItem('savedPlayerPosition');
+
+            if (savedUser && savedUser.name) {
+                startGameSession(savedUser, savedPos, true);
+            }
+        } catch (err) {
+            console.warn("Gagal memulihkan sesi:", err);
+        }
+    }
+};

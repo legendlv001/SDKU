@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taman Bermain Edukasi - Petualangan Ceria</title>
+    <!-- Tailwind CSS untuk tata letak responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Fredoka & Nunito untuk nuansa bermain anak yang ramah dan mudah dibaca -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Tone.js untuk efek suara sintesis interaktif tanpa file eksternal -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Canvas Confetti untuk efek perayaan jawaban benar -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --sky-top: #7dd3fc;
+            --sky-bottom: #e0f2fe;
+            --grass-light: #86efac;
+            --grass-dark: #4ade80;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 65%, var(--grass-light) 65%, var(--grass-dark) 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        h1, h2, h3, .font-title {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Animasi Awan Mengambang */
+        @keyframes floatCloud {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(25px); }
+        }
+        .cloud-anim-1 { animation: floatCloud 8s ease-in-out infinite; }
+        .cloud-anim-2 { animation: floatCloud 11s ease-in-out infinite reverse; }
+
+        /* Animasi Biang Lala */
+        @keyframes spinFerris {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .ferris-wheel-spin {
+            transform-origin: 100px 95px;
+            animation: spinFerris 20s linear infinite;
+        }
+
+        /* Animasi Jungkat-Jungkit */
+        @keyframes seesawMotion {
+            0%, 100% { transform: rotate(-13deg); }
+            50% { transform: rotate(13deg); }
+        }
+        .seesaw-anim {
+            transform-origin: 100px 125px;
+            animation: seesawMotion 2.8s ease-in-out infinite;
+        }
+
+        @keyframes swingMotion {
+            0%, 100% { transform: rotate(-16deg); }
+            50% { transform: rotate(16deg); }
+        }
+        .swing-anim {
+            transform-origin: 100px 42px;
+            animation: swingMotion 3s ease-in-out infinite;
+        }
+
+        @keyframes bounceSoft {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .bounce-hover:hover {
+            animation: bounceSoft 0.8s ease-in-out infinite;
+        }
+
+        /* Gaya Tombol 3D Playful */
+        .btn-3d {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+        }
+        .btn-3d:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+        }
+
+        /* Kartu Wahana */
+        .ride-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            border: 4px solid #ffffff;
+            box-shadow: 0 12px 25px -5px rgba(14, 116, 144, 0.15), 0 8px 0 #cbd5e1;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .ride-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 30px -5px rgba(14, 116, 144, 0.25), 0 12px 0 #94a3b8;
+        }
+        .ride-card:active {
+            transform: translateY(2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1), 0 4px 0 #94a3b8;
+        }
+
+        /* Animasi Getar untuk Jawaban Salah */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Animasi Pop-in Modal */
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.85) translateY(15px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop-in {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="flex flex-col justify-between relative text-slate-800">
+
+    <!-- Dekorasi Latar Belakang: Awan & Matahari -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <!-- Matahari Tersenyum -->
+        <svg class="w-24 h-24 sm:w-32 sm:h-32 absolute top-4 right-4 sm:right-12 text-amber-300 drop-shadow-md" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="28" fill="#FBBF24"/>
+            <g stroke="#F59E0B" stroke-width="5" stroke-linecap="round">
+                <line x1="50" y1="8" x2="50" y2="16"/>
+                <line x1="50" y1="84" x2="50" y2="92"/>
+                <line x1="8" y1="50" x2="16" y2="50"/>
+                <line x1="84" y1="50" x2="92" y2="50"/>
+                <line x1="20" y1="20" x2="26" y2="26"/>
+                <line x1="74" y1="74" x2="80" y2="80"/>
+                <line x1="80" y1="20" x2="74" y2="26"/>
+                <line x1="26" y1="74" x2="20" y2="80"/>
+            </g>
+            <!-- Mata & Senyum -->
+            <circle cx="42" cy="46" r="3" fill="#78350F"/>
+            <circle cx="58" cy="46" r="3" fill="#78350F"/>
+            <path d="M 42 56 Q 50 63 58 56" stroke="#78350F" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </svg>
+
+        <!-- Awan Kiri -->
+        <svg class="w-36 h-20 absolute top-10 left-6 text-white/90 cloud-anim-1" viewBox="0 0 120 60">
+            <path d="M25,50 L95,50 C108,50 115,40 115,30 C115,20 105,12 94,14 C90,5 78,0 66,4 C56,-2 40,2 35,14 C20,12 10,22 10,34 C10,43 17,50 25,50 Z" fill="currentColor"/>
+        </svg>
+
+        <!-- Awan Tengah -->
+        <svg class="w-28 h-16 absolute top-24 left-1/3 text-white/80 cloud-anim-2 hidden sm:block" viewBox="0 0 120 60">
+            <path d="M25,50 L95,50 C108,50 115,40 115,30 C115,20 105,12 94,14 C90,5 78,0 66,4 C56,-2 40,2 35,14 C20,12 10,22 10,34 C10,43 17,50 25,50 Z" fill="currentColor"/>
+        </svg>
+    </div>
+
+    <!-- Header / Navigasi Atas -->
+    <header class="relative z-10 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex flex-wrap items-center justify-between gap-3">
+        <!-- Tombol Kembali ke Sekolah & Logo -->
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Tombol Kembali ke index.html -->
+            <button onclick="kembaliKeSekolah()" class="btn-3d bg-yellow-400 hover:bg-yellow-300 text-slate-900 border-2 border-white px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-extrabold text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer">
+                <span>⬅️</span>
+                <span>Ke Sekolah</span>
+            </button>
+
+            <!-- Logo & Judul -->
+            <div class="flex items-center gap-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-md border-2 border-white">
+                <span class="text-3xl sm:text-4xl">🎪</span>
+                <div>
+                    <h1 class="text-lg sm:text-2xl font-bold text-sky-700 leading-tight">Taman Bermain Ceria</h1>
+                    <p class="text-xs sm:text-sm font-semibold text-emerald-600">Belajar Sambil Bermain!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Skor, Bintang & Kontrol Suara -->
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Penghitung Bintang -->
+            <div class="flex items-center gap-2 bg-amber-100 border-2 border-amber-300 px-3 sm:px-4 py-2 rounded-2xl shadow-sm">
+                <span class="text-xl sm:text-2xl">⭐</span>
+                <div>
+                    <span class="text-xs font-bold text-amber-700 block uppercase tracking-wider">Bintang</span>
+                    <span id="star-count" class="text-lg sm:text-xl font-extrabold text-amber-600 leading-none">0</span>
+                </div>
+            </div>
+
+            <!-- Penghitung Tiket / Level -->
+            <div class="flex items-center gap-2 bg-rose-100 border-2 border-rose-300 px-3 sm:px-4 py-2 rounded-2xl shadow-sm" title="Dapatkan 1 Tiket jika semua 5 soal benar!">
+                <span class="text-xl sm:text-2xl">🎟️</span>
+                <div>
+                    <span class="text-xs font-bold text-rose-700 block uppercase tracking-wider">Tiket</span>
+                    <span id="ticket-count" class="text-lg sm:text-xl font-extrabold text-rose-600 leading-none">0</span>
+                </div>
+            </div>
+
+            <!-- Tombol Suara -->
+            <button id="sound-toggle" onclick="toggleSound()" aria-label="Suara" class="btn-3d bg-white hover:bg-sky-50 text-sky-600 border-2 border-sky-200 p-3 rounded-2xl font-bold text-xl">
+                🔊
+            </button>
+        </div>
+    </header>
+
+    <!-- Konten Utama -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 py-4 sm:py-6 flex flex-col justify-center">
+        
+        <!-- LAYAR 1: PETA TAMAN BERMAIN (PILIH WAHANA) -->
+        <section id="park-map-view" class="w-full transition-all duration-300">
+            <div class="text-center mb-6 sm:mb-8">
+                <span class="inline-block bg-white/90 text-sky-700 font-bold px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-sm mb-2 border border-sky-100">
+                    🎟️ Jawab <strong>semua 5 soal dengan benar</strong> di setiap wahana untuk mendapatkan <strong>1 Tiket Hadiah</strong>!
+                </span>
+                <h2 class="text-2xl sm:text-4xl font-bold text-slate-800 drop-shadow-sm">Peta Petualangan Taman Bermain</h2>
+            </div>
+
+            <!-- Grid 4 Wahana Utama -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+                
+                <!-- WAHANA 1: JUNGKAT-JUNGKIT ANGKA (MATEMATIKA) -->
+                <div onclick="startRide('seesaw')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                    <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-sky-50 rounded-2xl p-2 border-2 border-sky-100">
+                        <!-- Ilustrasi SVG Jungkat-Jungkit -->
+                        <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
+                            <!-- Tanah -->
+                            <line x1="20" y1="168" x2="180" y2="168" stroke="#16A34A" stroke-width="6" stroke-linecap="round"/>
+                            
+                            <!-- Papan Jungkat-Jungkit Berayun -->
+                            <g class="seesaw-anim">
+                                <!-- Papan Utama -->
+                                <rect x="24" y="119" width="152" height="12" rx="6" fill="#F43F5E" stroke="#BE123C" stroke-width="2.5"/>
+                                <!-- Pegangan Kiri & Kanan -->
+                                <path d="M 48 119 L 48 103 L 58 103" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M 152 119 L 152 103 L 142 103" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                                <!-- Kursi & Beban Angka Kiri -->
+                                <rect x="28" y="113" width="22" height="7" rx="3" fill="#FBBF24"/>
+                                <circle cx="39" cy="96" r="13" fill="#38BDF8" stroke="#0284C7" stroke-width="2.5"/>
+                                <text x="39" y="101" text-anchor="middle" fill="#FFFFFF" font-weight="bold" font-size="14" font-family="Fredoka, sans-serif">2</text>
+                                <!-- Kursi & Beban Angka Kanan -->
+                                <rect x="150" y="113" width="22" height="7" rx="3" fill="#FBBF24"/>
+                                <circle cx="161" cy="96" r="13" fill="#34D399" stroke="#047857" stroke-width="2.5"/>
+                                <text x="161" y="101" text-anchor="middle" fill="#FFFFFF" font-weight="bold" font-size="14" font-family="Fredoka, sans-serif">3</text>
+                            </g>
+
+                            <!-- Penyangga Segitiga Tengah -->
+                            <polygon points="100,125 76,168 124,168" fill="#F59E0B" stroke="#B45309" stroke-width="3" stroke-linejoin="round"/>
+                            <!-- Poros Tengah -->
+                            <circle cx="100" cy="125" r="7" fill="#FFFFFF" stroke="#475569" stroke-width="3"/>
+                        </svg>
+                    </div>
+                    <span class="bg-rose-100 text-rose-700 text-xs font-extrabold px-3 py-1 rounded-full mb-2">🔢 BERHITUNG CERDAS</span>
+                    <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1">Jungkat-Jungkit Angka</h3>
+                    <p class="text-sm text-slate-600 mb-4 flex-grow">Seimbangkan sisi kiri dan kanan dengan menyelesaikan soal penjumlahan & pengurangan!</p>
+                    <button class="btn-3d w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-2xl text-base sm:text-lg">
+                        Main Jungkat-Jungkit 🚀
+                    </button>
+                </div>
+
+                <!-- WAHANA 2: AYUNAN WARNA & BENTUK -->
+                <div onclick="startRide('swing')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                    <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-amber-50 rounded-2xl p-2 border-2 border-amber-100">
+                        <!-- Ilustrasi SVG Ayunan -->
+                        <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
+                            <!-- Rangka Ayunan -->
+                            <line x1="35" y1="168" x2="60" y2="42" stroke="#D97706" stroke-width="7" stroke-linecap="round"/>
+                            <line x1="165" y1="168" x2="140" y2="42" stroke="#D97706" stroke-width="7" stroke-linecap="round"/>
+                            <line x1="48" y1="42" x2="152" y2="42" stroke="#B45309" stroke-width="9" stroke-linecap="round"/>
+                            <!-- Tali & Kursi Berayun -->
+                            <g class="swing-anim">
+                                <line x1="82" y1="42" x2="82" y2="128" stroke="#64748B" stroke-width="3"/>
+                                <line x1="118" y1="42" x2="118" y2="128" stroke="#64748B" stroke-width="3"/>
+                                <!-- Kursi -->
+                                <rect x="72" y="126" width="56" height="10" rx="5" fill="#EC4899" stroke="#9D174D" stroke-width="2"/>
+                                <!-- Balok Bentuk di Atas Kursi -->
+                                <polygon points="100,92 84,124 116,124" fill="#38BDF8" stroke="#0284C7" stroke-width="2"/>
+                            </g>
+                            <!-- Tanah -->
+                            <line x1="20" y1="168" x2="180" y2="168" stroke="#16A34A" stroke-width="6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full mb-2">🎨 WARNA & GEOMETRI</span>
+                    <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1">Ayunan Bentuk & Warna</h3>
+                    <p class="text-sm text-slate-600 mb-4 flex-grow">Temukan kombinasi warna dan bangun datar yang tepat agar ayunan meluncur tinggi!</p>
+                    <button class="btn-3d w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-2xl text-base sm:text-lg">
+                        Main Ayunan ✨
+                    </button>
+                </div>
+
+                <!-- WAHANA 3: PEROSOTAN KATA & SAINS -->
+                <div onclick="startRide('slide')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                    <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-emerald-50 rounded-2xl p-2 border-2 border-emerald-100">
+                        <!-- Ilustrasi SVG Perosotan -->
+                        <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
+                            <!-- Tangga -->
+                            <line x1="45" y1="168" x2="45" y2="55" stroke="#0284C7" stroke-width="6" stroke-linecap="round"/>
+                            <line x1="68" y1="168" x2="68" y2="55" stroke="#0284C7" stroke-width="6" stroke-linecap="round"/>
+                            <line x1="45" y1="80" x2="68" y2="80" stroke="#38BDF8" stroke-width="4"/>
+                            <line x1="45" y1="105" x2="68" y2="105" stroke="#38BDF8" stroke-width="4"/>
+                            <line x1="45" y1="130" x2="68" y2="130" stroke="#38BDF8" stroke-width="4"/>
+                            <line x1="45" y1="152" x2="68" y2="152" stroke="#38BDF8" stroke-width="4"/>
+                            <!-- Platform Atas -->
+                            <rect x="38" y="48" width="42" height="10" rx="4" fill="#F59E0B"/>
+                            <!-- Papan Luncur Melengkung -->
+                            <path d="M 76 54 C 110 54, 115 155, 168 158" fill="none" stroke="#10B981" stroke-width="14" stroke-linecap="round"/>
+                            <path d="M 76 50 C 110 50, 115 151, 168 154" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linecap="round"/>
+                            <!-- Bintang Meluncur -->
+                            <circle cx="112" cy="108" r="11" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
+                            <!-- Tanah -->
+                            <line x1="25" y1="168" x2="180" y2="168" stroke="#15803D" stroke-width="6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-3 py-1 rounded-full mb-2">📚 KATA & LOGIKA ALAM</span>
+                    <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1">Perosotan Pengetahuan</h3>
+                    <p class="text-sm text-slate-600 mb-4 flex-grow">Lengkapi huruf yang hilang dan tebak fakta seru tentang alam di sekitar kita!</p>
+                    <button class="btn-3d w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-2xl text-base sm:text-lg">
+                        Meluncur Seru 🛝
+                    </button>
+                </div>
+
+                <!-- WAHANA 4: BIANG LALA PJOK -->
+                <div onclick="startRide('ferris')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                    <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-indigo-50 rounded-2xl p-2 border-2 border-indigo-100">
+                        <!-- Ilustrasi SVG Biang Lala -->
+                        <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
+                            <!-- Tiang Penyangga -->
+                            <line x1="100" y1="95" x2="55" y2="170" stroke="#475569" stroke-width="7" stroke-linecap="round"/>
+                            <line x1="100" y1="95" x2="145" y2="170" stroke="#475569" stroke-width="7" stroke-linecap="round"/>
+                            <line x1="40" y1="170" x2="160" y2="170" stroke="#334155" stroke-width="8" stroke-linecap="round"/>
+                            <!-- Roda Berputar -->
+                            <g class="ferris-wheel-spin">
+                                <circle cx="100" cy="95" r="62" fill="none" stroke="#6366F1" stroke-width="6"/>
+                                <circle cx="100" cy="95" r="45" fill="none" stroke="#818CF8" stroke-width="3" stroke-dasharray="6 6"/>
+                                <!-- Jari-jari -->
+                                <line x1="100" y1="33" x2="100" y2="157" stroke="#A5B4FC" stroke-width="3"/>
+                                <line x1="38" y1="95" x2="162" y2="95" stroke="#A5B4FC" stroke-width="3"/>
+                                <line x1="56" y1="51" x2="144" y2="139" stroke="#A5B4FC" stroke-width="3"/>
+                                <line x1="144" y1="51" x2="56" y2="139" stroke="#A5B4FC" stroke-width="3"/>
+                                <!-- Kabin Penumpang -->
+                                <rect x="90" y="23" width="20" height="16" rx="5" fill="#FBBF24" stroke="#B45309" stroke-width="2"/>
+                                <rect x="90" y="149" width="20" height="16" rx="5" fill="#38BDF8" stroke="#0369A1" stroke-width="2"/>
+                                <rect x="28" y="87" width="20" height="16" rx="5" fill="#34D399" stroke="#047857" stroke-width="2"/>
+                                <rect x="152" y="87" width="20" height="16" rx="5" fill="#F43F5E" stroke="#BE123C" stroke-width="2"/>
+                            </g>
+                            <!-- Poros Tengah -->
+                            <circle cx="100" cy="95" r="10" fill="#F59E0B" stroke="#FFFFFF" stroke-width="3"/>
+                        </svg>
+                    </div>
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-extrabold px-3 py-1 rounded-full mb-2">⚽ OLAHRAGA & KESEHATAN</span>
+                    <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1">Biang Lala PJOK</h3>
+                    <p class="text-sm text-slate-600 mb-4 flex-grow">Putar roda kebugaran dan jawab kuis seru tentang olahraga, gerak tubuh, dan hidup sehat!</p>
+                    <button class="btn-3d w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-2xl text-base sm:text-lg">
+                        Naik Biang Lala 🎡
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Baris Pencapaian / Hadiah Mini -->
+            <div class="mt-8 bg-white/85 backdrop-blur-sm rounded-3xl p-4 sm:p-5 border-2 border-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3 text-center sm:text-left">
+                    <div class="text-3xl sm:text-4xl bg-sky-100 p-3 rounded-2xl">🏆</div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-base sm:text-lg">Koleksi Lencana Penjelajah</h4>
+                        <p id="badge-status-text" class="text-xs sm:text-sm text-slate-600">Kumpulkan 3 bintang untuk membuka Lencana Bintang Pertama!</p>
+                    </div>
+                </div>
+                <div id="badges-container" class="flex items-center gap-2 sm:gap-3">
+                    <div id="badge-1" class="w-12 h-12 rounded-2xl bg-slate-200 flex items-center justify-center text-2xl opacity-40 border-2 border-slate-300 transition-all" title="3 Bintang: Penjelajah Pemula">🥉</div>
+                    <div id="badge-2" class="w-12 h-12 rounded-2xl bg-slate-200 flex items-center justify-center text-2xl opacity-40 border-2 border-slate-300 transition-all" title="6 Bintang: Bintang Taman Bermain">🥈</div>
+                    <div id="badge-3" class="w-12 h-12 rounded-2xl bg-slate-200 flex items-center justify-center text-2xl opacity-40 border-2 border-slate-300 transition-all" title="10 Bintang: Juara Cerdas">🥇</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LAYAR 2: ARENA PERMAINAN EDUKASI -->
+        <section id="game-arena-view" class="hidden w-full max-w-3xl mx-auto animate-pop-in">
+            <!-- Navigasi Kembali & Progress Soal -->
+            <div class="flex items-center justify-between mb-4 gap-3">
+                <button onclick="returnToPark()" class="btn-3d bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-2xl border-2 border-slate-200 flex items-center gap-2 text-sm sm:text-base">
+                    ⬅️ Peta Taman
+                </button>
+                
+                <!-- Progress Bar -->
+                <div class="flex-grow max-w-xs bg-white/80 p-1.5 rounded-full border-2 border-white shadow-inner">
+                    <div id="progress-bar" class="h-3.5 bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full transition-all duration-500" style="width: 20%;"></div>
+                </div>
+
+                <span id="question-counter" class="bg-white/90 text-slate-700 font-extrabold px-3.5 py-2 rounded-2xl text-sm border-2 border-white shadow-sm">
+                    Soal 1/5
+                </span>
+            </div>
+
+            <!-- Kartu Pertanyaan Utama -->
+            <div id="question-card" class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-8 border-4 border-white shadow-xl">
+                
+                <!-- Header Wahana Aktif -->
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <span id="active-ride-badge" class="bg-rose-100 text-rose-700 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm uppercase tracking-wide">
+                        ⚖️ Jungkat-Jungkit Angka
+                    </span>
+                </div>
+
+                <!-- Area Visual Interaktif Soal -->
+                <div id="visual-prompt-box" class="bg-sky-50/90 border-2 border-sky-100 rounded-2xl p-4 sm:p-6 mb-5 flex flex-col items-center justify-center min-h-[140px] sm:min-h-[165px]">
+                    <!-- Konten visual (emoji, bentuk SVG, atau susunan huruf) dirender via JS -->
+                </div>
+
+                <!-- Teks Pertanyaan -->
+                <h3 id="question-text" class="text-xl sm:text-2xl font-bold text-center text-slate-800 mb-6 leading-snug">
+                    Pertanyaan akan muncul di sini...
+                </h3>
+
+                <!-- Pilihan Jawaban (Grid 2x2 Responsif) -->
+                <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <!-- Tombol opsi dirender via JS -->
+                </div>
+
+                <!-- Kotak Umpan Balik Edukatif (Muncul setelah menjawab) -->
+                <div id="feedback-box" class="hidden mt-6 p-4 rounded-2xl border-2 text-center animate-pop-in">
+                    <p id="feedback-title" class="font-extrabold text-lg mb-1"></p>
+                    <p id="feedback-explanation" class="text-sm sm:text-base font-semibold mb-4"></p>
+                    <button id="next-question-btn" onclick="nextQuestion()" class="btn-3d bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-8 rounded-2xl text-base sm:text-lg">
+                        Lanjut Bermain ➡️
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- LAYAR 3: RINGKASAN SELESAI WAHANA -->
+        <section id="summary-view" class="hidden w-full max-w-xl mx-auto text-center animate-pop-in">
+            <div class="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-10 border-4 border-white shadow-2xl">
+                <div id="summary-emoji" class="text-6xl sm:text-7xl mb-4 animate-bounce">🎉</div>
+                <h2 class="text-2xl sm:text-4xl font-bold text-slate-800 mb-2">Wahana Selesai!</h2>
+                <p id="summary-subtitle" class="text-slate-600 font-semibold text-base sm:text-lg mb-6">
+                    Hebat sekali! Kamu telah menyelesaikan tantangan di wahana ini.
+                </p>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4">
+                        <span class="text-3xl block mb-1">⭐</span>
+                        <span class="text-xs font-bold text-amber-700 uppercase">Bintang Didapat</span>
+                        <p id="round-stars" class="text-2xl sm:text-3xl font-extrabold text-amber-600">+5</p>
+                    </div>
+                    <div id="ticket-reward-card" class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4 transition-all">
+                        <span class="text-3xl block mb-1">🎟️</span>
+                        <span id="ticket-reward-label" class="text-xs font-bold text-emerald-700 uppercase">Tiket Hadiah</span>
+                        <p id="round-tickets" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">+1</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button onclick="replayCurrentRide()" class="btn-3d bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 px-6 rounded-2xl text-base sm:text-lg">
+                        🔄 Main Lagi
+                    </button>
+                    <button onclick="returnToPark()" class="btn-3d bg-sky-500 hover:bg-sky-600 text-white font-bold py-3.5 px-6 rounded-2xl text-base sm:text-lg">
+                        🗺️ Pilih Wahana Lain
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Singkat -->
+    <footer class="relative z-10 text-center py-3 px-4 text-xs sm:text-sm font-bold text-emerald-950/75">
+        Taman Bermain Edukasi • Melatih Berhitung, Logika Bentuk & Kosakata Anak
+    </footer>
+
+    <!-- LOGIKA GAME & AUDIO INTERAKTIF -->
+    <script>
+        // ==========================================
+        // 0. NAVIGASI KEMBALI KE HALAMAN SEKOLAH
+        // ==========================================
+        function kembaliKeSekolah() {
+            playSound('click');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 120);
+        }
+
+        // ==========================================
+        // 1. STATE & KONFIGURASI PERMAINAN
+        // ==========================================
+        const gameState = {
+            stars: 0,
+            tickets: 0,
+            soundEnabled: true,
+            currentRide: null,
+            questions: [],
+            currentIndex: 0,
+            roundStars: 0,
+            answered: false
+        };
+
+        // Inisialisasi Audio Sintesis dengan Tone.js
+        let synth = null;
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8;
+            }
+        }
+
+        function playSound(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                initAudio();
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                const now = Tone.now();
+                if (type === 'click') {
+                    synth.triggerAttackRelease('C5', '16n', now);
+                } else if (type === 'correct') {
+                    synth.triggerAttackRelease(['C5', 'E5', 'G5'], '16n', now);
+                    synth.triggerAttackRelease(['C6'], '8n', now + 0.12);
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease(['E4', 'Eb4'], '8n', now);
+                } else if (type === 'win') {
+                    synth.triggerAttackRelease('C5', '16n', now);
+                    synth.triggerAttackRelease('E5', '16n', now + 0.1);
+                    synth.triggerAttackRelease('G5', '16n', now + 0.2);
+                    synth.triggerAttackRelease('C6', '4n', now + 0.3);
+                }
+            } catch (e) {
+                // Abaikan error audio jika browser membatasi autoplay
+            }
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const btn = document.getElementById('sound-toggle');
+            btn.textContent = gameState.soundEnabled ? '🔊' : '🔇';
+            if (gameState.soundEnabled) playSound('click');
+        }
+
+        // ==========================================
+        // 2. BANK SOAL EDUKATIF BERBASIS WAHANA
+        // ==========================================
+        
+        // Generator Soal Dinamis untuk Jungkat-Jungkit Angka (Matematika Dasar)
+        function generateSeesawQuestions() {
+            const list = [];
+            const items = [
+                { icon: '🎈', name: 'balon warna-warni' },
+                { icon: '🍦', name: 'es krim manis' },
+                { icon: '🧸', name: 'boneka beruang' },
+                { icon: '🍎', name: 'apel merah segar' },
+                { icon: '🐥', name: 'anak ayam lucu' }
+            ];
+
+            for (let i = 0; i < 5; i++) {
+                const item = items[i % items.length];
+                const isAddition = i % 2 === 0;
+                
+                if (isAddition) {
+                    const a = Math.floor(Math.random() * 5) + 2; // 2..6
+                    const b = Math.floor(Math.random() * 5) + 1; // 1..5
+                    const ans = a + b;
+                    const options = generateNumberOptions(ans);
+                    
+                    list.push({
+                        visualHTML: `
+                            <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-2xl sm:text-4xl">
+                                <div class="bg-white px-4 py-2 rounded-2xl shadow-sm border border-sky-200">${item.icon.repeat(a)}</div>
+                                <span class="font-extrabold text-rose-500 text-3xl">+</span>
+                                <div class="bg-white px-4 py-2 rounded-2xl shadow-sm border border-sky-200">${item.icon.repeat(b)}</div>
+                            </div>
+                            <p class="text-xs sm:text-sm font-bold text-sky-700 mt-3">Sisi kiri jungkat-jungkit ada ${a} ${item.name}, sisi kanan ada ${b} ${item.name}</p>
+                        `,
+                        question: `Berapa jumlah seluruh ${item.name} di kedua sisi jungkat-jungkit?`,
+                        options: options.map(n => `${n} ${item.icon}`),
+                        correctIndex: options.indexOf(ans),
+                        explanation: `Benar! ${a} ditambah ${b} sama dengan ${ans} ${item.name}.`
+                    });
+                } else {
+                    const total = Math.floor(Math.random() * 5) + 5; // 5..9
+                    const taken = Math.floor(Math.random() * 3) + 1; // 1..3
+                    const ans = total - taken;
+                    const options = generateNumberOptions(ans);
+
+                    list.push({
+                        visualHTML: `
+                            <div class="flex flex-wrap items-center justify-center gap-2 text-2xl sm:text-4xl bg-white px-5 py-3 rounded-2xl shadow-sm border border-sky-200">
+                                <span>${item.icon.repeat(ans)}</span>
+                                <span class="opacity-30 line-through">${item.icon.repeat(taken)}</span>
+                            </div>
+                            <p class="text-xs sm:text-sm font-bold text-sky-700 mt-3">Awalnya ada ${total} ${item.name} di jungkat-jungkit, lalu diambil ${taken}.</p>
+                        `,
+                        question: `Berapa sisa ${item.name} agar jungkat-jungkit tetap seimbang?`,
+                        options: options.map(n => `${n} ${item.icon}`),
+                        correctIndex: options.indexOf(ans),
+                        explanation: `Tepat sekali! ${total} dikurangi ${taken} menyisakan ${ans} ${item.name}.`
+                    });
+                }
+            }
+            return list;
+        }
+
+        function generateNumberOptions(correct) {
+            const set = new Set([correct]);
+            while (set.size < 4) {
+                const offset = Math.floor(Math.random() * 5) - 2;
+                const candidate = correct + offset;
+                if (candidate >= 1 && candidate <= 15) {
+                    set.add(candidate);
+                }
+            }
+            return Array.from(set).sort(() => Math.random() - 0.5);
+        }
+
+        // Bank Soal Ayunan Bentuk & Warna (Geometri & Pencampuran Warna)
+        function generateSwingQuestions() {
+            const pool = [
+                {
+                    visualHTML: `
+                        <svg class="w-24 h-24 sm:w-28 sm:h-28" viewBox="0 0 100 100">
+                            <polygon points="50,12 12,85 88,85" fill="#F59E0B" stroke="#B45309" stroke-width="4" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="text-xs font-bold text-amber-800 mt-2">Perhatikan jumlah sudut dan sisinya!</span>
+                    `,
+                    question: "Bangun datar pada kursi ayunan di atas memiliki 3 sisi. Apa namanya?",
+                    options: ["🔺 Segitiga", "🟦 Persegi", "⚪ Lingkaran", "⭐ Bintang"],
+                    correctIndex: 0,
+                    explanation: "Hebat! Bangun datar yang memiliki 3 sisi dan 3 titik sudut disebut Segitiga."
+                },
+                {
+                    visualHTML: `
+                        <div class="flex items-center gap-3 sm:gap-4 text-3xl sm:text-4xl font-extrabold">
+                            <div class="w-14 h-14 rounded-full bg-red-500 border-4 border-white shadow-md"></div>
+                            <span class="text-slate-600">+</span>
+                            <div class="w-14 h-14 rounded-full bg-yellow-400 border-4 border-white shadow-md"></div>
+                            <span class="text-slate-600">=</span>
+                            <div class="w-14 h-14 rounded-full bg-slate-200 border-4 border-dashed border-slate-400 flex items-center justify-center text-xl text-slate-500">?</div>
+                        </div>
+                    `,
+                    question: "Jika cat warna Merah dicampur dengan warna Kuning, warna apa yang terbentuk?",
+                    options: ["🟠 Oranye (Jingga)", "🟢 Hijau", "🟣 Ungu", "🔵 Biru"],
+                    correctIndex: 0,
+                    explanation: "Benar! Pencampuran warna primer Merah dan Kuning menghasilkan warna Oranye (Jingga)."
+                },
+                {
+                    visualHTML: `
+                        <svg class="w-24 h-24 sm:w-28 sm:h-28" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="38" fill="#38BDF8" stroke="#0284C7" stroke-width="4"/>
+                        </svg>
+                        <span class="text-xs font-bold text-sky-800 mt-2">Bentuknya bulat seperti bola atau roda!</span>
+                    `,
+                    question: "Bentuk apakah yang tidak memiliki sudut dan berbentuk bulat penuh seperti roda?",
+                    options: ["⚪ Lingkaran", "🟧 Persegi Panjang", "🔺 Segitiga", "💎 Belah Ketupat"],
+                    correctIndex: 0,
+                    explanation: "Betul! Lingkaran memiliki garis lengkung tertutup dan tidak memiliki titik sudut."
+                },
+                {
+                    visualHTML: `
+                        <div class="flex items-center gap-3 sm:gap-4 text-3xl sm:text-4xl font-extrabold">
+                            <div class="w-14 h-14 rounded-full bg-blue-500 border-4 border-white shadow-md"></div>
+                            <span class="text-slate-600">+</span>
+                            <div class="w-14 h-14 rounded-full bg-yellow-400 border-4 border-white shadow-md"></div>
+                            <span class="text-slate-600">=</span>
+                            <div class="w-14 h-14 rounded-full bg-slate-200 border-4 border-dashed border-slate-400 flex items-center justify-center text-xl text-slate-500">?</div>
+                        </div>
+                    `,
+                    question: "Warna Biru dicampur dengan warna Kuning akan menghasilkan warna daun, yaitu...",
+                    options: ["🟢 Hijau", "🟣 Ungu", "🟤 Cokelat", "🩷 Merah Muda"],
+                    correctIndex: 0,
+                    explanation: "Cerdas! Warna Biru + Kuning menghasilkan warna Hijau yang segar seperti dedaunan."
+                },
+                {
+                    visualHTML: `
+                        <svg class="w-24 h-24 sm:w-28 sm:h-28" viewBox="0 0 100 100">
+                            <rect x="18" y="18" width="64" height="64" rx="6" fill="#EC4899" stroke="#9D174D" stroke-width="4"/>
+                        </svg>
+                        <span class="text-xs font-bold text-pink-800 mt-2">Keempat sisinya sama panjang!</span>
+                    `,
+                    question: "Bangun datar dengan 4 sisi yang sama panjang dan 4 sudut siku-siku disebut...",
+                    options: ["🟥 Persegi", "🔺 Segitiga", "🥚 Oval", "🌙 Bulan Sabit"],
+                    correctIndex: 0,
+                    explanation: "Tepat sekali! Persegi memiliki empat sisi yang sama panjang."
+                }
+            ];
+            return pool.sort(() => Math.random() - 0.5);
+        }
+
+        // Bank Soal Perosotan Pengetahuan (Kosakata & Sains Alam)
+        function generateSlideQuestions() {
+            const pool = [
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">🦋</div>
+                        <div class="flex gap-2 text-2xl sm:text-3xl font-extrabold tracking-widest">
+                            <span class="bg-white px-3 py-1 rounded-xl border-2 border-emerald-200">K</span>
+                            <span class="bg-white px-3 py-1 rounded-xl border-2 border-emerald-200">U</span>
+                            <span class="bg-amber-100 text-amber-600 px-3 py-1 rounded-xl border-2 border-dashed border-amber-400">_</span>
+                            <span class="bg-white px-3 py-1 rounded-xl border-2 border-emerald-200">U</span>
+                        </div>
+                    `,
+                    question: "Huruf apa yang hilang untuk melengkapi nama hewan bersayap indah di taman ini?",
+                    options: ["Huruf P (KUPU)", "Huruf T (KUTU)", "Huruf M (KUMU)", "Huruf S (KUSU)"],
+                    correctIndex: 0,
+                    explanation: "Benar! K-U-P-U membentuk kata KUPU-KUPU yang suka hinggap di bunga taman."
+                },
+                {
+                    visualHTML: `
+                        <div class="flex items-center gap-4 text-4xl sm:text-5xl">
+                            <span>🌱</span><span>➡️</span><span>💧 + ☀️</span><span>➡️</span><span>🌳</span>
+                        </div>
+                    `,
+                    question: "Agar tanaman di taman bermain tumbuh subur dan hijau, apa yang sangat dibutuhkan?",
+                    options: ["💧 Air & Sinar Matahari", "🍬 Permen & Es Krim", "🧸 Mainan Plastik", "❄️ Salju Beku"],
+                    correctIndex: 0,
+                    explanation: "Hebat! Tumbuhan memerlukan air, tanah yang subur, dan sinar matahari untuk berfotosintesis."
+                },
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">🌈</div>
+                        <p class="text-sm font-bold text-sky-700">Muncul di langit setelah hujan turun saat matahari bersinar!</p>
+                    `,
+                    question: "Fenomena alam melengkung warna-warni di langit setelah hujan disebut...",
+                    options: ["🌈 Pelangi", "⚡ Petir", "🌪️ Angin Topan", "☄️ Meteor"],
+                    correctIndex: 0,
+                    explanation: "Tepat! Pelangi terjadi karena pembiasan cahaya matahari oleh tetesan air hujan."
+                },
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">🐝</div>
+                        <div class="flex gap-2 text-2xl sm:text-3xl font-extrabold tracking-widest">
+                            <span class="bg-white px-3 py-1 rounded-xl border-2 border-emerald-200">L</span>
+                            <span class="bg-amber-100 text-amber-600 px-3 py-1 rounded-xl border-2 border-dashed border-amber-400">_</span>
+                            <span class="bg-white px-3 py-1 rounded-xl border-2 border-emerald-200">B</span>
+                            <span class="bg-white px-3 py-1 rounded-xl border-2 border-emerald-200">A</span>
+                            <span class="bg-white px-3 py-1 rounded-xl border-2 border-emerald-200">H</span>
+                        </div>
+                    `,
+                    question: "Serangga penghasil madu manis ini bernama L _ B A H. Huruf apakah yang tepat?",
+                    options: ["Huruf E (LEBAH)", "Huruf O (LOBAH)", "Huruf I (LIBAH)", "Huruf U (LUBAH)"],
+                    correctIndex: 0,
+                    explanation: "Pintar! L-E-B-A-H adalah serangga rajin yang membantu penyerbukan bunga."
+                },
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">🗑️♻️</div>
+                        <p class="text-sm font-bold text-emerald-700">Menjaga kebersihan taman bermain adalah tugas kita bersama.</p>
+                    `,
+                    question: "Jika kamu selesai makan camilan di taman bermain, di mana bungkusnya harus dibuang?",
+                    options: ["🗑️ Tempat Sampah", "🌿 Semak Bunga", "🛝 Atas Perosotan", "💧 Kolam Air"],
+                    correctIndex: 0,
+                    explanation: "Luar biasa! Membuang sampah di tempat sampah membuat taman bermain tetap bersih dan sehat."
+                }
+            ];
+            return pool.sort(() => Math.random() - 0.5);
+        }
+
+        // Bank Soal Biang Lala PJOK (Olahraga, Kebugaran & Hidup Sehat)
+        function generateFerrisPJOKQuestions() {
+            const pool = [
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">🤸‍♂️🏃‍♀️</div>
+                        <p class="text-sm font-bold text-indigo-700">Gerakan ringan sebelum memulai olahraga inti!</p>
+                    `,
+                    question: "Sebelum mulai berolahraga lari atau bermain bola, apa yang harus kita lakukan terlebih dahulu?",
+                    options: ["🤸 Pemanasan", "🛌 Tidur Siang", "🍔 Makan Banyak", "📺 Menonton TV"],
+                    correctIndex: 0,
+                    explanation: "Benar! Pemanasan membuat otot tubuh siap bergerak dan mencegah terjadinya cedera saat berolahraga."
+                },
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">⚽🥅</div>
+                        <p class="text-sm font-bold text-indigo-700">Olahraga tim menggunakan bola besar di lapangan rumput!</p>
+                    `,
+                    question: "Dalam permainan sepak bola, bagian tubuh mana yang TIDAK boleh menyentuh bola (kecuali kiper)?",
+                    options: ["✋ Tangan", "🦶 Kaki", "🗣️ Kepala", "🦵 Lutut"],
+                    correctIndex: 0,
+                    explanation: "Tepat sekali! Pemain sepak bola dilarang menyentuh bola dengan tangan atau lengan (handball)."
+                },
+                {
+                    visualHTML: `
+                        <div class="flex items-center gap-3 text-4xl sm:text-5xl mb-2">
+                            <span>🥦</span><span>🍎</span><span>🥕</span><span>🥛</span>
+                        </div>
+                        <p class="text-sm font-bold text-emerald-700">Asupan bergizi agar tubuh kuat beraktivitas!</p>
+                    `,
+                    question: "Manakah di bawah ini yang termasuk makanan dan minuman sehat untuk mendukung kebugaran tubuh?",
+                    options: ["🥗 Sayur, Buah & Susu", "🍭 Permen & Soda", "🍟 Gorengan Berlebih", "🍫 Cokelat Setiap Jam"],
+                    correctIndex: 0,
+                    explanation: "Hebat! Sayuran, buah-buahan, dan susu kaya akan vitamin, serat, serta kalsium untuk pertumbuhan."
+                },
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">🦩🧍‍♂️</div>
+                        <p class="text-sm font-bold text-indigo-700">Berdiri tegak dengan satu kaki terangkat seperti burung bangau!</p>
+                    `,
+                    question: "Gerakan meniru sikap kapal terbang atau berdiri dengan satu kaki bertujuan untuk melatih...",
+                    options: ["⚖️ Keseimbangan Tubuh", "🎤 Suara Merdu", "😴 Rasa Kantuk", "✍️ Tulisan Tangan"],
+                    correctIndex: 0,
+                    explanation: "Cerdas! Berdiri satu kaki melatih fokus dan keseimbangan tubuh agar tidak mudah terjatuh."
+                },
+                {
+                    visualHTML: `
+                        <div class="text-5xl sm:text-6xl mb-2">🧼💧🤲</div>
+                        <p class="text-sm font-bold text-sky-700">Kebiasaan bersih setelah selesai bermain di taman!</p>
+                    `,
+                    question: "Setelah selesai bermain di taman bermain, mengapa kita harus mencuci tangan dengan sabun dan air mengalir?",
+                    options: ["🦠 Menghilangkan Kuman", "🎨 Mewarnai Jari", "❄️ Mendinginkan Sepatu", "⏳ Membuang Waktu"],
+                    correctIndex: 0,
+                    explanation: "Luar biasa! Mencuci tangan pakai sabun membunuh kuman dan bakteri yang menempel setelah bermain."
+                }
+            ];
+            return pool.sort(() => Math.random() - 0.5);
+        }
+
+        // ==========================================
+        // 3. KONTROL ALUR PERMAINAN & RENDER UI
+        // ==========================================
+        
+        function startRide(rideType) {
+            playSound('click');
+            gameState.currentRide = rideType;
+            gameState.currentIndex = 0;
+            gameState.roundStars = 0;
+            gameState.answered = false;
+
+            const badgeEl = document.getElementById('active-ride-badge');
+            if (rideType === 'seesaw') {
+                gameState.questions = generateSeesawQuestions();
+                badgeEl.textContent = '⚖️ Jungkat-Jungkit Angka';
+                badgeEl.className = 'bg-rose-100 text-rose-700 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm uppercase tracking-wide';
+            } else if (rideType === 'swing') {
+                gameState.questions = generateSwingQuestions();
+                badgeEl.textContent = '🎠 Ayunan Bentuk & Warna';
+                badgeEl.className = 'bg-amber-100 text-amber-800 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm uppercase tracking-wide';
+            } else if (rideType === 'slide') {
+                gameState.questions = generateSlideQuestions();
+                badgeEl.textContent = '🛝 Perosotan Pengetahuan';
+                badgeEl.className = 'bg-emerald-100 text-emerald-800 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm uppercase tracking-wide';
+            } else {
+                gameState.questions = generateFerrisPJOKQuestions();
+                badgeEl.textContent = '🎡 Biang Lala PJOK';
+                badgeEl.className = 'bg-indigo-100 text-indigo-800 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm uppercase tracking-wide';
+            }
+
+            // Alihkan tampilan ke Arena Game
+            document.getElementById('park-map-view').classList.add('hidden');
+            document.getElementById('summary-view').classList.add('hidden');
+            document.getElementById('game-arena-view').classList.remove('hidden');
+
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            gameState.answered = false;
+            const q = gameState.questions[gameState.currentIndex];
+            const total = gameState.questions.length;
+
+            // Update Progress & Counter
+            document.getElementById('question-counter').textContent = `Soal ${gameState.currentIndex + 1}/${total}`;
+            document.getElementById('progress-bar').style.width = `${((gameState.currentIndex + 1) / total) * 100}%`;
+
+            // Render Visual & Teks
+            document.getElementById('visual-prompt-box').innerHTML = q.visualHTML;
+            document.getElementById('question-text').textContent = q.question;
+
+            // Sembunyikan Kotak Feedback
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.classList.add('hidden');
+
+            // Render Tombol Pilihan
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.innerHTML = '';
+
+            const btnColors = [
+                'bg-sky-50 hover:bg-sky-100 border-sky-200 text-sky-900',
+                'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900',
+                'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900',
+                'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-900'
+            ];
+
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `btn-3d p-4 rounded-2xl border-2 font-extrabold text-base sm:text-lg text-center transition-all ${btnColors[idx % btnColors.length]}`;
+                btn.textContent = optText;
+                btn.onclick = () => handleAnswer(idx, btn);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedIndex, btnElement) {
+            if (gameState.answered) return;
+            gameState.answered = true;
+
+            const q = gameState.questions[gameState.currentIndex];
+            const isCorrect = selectedIndex === q.correctIndex;
+            const allButtons = document.getElementById('options-grid').querySelectorAll('button');
+
+            // Nonaktifkan semua tombol opsi dan tandai jawaban benar/salah
+            allButtons.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === q.correctIndex) {
+                    btn.className = 'p-4 rounded-2xl border-4 border-emerald-500 bg-emerald-100 text-emerald-900 font-extrabold text-base sm:text-lg shadow-md scale-[1.02]';
+                } else if (idx === selectedIndex && !isCorrect) {
+                    btn.className = 'p-4 rounded-2xl border-4 border-rose-500 bg-rose-100 text-rose-900 font-extrabold text-base sm:text-lg animate-shake opacity-90';
+                } else {
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            // Tampilkan Umpan Balik Edukatif
+            const feedbackBox = document.getElementById('feedback-box');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackExp = document.getElementById('feedback-explanation');
+            const nextBtn = document.getElementById('next-question-btn');
+
+            feedbackBox.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-300', 'text-emerald-900', 'bg-amber-50', 'border-amber-300', 'text-amber-900');
+
+            if (isCorrect) {
+                playSound('correct');
+                gameState.stars += 1;
+                gameState.roundStars += 1;
+                updateHeaderStats();
+
+                feedbackBox.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-900');
+                feedbackTitle.textContent = '🌟 Hebat! Jawabanmu Benar (+1 Bintang)';
+                
+                // Efek Konfeti Mini
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 45, spread: 60, origin: { y: 0.7 } });
+                }
+            } else {
+                playSound('wrong');
+                feedbackBox.classList.add('bg-amber-50', 'border-amber-300', 'text-amber-900');
+                feedbackTitle.textContent = '💡 Hampir Tepat! Ayo Kita Pelajari:';
+            }
+
+            feedbackExp.textContent = q.explanation;
+            nextBtn.textContent = (gameState.currentIndex < gameState.questions.length - 1) ? 'Soal Berikutnya ➡️' : 'Lihat Hasil Wahana 🎉';
+        }
+
+        function nextQuestion() {
+            playSound('click');
+            if (gameState.currentIndex < gameState.questions.length - 1) {
+                gameState.currentIndex++;
+                renderQuestion();
+            } else {
+                finishRide();
+            }
+        }
+
+        function finishRide() {
+            const totalQuestions = gameState.questions.length;
+            const isPerfectScore = gameState.roundStars === totalQuestions;
+
+            // Berikan 1 tiket HANYA JIKA semua jawaban benar (5/5)
+            if (isPerfectScore) {
+                playSound('win');
+                gameState.tickets += 1;
+            } else {
+                playSound('click');
+            }
+            updateHeaderStats();
+
+            document.getElementById('game-arena-view').classList.add('hidden');
+            document.getElementById('summary-view').classList.remove('hidden');
+
+            document.getElementById('round-stars').textContent = `+${gameState.roundStars}`;
+            
+            const ticketCard = document.getElementById('ticket-reward-card');
+            const ticketLabel = document.getElementById('ticket-reward-label');
+            const roundTicketsEl = document.getElementById('round-tickets');
+            const summaryEmoji = document.getElementById('summary-emoji');
+            const subtitle = document.getElementById('summary-subtitle');
+
+            if (isPerfectScore) {
+                summaryEmoji.textContent = '🏆';
+                subtitle.textContent = 'Sempurna! Semua 5 jawaban benar! Kamu mendapatkan 1 Tiket Hadiah!';
+                ticketCard.className = 'bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 transition-all';
+                ticketLabel.className = 'text-xs font-bold text-emerald-700 uppercase';
+                roundTicketsEl.className = 'text-2xl sm:text-3xl font-extrabold text-emerald-600';
+                roundTicketsEl.textContent = '+1';
+
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 100, spread: 85, origin: { y: 0.6 } });
+                }
+            } else {
+                summaryEmoji.textContent = '🌟';
+                subtitle.textContent = `Kamu menjawab ${gameState.roundStars} dari ${totalQuestions} soal dengan benar. Jawab semua 5 soal dengan benar untuk meraih 1 Tiket!`;
+                ticketCard.className = 'bg-slate-100 border-2 border-slate-200 rounded-2xl p-4 opacity-80 transition-all';
+                ticketLabel.className = 'text-xs font-bold text-slate-500 uppercase';
+                roundTicketsEl.className = 'text-2xl sm:text-3xl font-extrabold text-slate-400';
+                roundTicketsEl.textContent = '0';
+            }
+        }
+
+        function replayCurrentRide() {
+            if (gameState.currentRide) {
+                startRide(gameState.currentRide);
+            }
+        }
+
+        function returnToPark() {
+            playSound('click');
+            document.getElementById('game-arena-view').classList.add('hidden');
+            document.getElementById('summary-view').classList.add('hidden');
+            document.getElementById('park-map-view').classList.remove('hidden');
+        }
+
+        function updateHeaderStats() {
+            document.getElementById('star-count').textContent = gameState.stars;
+            document.getElementById('ticket-count').textContent = gameState.tickets;
+
+            // Cek pembukaan lencana pencapaian
+            const b1 = document.getElementById('badge-1');
+            const b2 = document.getElementById('badge-2');
+            const b3 = document.getElementById('badge-3');
+            const statusText = document.getElementById('badge-status-text');
+
+            if (gameState.stars >= 3) {
+                b1.classList.remove('opacity-40', 'bg-slate-200');
+                b1.classList.add('bg-amber-100', 'border-amber-400', 'scale-110', 'shadow-sm');
+                statusText.textContent = 'Lencana Perunggu terbuka! Kumpulkan 6 bintang untuk Lencana Perak.';
+            }
+            if (gameState.stars >= 6) {
+                b2.classList.remove('opacity-40', 'bg-slate-200');
+                b2.classList.add('bg-sky-100', 'border-sky-400', 'scale-110', 'shadow-sm');
+                statusText.textContent = 'Lencana Perak terbuka! Kumpulkan 10 bintang untuk Lencana Emas!';
+            }
+            if (gameState.stars >= 10) {
+                b3.classList.remove('opacity-40', 'bg-slate-200');
+                b3.classList.add('bg-yellow-200', 'border-yellow-500', 'scale-110', 'shadow-md');
+                statusText.textContent = 'Selamat! Semua Lencana Penjelajah Taman Bermain telah terbuka!';
+            }
+        }
+    </script>
+</body>
+</html>
