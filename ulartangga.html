@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ular Tangga Edukasi 3D - 100 Petak SD</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js untuk rendering 3D asli -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls untuk zoom kamera 3D -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Tone.js untuk efek suara tanpa file eksternal -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Google Fonts: Fredoka & Nunito untuk nuansa edukasi anak yang ceria -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Nunito', sans-serif;
+            background: #ffffff;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1, h2, h3, .font-display {
+            font-family: 'Fredoka', sans-serif;
+        }
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        /* Animasi Dadu & Tombol */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(250, 204, 21, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(250, 204, 21, 0.9); }
+        }
+        .btn-dice {
+            animation: pulseGlow 2s infinite;
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-dice:active:not(:disabled) {
+            transform: scale(0.92);
+        }
+        /* Glassmorphism panels */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 99px;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- Container 3D Three.js -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Atas: Judul & Info Status -->
+    <div class="fixed top-0 left-0 right-0 z-10 p-3 sm:p-4 pointer-events-none flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <!-- Header & Skor -->
+        <div class="flex flex-wrap items-center gap-2 pointer-events-auto max-w-full">
+            <!-- Tombol Kembali ke index.html -->
+            <button onclick="kembaliKeSekolah()" class="bg-yellow-400 hover:bg-yellow-300 text-slate-900 border-2 border-slate-900/10 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-xl transition active:scale-95 cursor-pointer">
+                <span>⬅️</span>
+                <span>Ke Sekolah</span>
+            </button>
+
+            <div class="glass-panel rounded-2xl p-3 sm:px-4 sm:py-3 flex items-center gap-3 shadow-xl">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-2xl shadow-lg shrink-0">
+                    🎲
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-xl font-bold text-amber-300 leading-tight">Ular Tangga 3D SD</h1>
+                    <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-200 mt-0.5">
+                        <span class="bg-blue-600/90 px-2 py-0.5 rounded-lg font-bold">Petak: <span id="ui-pos" class="text-amber-300">1</span>/100</span>
+                        <span class="bg-emerald-600/90 px-2 py-0.5 rounded-lg font-bold">Tingkat: <span id="ui-floor" class="text-amber-300">1</span>/10</span>
+                        <span class="bg-purple-600/90 px-2 py-0.5 rounded-lg font-bold">Skor: <span id="ui-score" class="text-amber-300">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legenda Mata Pelajaran & Kontrol Kamera -->
+        <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+            <button id="btn-focus-player" class="glass-panel hover:bg-slate-800 text-xs sm:text-sm font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-lg transition active:scale-95">
+                <span>🎯</span> <span class="hidden sm:inline">Fokus Pion</span>
+            </button>
+            <button id="btn-overview" class="glass-panel hover:bg-slate-800 text-xs sm:text-sm font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-lg transition active:scale-95">
+                <span>🏛️</span> <span class="hidden sm:inline">Lihat Menara</span>
+            </button>
+            <button id="btn-sound" class="glass-panel hover:bg-slate-800 text-xs sm:text-sm font-bold px-3 py-2 rounded-xl shadow-lg transition active:scale-95" title="Suara">
+                🔊
+            </button>
+        </div>
+    </div>
+
+    <!-- Legenda Warna Mapel di Sisi Kiri (Desktop) -->
+    <div class="fixed left-3 top-24 sm:top-24 z-10 pointer-events-none hidden md:flex flex-col gap-1.5 glass-panel p-3 rounded-2xl text-xs shadow-lg">
+        <div class="font-bold text-slate-300 mb-1 uppercase tracking-wider text-[10px]">Warna Petak Mapel:</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> IPAS (IPA & IPS)</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Matematika</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Bahasa Indonesia</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> Agama Islam (PAI)</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span> PJOK (Olahraga)</div>
+        <hr class="border-slate-700 my-1">
+        <div class="flex items-center gap-2"><span class="text-emerald-400 font-bold">🪜</span> Tangga (Naik Tingkat)</div>
+        <div class="flex items-center gap-2"><span class="text-rose-400 font-bold">🐍</span> Ular (Turun Tingkat)</div>
+    </div>
+
+    <!-- Toast Notifikasi / Pesan Status -->
+    <div id="toast-box" class="fixed top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none transition-all duration-300 opacity-0 -translate-y-3">
+        <div id="toast-content" class="glass-panel border-amber-400/50 px-4 py-2 rounded-full text-sm sm:text-base font-bold text-amber-200 shadow-2xl text-center whitespace-nowrap">
+            Selamat Datang! Kocok Dadu untuk Mulai!
+        </div>
+    </div>
+
+    <!-- Kontrol Bawah: Tombol Kocok Dadu -->
+    <div class="fixed bottom-4 left-0 right-0 z-10 flex flex-col items-center justify-center pointer-events-none px-4">
+        <div class="flex items-center gap-3 pointer-events-auto">
+            <!-- Display Hasil Dadu -->
+            <div id="dice-display" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white text-slate-900 font-display text-3xl sm:text-4xl font-bold flex items-center justify-center shadow-2xl border-4 border-amber-400">
+                🎲
+            </div>
+            <!-- Tombol Lempar Dadu -->
+            <button id="btn-roll" class="btn-dice bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 hover:from-amber-300 hover:to-rose-400 text-slate-950 font-display font-bold text-lg sm:text-xl px-6 sm:px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <span>KOCOK DADU</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL KUIS SOAL SETIAP PETAK -->
+    <div id="quiz-modal" class="fixed inset-0 z-30 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-slate-700 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl transform transition-all scale-95 opacity-0" id="quiz-card">
+            <!-- Header Soal -->
+            <div class="flex items-center justify-between gap-2 mb-4">
+                <span id="q-subject-badge" class="px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold uppercase tracking-wide bg-blue-600 text-white shadow">
+                    MATEMATIKA
+                </span>
+                <span class="bg-slate-800 border border-slate-600 px-3 py-1 rounded-full text-xs sm:text-sm font-bold text-amber-300">
+                    Petak #<span id="q-tile-num">1</span>
+                </span>
+            </div>
+
+            <!-- Pertanyaan -->
+            <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 mb-4">
+                <p id="q-text" class="text-base sm:text-lg font-bold text-white leading-relaxed">
+                    Memuat pertanyaan...
+                </p>
+            </div>
+
+            <!-- Pilihan Jawaban -->
+            <div id="q-options" class="grid grid-cols-1 gap-2.5 mb-4">
+                <!-- Tombol opsi digenerate oleh JS -->
+            </div>
+
+            <!-- Feedback Jawaban -->
+            <div id="q-feedback" class="hidden rounded-2xl p-3.5 text-sm sm:text-base font-bold text-center mb-3"></div>
+
+            <!-- Tombol Lanjut setelah menjawab -->
+            <button id="btn-continue" class="hidden w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-display font-bold text-lg shadow-lg transition active:scale-95">
+                Lanjutkan Perjalanan ➡️
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL KEMENANGAN (PETAK 100) -->
+    <div id="win-modal" class="fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-400 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl">
+            <div class="text-6xl mb-3">🏆</div>
+            <h2 class="text-2xl sm:text-3xl font-display font-bold text-amber-300 mb-2">SELAMAT! JUARA 1!</h2>
+            <p class="text-slate-300 text-sm sm:text-base mb-5">
+                Kamu berhasil mencapai puncak menara <strong>Petak 100</strong> dan menaklukkan tantangan soal-soal Sekolah Dasar!
+            </p>
+            <div class="bg-slate-950/60 rounded-2xl p-4 mb-6 border border-slate-700">
+                <div class="text-xs text-slate-400 uppercase font-bold">Total Skor Akhir</div>
+                <div id="win-score" class="text-4xl font-display font-bold text-emerald-400 mt-1">0</div>
+            </div>
+            <button id="btn-restart" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-display font-bold text-lg shadow-xl hover:brightness-110 transition active:scale-95">
+                🔄 Main Lagi dari Petak 1
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 1. BANK 100 SOAL MATERI SEKOLAH DASAR (PETAK 1 - 100)
+         * Terdiri dari: IPAS, Matematika, Bahasa Indonesia, Agama Islam (PAI), PJOK
+         * Setiap petak (index 0 = petak 1, index 99 = petak 100) memiliki soal unik.
+         * ============================================================================
+         */
+        const QUESTIONS_100 = [
+            // --- TINGKAT 1: PETAK 1 - 10 ---
+            { s: "IPAS", q: "Bagian tumbuhan yang berfungsi menyerap air dan zat hara dari dalam tanah adalah...", o: ["Daun", "Akar", "Bunga", "Batang"], a: 1 },
+            { s: "Matematika", q: "Hasil dari 25 + 37 adalah...", o: ["52", "62", "64", "72"], a: 1 },
+            { s: "Bahasa Indonesia", q: "Sinonim atau persamaan kata dari 'Pandai' adalah...", o: ["Malas", "Pintar", "Rajin", "Cepat"], a: 1 },
+            { s: "Agama Islam", q: "Rukun Islam yang pertama adalah mengucapkan...", o: ["Shalat", "Zakat", "Dua Kalimat Syahadat", "Puasa"], a: 2 },
+            { s: "PJOK", q: "Sebelum melakukan olahraga berat, kita wajib melakukan...", o: ["Pendinginan", "Pemanasan", "Tidur", "Makan kenyang"], a: 1 },
+            { s: "IPAS", q: "Hewan yang memakan tumbuhan saja disebut...", o: ["Karnivora", "Omnivora", "Herbivora", "Insektivora"], a: 2 },
+            { s: "Matematika", q: "Bangun datar yang memiliki 3 sisi dan 3 sudut disebut...", o: ["Persegi", "Lingkaran", "Segitiga", "Trapesium"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Tanda baca yang digunakan di akhir kalimat tanya adalah...", o: ["Tanda seru (!)", "Tanda titik (.)", "Tanda tanya (?)", "Tanda koma (,)"], a: 2 },
+            { s: "Agama Islam", q: "Jumlah rakaat shalat fardhu Subuh adalah...", o: ["2 rakaat", "3 rakaat", "4 rakaat", "5 rakaat"], a: 0 },
+            { s: "PJOK", q: "Jumlah pemain dalam satu tim sepak bola di lapangan adalah...", o: ["6 orang", "9 orang", "11 orang", "12 orang"], a: 2 },
+
+            // --- TINGKAT 2: PETAK 11 - 20 ---
+            { s: "IPAS", q: "Perubahan wujud benda dari cair menjadi gas disebut...", o: ["Membeku", "Mencair", "Menguap", "Menyublim"], a: 2 },
+            { s: "Matematika", q: "Hasil perkalian dari 8 × 7 adalah...", o: ["54", "56", "63", "48"], a: 1 },
+            { s: "Bahasa Indonesia", q: "Lawan kata (antonim) dari kata 'Hemat' adalah...", o: ["Irit", "Boros", "Kaya", "Dermawan"], a: 1 },
+            { s: "Agama Islam", q: "Kitab suci yang diturunkan kepada Nabi Muhammad SAW adalah...", o: ["Taurat", "Zabur", "Injil", "Al-Qur'an"], a: 3 },
+            { s: "PJOK", q: "Gerakan berpindah tempat seperti berjalan, berlari, dan melompat disebut gerak...", o: ["Non-lokomotor", "Lokomotor", "Manipulatif", "Statis"], a: 1 },
+            { s: "IPAS", q: "Sumber energi panas dan cahaya terbesar di bumi adalah...", o: ["Bulan", "Bintang", "Matahari", "Listrik"], a: 2 },
+            { s: "Matematika", q: "1 jam sama dengan berapa menit?", o: ["30 menit", "45 menit", "60 menit", "100 menit"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Kalimat yang berisi perintah atau ajakan diakhiri dengan tanda...", o: ["Titik (.)", "Tanya (?)", "Seru (!)", "Titik dua (:)"], a: 2 },
+            { s: "Agama Islam", q: "Nabi terakhir sekaligus penutup para nabi adalah...", o: ["Nabi Adam AS", "Nabi Ibrahim AS", "Nabi Isa AS", "Nabi Muhammad SAW"], a: 3 },
+            { s: "PJOK", q: "Induk organisasi sepak bola di Indonesia adalah...", o: ["PBSI", "PSSI", "PERBASI", "PBVSI"], a: 1 },
+
+            // --- TINGKAT 3: PETAK 21 - 30 ---
+            { s: "IPAS", q: "Proses pembuatan makanan pada tumbuhan hijau dengan bantuan cahaya matahari disebut...", o: ["Respirasi", "Fotosintesis", "Adaptasi", "Metamorfosis"], a: 1 },
+            { s: "Matematika", q: "Sebuah persegi memiliki panjang sisi 6 cm. Berapa luasnya?", o: ["12 cm²", "24 cm²", "36 cm²", "42 cm²"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Kata tanya untuk menanyakan tempat kejadian adalah...", o: ["Kapan", "Siapa", "Di mana", "Mengapa"], a: 2 },
+            { s: "Agama Islam", q: "Malaikat yang bertugas menyampaikan wahyu kepada para nabi adalah...", o: ["Malaikat Mikail", "Malaikat Jibril", "Malaikat Israfil", "Malaikat Izrail"], a: 1 },
+            { s: "PJOK", q: "Olahraga bulu tangkis menggunakan alat pemukul yang disebut...", o: ["Bet", "Raket", "Stik", "Tongkat"], a: 1 },
+            { s: "IPAS", q: "Benda yang dapat ditarik kuat oleh magnet terbuat dari bahan...", o: ["Kayu", "Plastik", "Besi", "Kaca"], a: 2 },
+            { s: "Matematika", q: "Pecahan 1/2 jika diubah menjadi bentuk desimal adalah...", o: ["0,2", "0,25", "0,5", "0,75"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Ide utama yang dibahas dalam suatu paragraf disebut...", o: ["Kalimat penjelas", "Gagasan pokok", "Judul cerita", "Amanat"], a: 1 },
+            { s: "Agama Islam", q: "Puasa wajib bagi umat Islam dilaksanakan pada bulan...", o: ["Syawal", "Muharram", "Ramadhan", "Rajab"], a: 2 },
+            { s: "PJOK", q: "Sikap awal melakukan gerakan guling depan (roll depan) pada senam lantai adalah...", o: ["Tidur telentang", "Jongkok atau berdiri", "Duduk selonjor", "Kayang"], a: 1 },
+
+            // --- TINGKAT 4: PETAK 31 - 40 ---
+            { s: "IPAS", q: "Simbiosis antara kupu-kupu dan bunga merupakan contoh simbiosis...", o: ["Parasitisme", "Komensalisme", "Mutualisme", "Amensalisme"], a: 2 },
+            { s: "Matematika", q: "Hasil dari 144 : 12 adalah...", o: ["10", "11", "12", "14"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Orang yang melakukan wawancara untuk mencari informasi disebut...", o: ["Narasumber", "Pewawancara", "Penulis", "Penyiar"], a: 1 },
+            { s: "Agama Islam", q: "Sifat wajib bagi Rasul yang artinya 'jujur' atau 'benar' adalah...", o: ["Amanah", "Tabligh", "Siddiq", "Fathanah"], a: 2 },
+            { s: "PJOK", q: "Dalam permainan bola voli, satu tim terdiri dari berapa pemain di lapangan?", o: ["5 orang", "6 orang", "7 orang", "11 orang"], a: 1 },
+            { s: "IPAS", q: "Ibukota negara Indonesia saat ini yang berada di Pulau Jawa adalah...", o: ["Bandung", "Surabaya", "DKI Jakarta", "Semarang"], a: 2 },
+            { s: "Matematika", q: "Sudut yang besarnya tepat 90 derajat disebut sudut...", o: ["Lancip", "Tumpul", "Siku-siku", "Lurus"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Pesan moral yang ingin disampaikan pengarang melalui cerita disebut...", o: ["Tokoh", "Latar", "Alur", "Amanat"], a: 3 },
+            { s: "Agama Islam", q: "Shalat sunnah yang dikerjakan pada malam hari di bulan Ramadhan disebut...", o: ["Shalat Dhuha", "Shalat Tarawih", "Shalat Id", "Shalat Istisqa"], a: 1 },
+            { s: "PJOK", q: "Gaya renang yang gerakannya menyerupai katak berenang adalah gaya...", o: ["Bebas", "Punggung", "Dada", "Kupu-kupu"], a: 2 },
+
+            // --- TINGKAT 5: PETAK 41 - 50 ---
+            { s: "IPAS", q: "Planet terbesar dalam tata surya kita adalah...", o: ["Mars", "Bumi", "Jupiter", "Saturnus"], a: 2 },
+            { s: "Matematika", q: "Keliling persegi panjang dengan panjang 10 cm dan lebar 5 cm adalah...", o: ["15 cm", "30 cm", "50 cm", "25 cm"], a: 1 },
+            { s: "Bahasa Indonesia", q: "Kata 'berlari' mendapat imbuhan berupa...", o: ["Akhiran -i", "Awalan ber-", "Sisipan -el-", "Awalan me-"], a: 1 },
+            { s: "Agama Islam", q: "Bacaan 'Alhamdulillah' disebut juga dengan bacaan...", o: ["Tasbih", "Tahmid", "Takbir", "Tahlil"], a: 1 },
+            { s: "PJOK", q: "Vitamin yang paling banyak ditemukan pada buah jeruk untuk daya tahan tubuh adalah...", o: ["Vitamin A", "Vitamin B", "Vitamin C", "Vitamin D"], a: 2 },
+            { s: "IPAS", q: "Gaya yang menyebabkan buah jatuh dari pohon ke tanah adalah gaya...", o: ["Gesek", "Otot", "Gravitasi", "Pegas"], a: 2 },
+            { s: "Matematika", q: "25% jika ditulis dalam bentuk pecahan paling sederhana adalah...", o: ["1/2", "1/3", "1/4", "1/5"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Pantun satu bait terdiri atas berapa baris?", o: ["2 baris", "4 baris", "6 baris", "8 baris"], a: 1 },
+            { s: "Agama Islam", q: "Rukun Iman berjumlah...", o: ["4 perkara", "5 perkara", "6 perkara", "7 perkara"], a: 2 },
+            { s: "PJOK", q: "Lari jarak pendek (sprint) menggunakan start...", o: ["Berdiri", "Melayang", "Jongkok", "Duduk"], a: 2 },
+
+            // --- TINGKAT 6: PETAK 51 - 60 ---
+            { s: "IPAS", q: "Hewan yang mengalami metamorfosis sempurna adalah...", o: ["Belalang", "Kecoak", "Kupu-kupu", "Jangkrik"], a: 2 },
+            { s: "Matematika", q: "Volume kubus dengan panjang rusuk 4 cm adalah...", o: ["16 cm³", "32 cm³", "48 cm³", "64 cm³"], a: 3 },
+            { s: "Bahasa Indonesia", q: "Baris pertama dan kedua pada pantun disebut...", o: ["Isi", "Sampiran", "Judul", "Penutup"], a: 1 },
+            { s: "Agama Islam", q: "Surat pertama dalam Al-Qur'an yang wajib dibaca saat shalat adalah...", o: ["Al-Ikhlas", "An-Nas", "Al-Fatihah", "Al-Falaq"], a: 2 },
+            { s: "PJOK", q: "Permainan kasti termasuk jenis permainan bola...", o: ["Besar", "Kecil", "Air", "Meja"], a: 1 },
+            { s: "IPAS", q: "Alat pernapasan pada ikan adalah...", o: ["Paru-paru", "Trakea", "Insang", "Kulit"], a: 2 },
+            { s: "Matematika", q: "Bilangan prima yang terletak antara 10 dan 15 adalah...", o: ["11 dan 13", "12 dan 14", "11 dan 15", "13 dan 15"], a: 0 },
+            { s: "Bahasa Indonesia", q: "Penulisan huruf kapital yang benar terdapat pada kalimat...", o: ["saya tinggal di bandung.", "Saya tinggal di Bandung.", "Saya Tinggal Di Bandung.", "saya Tinggal di bandung."], a: 1 },
+            { s: "Agama Islam", q: "Nabi yang diberi mukjizat dapat membelah Laut Merah dengan tongkatnya adalah...", o: ["Nabi Nuh AS", "Nabi Musa AS", "Nabi Sulaiman AS", "Nabi Yunus AS"], a: 1 },
+            { s: "PJOK", q: "Latihan push-up bertujuan untuk melatih kekuatan otot...", o: ["Kaki", "Lengan dan bahu", "Leher", "Pinggang"], a: 1 },
+
+            // --- TINGKAT 7: PETAK 61 - 70 ---
+            { s: "IPAS", q: "Benda yang dapat menghantarkan panas dengan baik disebut...", o: ["Isolator", "Konduktor", "Radiator", "Resistor"], a: 1 },
+            { s: "Matematika", q: "FPB dari 12 dan 18 adalah...", o: ["2", "3", "6", "36"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Ungkapan 'buah tangan' memiliki arti...", o: ["Anak kesayangan", "Oleh-oleh", "Hasil karya", "Pekerjaan"], a: 1 },
+            { s: "Agama Islam", q: "Asmaul Husna 'Al-Khaliq' artinya Allah Maha...", o: ["Melihat", "Mendengar", "Pencipta", "Pengasih"], a: 2 },
+            { s: "PJOK", q: "Gerakan menendang bola dalam sepak bola termasuk gerak dasar...", o: ["Lokomotor", "Non-lokomotor", "Manipulatif", "Keseimbangan"], a: 2 },
+            { s: "IPAS", q: "Bhinneka Tunggal Ika memiliki arti...", o: ["Bersatu kita teguh", "Berbeda-beda tetapi tetap satu jua", "Maju terus pantang mundur", "Keadilan sosial"], a: 1 },
+            { s: "Matematika", q: "3 kilometer sama dengan berapa meter?", o: ["30 meter", "300 meter", "3.000 meter", "30.000 meter"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Kalimat 'Adik menyiram bunga di halaman' memiliki objek yaitu...", o: ["Adik", "Menyiram", "Bunga", "Di halaman"], a: 2 },
+            { s: "Agama Islam", q: "Zakat yang wajib dikeluarkan umat Islam menjelang Hari Raya Idul Fitri adalah...", o: ["Zakat Mal", "Zakat Fitrah", "Infaq", "Sedekah"], a: 1 },
+            { s: "PJOK", q: "Dalam permainan bola basket, memasukkan bola ke ring dari luar garis tiga poin bernilai...", o: ["1 poin", "2 poin", "3 poin", "4 poin"], a: 2 },
+
+            // --- TINGKAT 8: PETAK 71 - 80 ---
+            { s: "IPAS", q: "Peristiwa berputarnya bumi pada porosnya disebut...", o: ["Revolusi bumi", "Rotasi bumi", "Gerhana", "Gravitasi"], a: 1 },
+            { s: "Matematika", q: "Luas segitiga dengan alas 10 cm dan tinggi 8 cm adalah...", o: ["80 cm²", "40 cm²", "18 cm²", "20 cm²"], a: 1 },
+            { s: "Bahasa Indonesia", q: "Majas yang membandingkan benda mati seolah-olah hidup seperti manusia disebut...", o: ["Hiperbola", "Personifikasi", "Metafora", "Simile"], a: 1 },
+            { s: "Agama Islam", q: "Peristiwa perjalanan Nabi Muhammad SAW dari Masjidil Haram ke Masjidil Aqsa lalu ke Sidratul Muntaha disebut...", o: ["Nuzulul Qur'an", "Isra Mi'raj", "Fathu Makkah", "Hijrah"], a: 1 },
+            { s: "PJOK", q: "Istilah 'passing' dalam permainan bola voli dan sepak bola berarti...", o: ["Menembak", "Mengoper bola", "Menggiring", "Menghadang"], a: 1 },
+            { s: "IPAS", q: "Organ tubuh manusia yang berfungsi memompa darah ke seluruh tubuh adalah...", o: ["Paru-paru", "Hati", "Jantung", "Ginjal"], a: 2 },
+            { s: "Matematika", q: "KPK dari 4 dan 6 adalah...", o: ["8", "12", "18", "24"], a: 1 },
+            { s: "Bahasa Indonesia", q: "Ringkasan dari suatu bacaan panjang dengan mengambil intisarinya disebut...", o: ["Sinopsis", "Rangkuman", "Daftar pustaka", "Glosarium"], a: 1 },
+            { s: "Agama Islam", q: "Berwudhu sebelum shalat bertujuan untuk menghilangkan...", o: ["Hadats besar", "Hadats kecil", "Rasa lapar", "Rasa kantuk"], a: 1 },
+            { s: "PJOK", q: "Posisi badan yang benar saat melakukan sikap lilin bertumpu pada...", o: ["Kepala", "Pundak/bahu", "Telapak tangan", "Lutut"], a: 1 },
+
+            // --- TINGKAT 9: PETAK 81 - 90 ---
+            { s: "IPAS", q: "Energi listrik pada setrika diubah menjadi energi...", o: ["Gerak", "Bunyi", "Panas", "Cahaya"], a: 2 },
+            { s: "Matematika", q: "Nilai rata-rata (mean) dari data: 6, 8, 7, 9 adalah...", o: ["7", "7,5", "8", "8,5"], a: 1 },
+            { s: "Bahasa Indonesia", q: "Surat yang dikirimkan oleh instansi resmi kepada instansi lain disebut surat...", o: ["Pribadi", "Resmi / Dinas", "Kabar", "Kaleng"], a: 1 },
+            { s: "Agama Islam", q: "Hukum bacaan nun mati bertemu huruf 'ba' (ب) dalam ilmu tajwid disebut...", o: ["Idzhar", "Idgham", "Iqlab", "Ikhfa"], a: 2 },
+            { s: "PJOK", q: "Lari estafet adalah lari sambung yang menggunakan alat berupa...", o: ["Bola", "Tongkat estafet", "Bendera", "Tali"], a: 1 },
+            { s: "IPAS", q: "Kerja sama negara-negara di kawasan Asia Tenggara tergabung dalam organisasi...", o: ["PBB", "ASEAN", "APEC", "OPEC"], a: 1 },
+            { s: "Matematika", q: "Sebuah lingkaran memiliki jari-jari 7 cm. Berapa diameternya?", o: ["3,5 cm", "7 cm", "14 cm", "21 cm"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Kata baku dari 'apotik' adalah...", o: ["Apotek", "Apotik", "Apotheek", "Apoteker"], a: 0 },
+            { s: "Agama Islam", q: "Nabi yang memiliki kesabaran luar biasa saat diuji penyakit kulit bertahun-tahun adalah...", o: ["Nabi Ayyub AS", "Nabi Yusuf AS", "Nabi Daud AS", "Nabi Ismail AS"], a: 0 },
+            { s: "PJOK", q: "Zat gizi utama yang berfungsi sebagai sumber tenaga utama tubuh terdapat pada...", o: ["Karbohidrat", "Mineral", "Air", "Serat"], a: 0 },
+
+            // --- TINGKAT 10 (PUNCAK): PETAK 91 - 100 ---
+            { s: "IPAS", q: "Gerhana matahari terjadi apabila posisi bulan berada di antara...", o: ["Bumi dan Mars", "Matahari dan Bumi", "Bumi dan Venus", "Matahari dan Jupiter"], a: 1 },
+            { s: "Matematika", q: "Jika harga 3 buku adalah Rp15.000, maka harga 5 buku yang sama adalah...", o: ["Rp20.000", "Rp25.000", "Rp30.000", "Rp35.000"], a: 1 },
+            { s: "Bahasa Indonesia", q: "Pidato yang dilakukan tanpa menyiapkan naskah terlebih dahulu disebut metode...", o: ["Manuskrip", "Memoriter", "Impromptu", "Ekstemporan"], a: 2 },
+            { s: "Agama Islam", q: "Malam yang lebih baik dari seribu bulan pada sepuluh malam terakhir Ramadhan disebut...", o: ["Nuzulul Qur'an", "Lailatul Qadar", "Asyura", "Isra Mi'raj"], a: 1 },
+            { s: "PJOK", q: "Kemampuan tubuh melakukan aktivitas fisik dalam waktu lama tanpa kelelahan berarti disebut...", o: ["Kelenturan", "Daya tahan (Endurance)", "Kecepatan", "Kelincahan"], a: 1 },
+            { s: "IPAS", q: "Teks Proklamasi Kemerdekaan Indonesia dibacakan oleh Ir. Soekarno pada tanggal...", o: ["17 Agustus 1945", "28 Oktober 1928", "1 Juni 1945", "10 November 1945"], a: 0 },
+            { s: "Matematika", q: "Hasil dari (-15) + 25 adalah...", o: ["-40", "-10", "10", "40"], a: 2 },
+            { s: "Bahasa Indonesia", q: "Kalimat 'Rina rajin belajar sehingga ia menjadi juara kelas' adalah kalimat majemuk...", o: ["Setara", "Bertingkat", "Campuran", "Tunggal"], a: 1 },
+            { s: "Agama Islam", q: "Empat sahabat utama penerus kepemimpinan Nabi Muhammad SAW disebut...", o: ["Assabiqunal Awwalun", "Khulafaur Rasyidin", "Ulul Azmi", "Ahlul Bait"], a: 1 },
+            { s: "PJOK", q: "Puncak prestasi olahraga dunia yang diselenggarakan setiap 4 tahun sekali adalah...", o: ["SEA Games", "Asian Games", "Olimpiade", "PON"], a: 2 }
+        ];
+
+        /**
+         * ============================================================================
+         * 2. KONFIGURASI TANGGA (NAIK TINGKAT) & ULAR (TURUN TINGKAT)
+         * Format: { startTile: endTile }
+         * ============================================================================
+         */
+        const LADDERS = {
+            4: 17,   // Tingkat 1 -> Tingkat 2
+            13: 28,  // Tingkat 2 -> Tingkat 3
+            22: 41,  // Tingkat 3 -> Tingkat 5
+            35: 54,  // Tingkat 4 -> Tingkat 6
+            48: 67,  // Tingkat 5 -> Tingkat 7
+            59: 78,  // Tingkat 6 -> Tingkat 8
+            72: 91   // Tingkat 8 -> Tingkat 10
+        };
+
+        const SNAKES = {
+            26: 8,   // Tingkat 3 -> Tingkat 1
+            39: 19,  // Tingkat 4 -> Tingkat 2
+            52: 31,  // Tingkat 6 -> Tingkat 4
+            66: 45,  // Tingkat 7 -> Tingkat 5
+            84: 63,  // Tingkat 9 -> Tingkat 7
+            97: 76   // Tingkat 10 -> Tingkat 8
+        };
+
+        // Warna tema berdasarkan Mata Pelajaran
+        const SUBJECT_COLORS = {
+            "IPAS": { hex: 0x10b981, css: "#10b981", badge: "bg-emerald-600" },
+            "Matematika": { hex: 0x3b82f6, css: "#3b82f6", badge: "bg-blue-600" },
+            "Bahasa Indonesia": { hex: 0xf43f5e, css: "#f43f5e", badge: "bg-rose-600" },
+            "Agama Islam": { hex: 0xf59e0b, css: "#f59e0b", badge: "bg-amber-500 text-slate-950" },
+            "PJOK": { hex: 0xa855f7, css: "#a855f7", badge: "bg-purple-600" }
+        };
+
+        /**
+         * ============================================================================
+         * 3. SISTEM AUDIO SINTETIS (TONE.JS)
+         * ============================================================================
+         */
+        let soundEnabled = true;
+        let synth = null;
+
+        function initAudio() {
+            if (!synth && window.Tone) {
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8;
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (Tone.context.state !== 'running') Tone.start();
+                const now = Tone.now();
+                if (type === 'step') {
+                    synth.triggerAttackRelease("C5", "32n", now);
+                } else if (type === 'dice') {
+                    synth.triggerAttackRelease("G4", "32n", now);
+                    synth.triggerAttackRelease("B4", "32n", now + 0.06);
+                    synth.triggerAttackRelease("D5", "32n", now + 0.12);
+                } else if (type === 'correct') {
+                    synth.triggerAttackRelease(["C5", "E5", "G5"], "16n", now);
+                    synth.triggerAttackRelease(["C6"], "8n", now + 0.15);
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease(["Eb4", "D4"], "8n", now);
+                } else if (type === 'ladder') {
+                    ["C4", "E4", "G4", "B4", "C5", "E5"].forEach((n, i) => {
+                        synth.triggerAttackRelease(n, "32n", now + i * 0.07);
+                    });
+                } else if (type === 'snake') {
+                    ["G4", "F#4", "F4", "E4", "Eb4", "D4"].forEach((n, i) => {
+                        synth.triggerAttackRelease(n, "32n", now + i * 0.08);
+                    });
+                } else if (type === 'win') {
+                    ["C5", "E5", "G5", "C6"].forEach((n, i) => {
+                        synth.triggerAttackRelease(n, "8n", now + i * 0.15);
+                    });
+                }
+            } catch (e) {
+                // Abaikan error audio jika browser memblokir autoplay
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 4. INISIALISASI SCENE 3D THREE.JS (MENARA BERSUSUN 10 TINGKAT)
+         * Tingkat 1 (bawah) = Petak 1 - 10
+         * Tingkat 2 = Petak 11 - 20 ... hingga Tingkat 10 (puncak) = Petak 91 - 100
+         * ============================================================================
+         */
+        let scene, camera, renderer, controls;
+        let tilePositions = {}; // Menyimpan koordinat 3D (x, y, z) tiap petak 1..100
+        let tileMeshes = {};
+        let playerGroup;
+        let cameraMode = 'overview'; // 'overview' (tampilkan seluruh menara) | 'follow' (ikuti pion saat jalan) | 'manual'
+
+        // Parameter geometri menara 3D (rapat tanpa celah)
+        const TILE_SIZE = 2.0;
+        const TILE_GAP = 0;
+        const LEVEL_HEIGHT = 0.55;
+        const LEVEL_DEPTH_STEP = TILE_SIZE;
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene & Kabut atmosferik warna putih bersih
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+            scene.fog = new THREE.FogExp2(0xffffff, 0.0055);
+
+            // Kamera Perspektif (Awal: menampilkan seluruh menara 100 petak)
+            camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 300);
+            camera.position.set(0, 17, 29);
+
+            // Renderer WebGL dengan bayangan realistis
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // OrbitControls (Zoom & Pan, rotasi 360 dinonaktifkan agar sudut pandang stabil)
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.enableRotate = false;
+            controls.maxPolarAngle = Math.PI / 2 - 0.04;
+            controls.minDistance = 7;
+            controls.maxDistance = 65;
+            controls.target.set(0, 2.5, -9);
+
+            // Jika pengguna menggeser/zoom kamera manual, alihkan ke mode manual sementara
+            controls.addEventListener('start', () => {
+                cameraMode = 'manual';
+            });
+
+            // Pencahayaan 3D merata & cerah untuk latar putih (tanpa titik cahaya silau di tengah)
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 0.95);
+            hemiLight.position.set(0, 50, 0);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+            dirLight.position.set(22, 45, 28);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 5;
+            dirLight.shadow.camera.far = 110;
+            const d = 32;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            // Bangun lingkungan, 100 petak bersusun, tangga, ular, dan pion pemain
+            buildEnvironment();
+            build100SteppedTiles();
+            build3DLaddersAndSnakes();
+            buildPlayerPawn();
+
+            // Responsif saat ukuran layar berubah
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // Membuat tekstur angka & ikon mapel di atas setiap petak menggunakan Canvas 2D -> Three.js Texture
+        function createTileTexture(tileNum, subject) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            const colorInfo = SUBJECT_COLORS[subject];
+
+            // Background gradasi petak
+            const grad = ctx.createLinearGradient(0, 0, 256, 256);
+            grad.addColorStop(0, colorInfo.css);
+            grad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Bingkai dalam putih halus
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            ctx.lineWidth = 12;
+            ctx.strokeRect(12, 12, 232, 232);
+
+            // Nomor Petak Besar di Tengah
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 92px Fredoka, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(tileNum.toString(), 128, 118);
+
+            // Label Mata Pelajaran di Bawah
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+            ctx.fillRect(24, 185, 208, 44);
+            ctx.fillStyle = '#fef08a';
+            ctx.font = 'bold 24px Nunito, Arial, sans-serif';
+            const shortSub = subject === "Bahasa Indonesia" ? "B. INDO" : (subject === "Agama Islam" ? "PAI" : subject.toUpperCase());
+            ctx.fillText(shortSub, 128, 208);
+
+            // Penanda khusus Tangga / Ular / Finish
+            if (LADDERS[tileNum]) {
+                ctx.fillStyle = '#4ade80';
+                ctx.font = 'bold 26px Arial';
+                ctx.fillText(`🪜⬆️${LADDERS[tileNum]}`, 128, 42);
+            } else if (SNAKES[tileNum]) {
+                ctx.fillStyle = '#fda4af';
+                ctx.font = 'bold 26px Arial';
+                ctx.fillText(`🐍⬇️${SNAKES[tileNum]}`, 128, 42);
+            } else if (tileNum === 100) {
+                ctx.fillStyle = '#fde047';
+                ctx.font = 'bold 28px Arial';
+                ctx.fillText(`🏆 FINISH`, 128, 42);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.anisotropy = 4;
+            return texture;
+        }
+
+        function buildEnvironment() {
+            // Alas dasar / lantai plaza cerah
+            const baseGeo = new THREE.CylinderGeometry(28, 30, 1.5, 48);
+            const baseMat = new THREE.MeshStandardMaterial({
+                color: 0xe2e8f0,
+                roughness: 0.85,
+                metalness: 0.1
+            });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.set(0, -1.2, -9);
+            baseMesh.receiveShadow = true;
+            scene.add(baseMesh);
+        }
+
+        function build100SteppedTiles() {
+            const step = TILE_SIZE + TILE_GAP;
+            const rowWidth = 9 * step; // Total lebar 10 petak
+
+            for (let tile = 1; tile <= 100; tile++) {
+                const zeroIdx = tile - 1;
+                const level = Math.floor(zeroIdx / 10); // 0 untuk petak 1-10, 1 untuk 11-20, ..., 9 untuk 91-100
+                const colInRow = zeroIdx % 10;
+
+                // Pola ular tangga Boustrophedon (Zig-Zag):
+                // Tingkat genap (0, 2, 4..): kiri ke kanan
+                // Tingkat ganjil (1, 3, 5..): kanan ke kiri
+                const xIndex = (level % 2 === 0) ? colInRow : (9 - colInRow);
+
+                const x = -rowWidth / 2 + xIndex * step;
+                const y = level * LEVEL_HEIGHT; // Naik setingkat setiap 10 petak
+                const z = -level * LEVEL_DEPTH_STEP; // Terasering bertingkat rapat tanpa celah
+
+                tilePositions[tile] = new THREE.Vector3(x, y, z);
+
+                const questionData = QUESTIONS_100[zeroIdx];
+                const topTexture = createTileTexture(tile, questionData.s);
+                const sideColor = SUBJECT_COLORS[questionData.s].hex;
+
+                // Material sisi & atas petak
+                const sideMat = new THREE.MeshStandardMaterial({
+                    color: sideColor,
+                    roughness: 0.45,
+                    metalness: 0.15
+                });
+                const topMat = new THREE.MeshStandardMaterial({
+                    map: topTexture,
+                    roughness: 0.3,
+                    metalness: 0.1
+                });
+
+                // BoxGeometry dengan 6 sisi: [right, left, top, bottom, front, back]
+                const materials = [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
+                const tileGeo = new THREE.BoxGeometry(TILE_SIZE, 0.55, TILE_SIZE);
+                const tileMesh = new THREE.Mesh(tileGeo, materials);
+
+                tileMesh.position.set(x, y, z);
+                tileMesh.castShadow = true;
+                tileMesh.receiveShadow = true;
+                scene.add(tileMesh);
+                tileMeshes[tile] = tileMesh;
+
+                // Anak tangga penghubung naik ke tingkat berikutnya (misal dari petak 10 ke 11, 20 ke 21, dst.)
+                if (tile % 10 === 0 && tile < 100) {
+                    const connectorGeo = new THREE.BoxGeometry(TILE_SIZE * 0.7, LEVEL_HEIGHT * 0.5, LEVEL_DEPTH_STEP * 0.6);
+                    const connectorMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.4 });
+                    const connector = new THREE.Mesh(connectorGeo, connectorMat);
+                    connector.position.set(x, y + LEVEL_HEIGHT * 0.35, z - LEVEL_DEPTH_STEP * 0.45);
+                    connector.castShadow = true;
+                    scene.add(connector);
+                }
+            }
+        }
+
+        function build3DLaddersAndSnakes() {
+            // 1. MEMBANGUN TANGGA 3D (EMAS/HIJAU)
+            const railMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.3, metalness: 0.4 });
+            const rungMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.3, metalness: 0.5 });
+
+            Object.entries(LADDERS).forEach(([startStr, endNum]) => {
+                const startPos = tilePositions[parseInt(startStr)].clone().add(new THREE.Vector3(0, 0.3, 0));
+                const endPos = tilePositions[endNum].clone().add(new THREE.Vector3(0, 0.3, 0));
+
+                const dir = new THREE.Vector3().subVectors(endPos, startPos);
+                const length = dir.length();
+                const midPoint = new THREE.Vector3().addVectors(startPos, endPos).multiplyScalar(0.5);
+
+                const ladderGroup = new THREE.Group();
+                ladderGroup.position.copy(midPoint);
+                ladderGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+
+                // Dua tiang tangga kiri & kanan
+                const railGeo = new THREE.CylinderGeometry(0.11, 0.11, length, 12);
+                const leftRail = new THREE.Mesh(railGeo, railMat);
+                leftRail.position.x = -0.38;
+                const rightRail = new THREE.Mesh(railGeo, railMat);
+                rightRail.position.x = 0.38;
+                ladderGroup.add(leftRail, rightRail);
+
+                // Anak-anak tangga melintang
+                const rungCount = Math.floor(length / 0.75);
+                const rungGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.76, 10);
+                rungGeo.rotateZ(Math.PI / 2);
+                for (let i = 1; i < rungCount; i++) {
+                    const rung = new THREE.Mesh(rungGeo, rungMat);
+                    rung.position.y = -length / 2 + i * (length / rungCount);
+                    ladderGroup.add(rung);
+                }
+
+                scene.add(ladderGroup);
+            });
+
+            // 2. MEMBANGUN ULAR 3D BERKELOK (TUBE GEOMETRY + KEPALA ULAR)
+            const snakeMat = new THREE.MeshStandardMaterial({
+                color: 0xf43f5e,
+                roughness: 0.35,
+                metalness: 0.2
+            });
+            const snakeHeadMat = new THREE.MeshStandardMaterial({
+                color: 0xbe123c,
+                roughness: 0.3
+            });
+
+            Object.entries(SNAKES).forEach(([headStr, tailNum]) => {
+                const headPos = tilePositions[parseInt(headStr)].clone().add(new THREE.Vector3(0, 0.45, 0));
+                const tailPos = tilePositions[tailNum].clone().add(new THREE.Vector3(0, 0.35, 0));
+
+                // Buat titik-titik kurva berkelok-kelok seperti tubuh ular asli
+                const points = [];
+                const segments = 6;
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const pt = new THREE.Vector3().lerpVectors(headPos, tailPos, t);
+                    if (i > 0 && i < segments) {
+                        const wave = Math.sin(t * Math.PI * 3) * 1.1;
+                        pt.x += wave;
+                        pt.z += 0.45;
+                    }
+                    points.push(pt);
+                }
+
+                const curve = new THREE.CatmullRomCurve3(points);
+                const tubeGeo = new THREE.TubeGeometry(curve, 36, 0.22, 12, false);
+                const snakeBody = new THREE.Mesh(tubeGeo, snakeMat);
+                snakeBody.castShadow = true;
+                scene.add(snakeBody);
+
+                // Kepala Ular di petak awal
+                const headGeo = new THREE.SphereGeometry(0.38, 16, 16);
+                const headMesh = new THREE.Mesh(headGeo, snakeHeadMat);
+                headMesh.position.copy(headPos);
+                scene.add(headMesh);
+
+                // Mata ular kuning
+                const eyeGeo = new THREE.SphereGeometry(0.09, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+                const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+                eyeL.position.set(headPos.x - 0.16, headPos.y + 0.15, headPos.z + 0.28);
+                const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+                eyeR.position.set(headPos.x + 0.16, headPos.y + 0.15, headPos.z + 0.28);
+                scene.add(eyeL, eyeR);
+            });
+        }
+
+        function buildPlayerPawn() {
+            playerGroup = new THREE.Group();
+
+            // Alas pion
+            const baseGeo = new THREE.CylinderGeometry(0.55, 0.65, 0.25, 24);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.6, roughness: 0.2 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.125;
+            base.castShadow = true;
+
+            // Badan pion
+            const bodyGeo = new THREE.ConeGeometry(0.48, 1.2, 24);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.3, roughness: 0.3 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.75;
+            body.castShadow = true;
+
+            // Kepala pion
+            const headGeo = new THREE.SphereGeometry(0.36, 24, 24);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.25 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.45;
+            head.castShadow = true;
+
+            // Cincin penanda di bawah pion
+            const ringGeo = new THREE.RingGeometry(0.68, 0.85, 32);
+            ringGeo.rotateX(-Math.PI / 2);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, side: THREE.DoubleSide });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.position.y = 0.05;
+
+            playerGroup.add(base, body, head, ring);
+
+            // Tempatkan pion di Petak 1
+            const startPos = tilePositions[1];
+            playerGroup.position.set(startPos.x, startPos.y + 0.28, startPos.z);
+            scene.add(playerGroup);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /**
+         * ============================================================================
+         * 5. LOGIKA PERMAINAN ULAR TANGGA & KUIS INTERAKTIF
+         * ============================================================================
+         */
+        let currentTile = 1;
+        let score = 0;
+        let isBusy = false; // Mengunci tombol saat animasi dadu/gerakan/kuis berlangsung
+
+        const uiPos = document.getElementById('ui-pos');
+        const uiFloor = document.getElementById('ui-floor');
+        const uiScore = document.getElementById('ui-score');
+        const diceDisplay = document.getElementById('dice-display');
+        const btnRoll = document.getElementById('btn-roll');
+        const toastBox = document.getElementById('toast-box');
+        const toastContent = document.getElementById('toast-content');
+
+        function showToast(msg, duration = 2600) {
+            toastContent.textContent = msg;
+            toastBox.classList.remove('opacity-0', '-translate-y-3');
+            toastBox.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => {
+                toastBox.classList.remove('opacity-100', 'translate-y-0');
+                toastBox.classList.add('opacity-0', '-translate-y-3');
+            }, duration);
+        }
+
+        function updateHUD() {
+            uiPos.textContent = currentTile;
+            uiFloor.textContent = Math.ceil(currentTile / 10);
+            uiScore.textContent = score;
+        }
+
+        // Animasi melompat dari satu petak ke petak berikutnya
+        function animatePawnHop(targetTile, duration = 280) {
+            return new Promise((resolve) => {
+                const startPos = playerGroup.position.clone();
+                const tCoord = tilePositions[targetTile];
+                const endPos = new THREE.Vector3(tCoord.x, tCoord.y + 0.28, tCoord.z);
+                const startTime = performance.now();
+
+                playSound('step');
+
+                function stepAnim(now) {
+                    const elapsed = now - startTime;
+                    const t = Math.min(elapsed / duration, 1);
+
+                    // Interpolasi horizontal + lengkungan lompatan parabola
+                    playerGroup.position.lerpVectors(startPos, endPos, t);
+                    playerGroup.position.y += Math.sin(t * Math.PI) * 1.1;
+
+                    if (t < 1) {
+                        requestAnimationFrame(stepAnim);
+                    } else {
+                        playerGroup.position.copy(endPos);
+                        resolve();
+                    }
+                }
+                requestAnimationFrame(stepAnim);
+            });
+        }
+
+        // Animasi meluncur naik tangga atau turun ular
+        function animateSlide(targetTile, isLadder) {
+            return new Promise((resolve) => {
+                const startPos = playerGroup.position.clone();
+                const tCoord = tilePositions[targetTile];
+                const endPos = new THREE.Vector3(tCoord.x, tCoord.y + 0.28, tCoord.z);
+                const startTime = performance.now();
+                const duration = 950;
+
+                playSound(isLadder ? 'ladder' : 'snake');
+
+                function slideAnim(now) {
+                    const elapsed = now - startTime;
+                    const t = Math.min(elapsed / duration, 1);
+                    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+                    playerGroup.position.lerpVectors(startPos, endPos, ease);
+                    if (!isLadder) {
+                        playerGroup.position.x += Math.sin(t * Math.PI * 3) * 0.6;
+                    }
+
+                    if (t < 1) {
+                        requestAnimationFrame(slideAnim);
+                    } else {
+                        playerGroup.position.copy(endPos);
+                        resolve();
+                    }
+                }
+                requestAnimationFrame(slideAnim);
+            });
+        }
+
+        // Kocok Dadu
+        btnRoll.addEventListener('click', async () => {
+            if (isBusy) return;
+            isBusy = true;
+            btnRoll.disabled = true;
+            cameraMode = 'follow'; // Kamera langsung mendekat & mengikuti pion saat mulai berjalan
+
+            playSound('dice');
+
+            // Efek acak angka dadu visual
+            const diceFaces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+            const rollInterval = setInterval(() => {
+                const r = Math.floor(Math.random() * 6);
+                diceDisplay.textContent = diceFaces[r];
+                diceDisplay.style.transform = `rotate(${(Math.random() - 0.5) * 24}deg) scale(1.08)`;
+            }, 65);
+
+            await new Promise(r => setTimeout(r, 650));
+            clearInterval(rollInterval);
+
+            const diceValue = Math.floor(Math.random() * 6) + 1;
+            diceDisplay.textContent = diceFaces[diceValue - 1];
+            diceDisplay.style.transform = "rotate(0deg) scale(1)";
+
+            showToast(`Dadu keluar angka ${diceValue}! Maju ${diceValue} langkah.`);
+
+            // Gerakkan pion langkah demi langkah
+            let stepsLeft = diceValue;
+            let direction = 1;
+
+            while (stepsLeft > 0) {
+                if (currentTile === 100) {
+                    direction = -1; // Memantul mundur jika melebihi 100
+                }
+                currentTile += direction;
+                updateHUD();
+                await animatePawnHop(currentTile, 260);
+                stepsLeft--;
+            }
+
+            // Cek apakah mendarat di Petak 100
+            if (currentTile === 100) {
+                openQuizModal(100, true);
+                return;
+            }
+
+            // Buka Soal sesuai nomor petak tempat pion mendarat
+            openQuizModal(currentTile, false);
+        });
+
+        /**
+         * ============================================================================
+         * 6. MODAL SOAL SD & PENGECEKAN JAWABAN
+         * ============================================================================
+         */
+        const quizModal = document.getElementById('quiz-modal');
+        const quizCard = document.getElementById('quiz-card');
+        const qSubjectBadge = document.getElementById('q-subject-badge');
+        const qTileNum = document.getElementById('q-tile-num');
+        const qText = document.getElementById('q-text');
+        const qOptions = document.getElementById('q-options');
+        const qFeedback = document.getElementById('q-feedback');
+        const btnContinue = document.getElementById('btn-continue');
+
+        function openQuizModal(tileNumber, isFinalTile) {
+            const qData = QUESTIONS_100[tileNumber - 1];
+            const colorStyle = SUBJECT_COLORS[qData.s];
+
+            qSubjectBadge.textContent = qData.s;
+            qSubjectBadge.className = `px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold uppercase tracking-wide shadow ${colorStyle.badge}`;
+            qTileNum.textContent = tileNumber;
+            qText.textContent = qData.q;
+
+            qFeedback.classList.add('hidden');
+            btnContinue.classList.add('hidden');
+            qOptions.innerHTML = '';
+
+            const letters = ['A', 'B', 'C', 'D'];
+            qData.o.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 font-bold text-sm sm:text-base transition flex items-center gap-3 active:scale-98";
+                btn.innerHTML = `
+                    <span class="w-8 h-8 rounded-xl bg-slate-700 text-amber-300 flex items-center justify-center shrink-0 font-display">${letters[idx]}</span>
+                    <span>${optText}</span>
+                `;
+                btn.onclick = () => handleAnswer(idx, qData.a, tileNumber, isFinalTile);
+                qOptions.appendChild(btn);
+            });
+
+            quizModal.classList.remove('hidden');
+            quizModal.classList.add('flex');
+            requestAnimationFrame(() => {
+                quizCard.classList.remove('scale-95', 'opacity-0');
+                quizCard.classList.add('scale-100', 'opacity-100');
+            });
+        }
+
+        function handleAnswer(selectedIdx, correctIdx, tileNumber, isFinalTile) {
+            const buttons = qOptions.querySelectorAll('button');
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === correctIdx) {
+                    btn.className = "w-full text-left p-3.5 rounded-2xl bg-emerald-600/90 border-2 border-emerald-300 font-bold text-sm sm:text-base flex items-center gap-3 text-white shadow-lg";
+                } else if (idx === selectedIdx && selectedIdx !== correctIdx) {
+                    btn.className = "w-full text-left p-3.5 rounded-2xl bg-rose-600/90 border-2 border-rose-300 font-bold text-sm sm:text-base flex items-center gap-3 text-white";
+                } else {
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            const isCorrect = selectedIdx === correctIdx;
+            qFeedback.classList.remove('hidden');
+
+            if (isCorrect) {
+                playSound('correct');
+                score += 100;
+                updateHUD();
+                qFeedback.className = "rounded-2xl p-3.5 text-sm sm:text-base font-bold text-center mb-3 bg-emerald-500/20 border border-emerald-400 text-emerald-200";
+                if (LADDERS[tileNumber]) {
+                    qFeedback.textContent = "🎉 Benar! (+100 Poin) Bersiap naik tangga!";
+                } else if (SNAKES[tileNumber]) {
+                    qFeedback.textContent = "🛡️ Benar! (+100 Poin) Kamu selamat dari gigitan ular!";
+                } else {
+                    qFeedback.textContent = "🎉 Hebat! Jawabanmu Benar! (+100 Poin)";
+                }
+            } else {
+                playSound('wrong');
+                qFeedback.className = "rounded-2xl p-3.5 text-sm sm:text-base font-bold text-center mb-3 bg-rose-500/20 border border-rose-400 text-rose-200";
+                if (LADDERS[tileNumber]) {
+                    qFeedback.textContent = "❌ Kurang tepat! Kamu gagal naik tangga, tapi posisimu tetap aman.";
+                } else if (SNAKES[tileNumber]) {
+                    qFeedback.textContent = "❌ Kurang tepat! Ular menggigitmu, kamu harus meluncur turun!";
+                } else {
+                    qFeedback.textContent = "❌ Kurang tepat! Hukuman: pion mundur 3 langkah.";
+                }
+            }
+
+            btnContinue.classList.remove('hidden');
+            btnContinue.onclick = async () => {
+                closeQuizModal();
+
+                if (isFinalTile && isCorrect) {
+                    playSound('win');
+                    document.getElementById('win-score').textContent = score;
+                    document.getElementById('win-modal').classList.remove('hidden');
+                    document.getElementById('win-modal').classList.add('flex');
+                    return;
+                }
+
+                // 1. LOGIKA KHUSUS PETAK TANGGA
+                if (LADDERS[tileNumber]) {
+                    if (isCorrect) {
+                        const dest = LADDERS[tileNumber];
+                        showToast(`🪜 Hore! Jawaban benar, naik tangga ke Petak ${dest}!`, 3000);
+                        currentTile = dest;
+                        updateHUD();
+                        await animateSlide(dest, true);
+                    } else {
+                        showToast(`🪜 Jawaban salah, gagal naik tangga. Tetap di Petak ${tileNumber}.`, 2800);
+                    }
+                    isBusy = false;
+                    btnRoll.disabled = false;
+                    cameraMode = 'overview';
+                    return;
+                }
+
+                // 2. LOGIKA KHUSUS PETAK ULAR
+                if (SNAKES[tileNumber]) {
+                    if (isCorrect) {
+                        showToast(`🛡️ Keren! Jawaban benar, kamu selamat dari ular!`, 3000);
+                    } else {
+                        const snakeDest = SNAKES[tileNumber];
+                        showToast(`🐍 Yah! Jawaban salah, meluncur turun ke Petak ${snakeDest}!`, 3000);
+                        currentTile = snakeDest;
+                        updateHUD();
+                        await animateSlide(snakeDest, false);
+                    }
+                    isBusy = false;
+                    btnRoll.disabled = false;
+                    cameraMode = 'overview';
+                    return;
+                }
+
+                // 3. LOGIKA PETAK BIASA (Jika salah, mundur 3 langkah)
+                if (!isCorrect) {
+                    const stepsBack = Math.min(3, currentTile - 1);
+                    if (stepsBack > 0) {
+                        showToast(`⏪ Jawaban salah! Mundur ${stepsBack} langkah.`, 2800);
+                        for (let i = 0; i < stepsBack; i++) {
+                            currentTile--;
+                            updateHUD();
+                            await animatePawnHop(currentTile, 240);
+                        }
+                    } else {
+                        showToast(`⚠️ Jawaban salah! Kamu tetap di Petak 1.`, 2500);
+                    }
+
+                    // Cek jika setelah mundur 3 langkah mendarat di kepala ular
+                    if (SNAKES[currentTile]) {
+                        const snakeDest = SNAKES[currentTile];
+                        showToast(`🐍 Terkena ular di Petak ${currentTile}, turun ke Petak ${snakeDest}!`, 3000);
+                        currentTile = snakeDest;
+                        updateHUD();
+                        await animateSlide(snakeDest, false);
+                    }
+                }
+
+                isBusy = false;
+                btnRoll.disabled = false;
+                cameraMode = 'overview'; // Kembali menampilkan seluruh menara saat pion diam menunggu giliran
+            };
+        }
+
+        function closeQuizModal() {
+            quizCard.classList.remove('scale-100', 'opacity-100');
+            quizCard.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                quizModal.classList.add('hidden');
+                quizModal.classList.remove('flex');
+            }, 180);
+        }
+
+        /**
+         * ============================================================================
+         * 7. TOMBOL KONTROL KAMERA, SUARA & RESTART
+         * ============================================================================
+         */
+        function kembaliKeSekolah() {
+            playSound('step');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 120);
+        }
+
+        document.getElementById('btn-focus-player').addEventListener('click', () => {
+            cameraMode = 'follow';
+            showToast("Kamera fokus mengikuti posisi pion.");
+        });
+
+        document.getElementById('btn-overview').addEventListener('click', () => {
+            cameraMode = 'overview';
+            showToast("Menampilkan seluruh menara 100 petak.");
+        });
+
+        document.getElementById('btn-sound').addEventListener('click', (e) => {
+            soundEnabled = !soundEnabled;
+            e.target.textContent = soundEnabled ? "🔊" : "🔇";
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            document.getElementById('win-modal').classList.add('hidden');
+            document.getElementById('win-modal').classList.remove('flex');
+            currentTile = 1;
+            score = 0;
+            updateHUD();
+            const startPos = tilePositions[1];
+            playerGroup.position.set(startPos.x, startPos.y + 0.28, startPos.z);
+            cameraMode = 'overview';
+            isBusy = false;
+            btnRoll.disabled = false;
+            showToast("Permainan dimulai ulang! Semoga beruntung!");
+        });
+
+        /**
+         * ============================================================================
+         * 8. ANIMATION LOOP (WINDOW ONLOAD)
+         * ============================================================================
+         */
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsed = clock.getElapsedTime();
+
+            // Animasi mengambang halus pada kepala pion & denyut cincin pion
+            if (playerGroup) {
+                playerGroup.children[2].position.y = 1.45 + Math.sin(elapsed * 4) * 0.06;
+                playerGroup.children[3].scale.setScalar(1 + Math.sin(elapsed * 5) * 0.12);
+
+                if (cameraMode === 'follow') {
+                    // Saat pion berjalan: kamera mendekat dan mengikuti pergerakan pion
+                    const targetLook = new THREE.Vector3(
+                        playerGroup.position.x * 0.65,
+                        playerGroup.position.y + 1.2,
+                        playerGroup.position.z
+                    );
+                    controls.target.lerp(targetLook, 0.07);
+
+                    const desiredCamPos = new THREE.Vector3(
+                        playerGroup.position.x * 0.75,
+                        playerGroup.position.y + 6.0,
+                        playerGroup.position.z + 11.0
+                    );
+                    camera.position.lerp(desiredCamPos, 0.06);
+                } else if (cameraMode === 'overview') {
+                    // Saat pion belum jalan / diam: tampilkan seluruh menara 100 petak secara halus
+                    const overviewTarget = new THREE.Vector3(0, 2.5, -9);
+                    const overviewCamPos = new THREE.Vector3(0, 15, 27);
+                    controls.target.lerp(overviewTarget, 0.045);
+                    camera.position.lerp(overviewCamPos, 0.045);
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.onload = function () {
+            init3D();
+            updateHUD();
+            animate();
+            setTimeout(() => {
+                showToast("Selamat Datang! Tekan KOCOK DADU untuk mulai!", 3200);
+            }, 500);
+        };
+    </script>
+</body>
+</html>
