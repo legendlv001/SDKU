@@ -1,9 +1,13 @@
 // ==========================================
+// LINK GOOGLE APPS SCRIPT (LETAKKAN PALING ATAS)
+// ==========================================
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXWMZdxNIbh2b8O7qYFAm8dmKoetrn6TGpdI4OT9FthJYwv-u5WFmMk0LyvDkuKYlX/exec";
+
+// ==========================================
 // CONFIGURATION, DATABASE & MAIN GAME LOOP
 // ==========================================
 const SPREADSHEET_ID = "1J4ePsSEV8xE3VCR-10Avf3W8FOQ-R1xSqWO-4IMzyWc", SHEET_NAME = "Login";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLW3IAK0U3lkzglsc0VxKGhHLFtuE3SsNFvSSDbdQxe3TdN8VqNkbYluTY_3iyoKwV/exec";
 
 function getSheetCsvUrl(sheetTitle) {
     return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetTitle)}`;
@@ -32,9 +36,9 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 }
 
 let USER_DATABASE = [
-    { name: "Admin", gender: "L", role: "ADMIN", status: "Full", points: 100 }, 
-    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50 }, 
-    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50 }
+    { name: "Admin", gender: "L", role: "ADMIN", status: "Full", points: 100, password: "123" }, 
+    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, password: "123" }, 
+    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50, password: "123" }
 ];
 
 let isDatabaseReady = false;
@@ -59,7 +63,39 @@ function hideLoginLoading() {
 }
 
 // ==========================================
-// SISTEM POIN & TAMPILAN POIN (FIREBASE & APPS SCRIPT)
+// FUNGSI INTIP & INGAT PASSWORD (LOCALSTORAGE)
+// ==========================================
+window.togglePasswordVisibility = function() {
+    const passInput = document.getElementById('loginPassword');
+    const icon = document.getElementById('togglePassIcon');
+    if (!passInput) return;
+    if (passInput.type === 'password') {
+        passInput.type = 'text';
+        if (icon) icon.className = 'fas fa-eye-slash';
+    } else {
+        passInput.type = 'password';
+        if (icon) icon.className = 'fas fa-eye';
+    }
+};
+
+function loadSavedCredentials() {
+    try {
+        const savedRaw = localStorage.getItem('openworld_saved_login');
+        if (!savedRaw) return;
+        const saved = JSON.parse(savedRaw);
+        const userEl = document.getElementById('loginUsername');
+        const passEl = document.getElementById('loginPassword');
+        const remEl = document.getElementById('rememberPassword');
+        if (userEl && saved.username) userEl.value = saved.username;
+        if (passEl && saved.password) passEl.value = saved.password;
+        if (remEl) remEl.checked = true;
+    } catch (e) {
+        console.warn("Gagal memuat password tersimpan:", e);
+    }
+}
+
+// ==========================================
+// SISTEM POIN & TAMPILAN POIN (FIREBASE)
 // ==========================================
 function updatePointsDisplay() {
     const headerPoin = document.getElementById('headerPoinDisplay');
@@ -95,28 +131,13 @@ function initPlayerPointsSync(sheetDefaultPoints) {
 
 function savePlayerPointsToFirebase() {
     updatePointsDisplay();
-    if (!playerCustomName) return;
-
-    if (db) {
-        const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
-        db.ref('playerPoints/' + safeKey).update({
-            name: playerCustomName,
-            points: playerPoints,
-            updatedAt: Date.now()
-        });
-    }
-
-    // Sinkronisasi poin terbaru ke Google Apps Script / Spreadsheet
-    fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'updatePoints',
-            name: playerCustomName,
-            points: playerPoints
-        })
-    }).catch(err => console.warn("Gagal kirim poin ke Apps Script:", err));
+    if (!db || !playerCustomName) return;
+    const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
+    db.ref('playerPoints/' + safeKey).update({
+        name: playerCustomName,
+        points: playerPoints,
+        updatedAt: Date.now()
+    });
 }
 
 // ==========================================
@@ -189,7 +210,8 @@ async function fetchSpreadsheetUsers() {
                         gender: (cols[1] || "L").toUpperCase(), 
                         role: (cols[2] || "SISWA").toUpperCase(), 
                         status: cols[3] || "User",
-                        points: isNaN(parsedPoints) ? 0 : parsedPoints
+                        points: isNaN(parsedPoints) ? 0 : parsedPoints,
+                        password: cols[5] || "" // Kolom F Sheet Login
                     });
                 }
             }
@@ -370,7 +392,7 @@ function updateOnlinePlayersList(otherPlayersData) {
             : 'Sekolah';
 
         const kickButtonHTML = isAdminUser 
-            ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
+            ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
             : `<span class="text-[10px] text-slate-400">${locName}</span>`;
 
         item.innerHTML = `
@@ -497,8 +519,10 @@ function handleLogin(e) {
     if (e && e.preventDefault) e.preventDefault();
     
     const inputElem = document.getElementById('loginUsername');
+    const passElem = document.getElementById('loginPassword');
+    const rememberElem = document.getElementById('rememberPassword');
     const errorMsg = document.getElementById('loginErrorMsg');
-    if (!inputElem) return;
+    if (!inputElem || !passElem) return;
 
     if (!isDatabaseReady) {
         showLoginLoading("Sedang menyiapkan data akun, tunggu sebentar...");
@@ -506,27 +530,48 @@ function handleLogin(e) {
     }
     
     const inputUsername = inputElem.value.trim();
-    if (!inputUsername) return;
+    const inputPassword = passElem.value.trim();
+    if (!inputUsername || !inputPassword) return;
     
     const cleanInput = inputUsername.replace(/\s+/g, ' ').toLowerCase();
     const matchedUser = USER_DATABASE.find(user => user.name.trim().replace(/\s+/g, ' ').toLowerCase() === cleanInput);
 
-    if (matchedUser) {
-        if (errorMsg) errorMsg.classList.add('hidden');
-        showLoginLoading("Memasuki dunia game...");
-
-        forceFullscreenAndLandscape();
-
-        setTimeout(() => {
-            hideLoginLoading();
-            startGameSession(matchedUser, null, false);
-        }, 600);
-    } else {
+    if (!matchedUser) {
         if (errorMsg) {
             errorMsg.innerHTML = `<span class="text-xs text-red-400 font-medium">Nama "${inputUsername}" tidak terdaftar!</span>`; 
             errorMsg.classList.remove('hidden');
         }
+        return;
     }
+
+    // Validasi Password dari Kolom F Sheet Login
+    if (String(matchedUser.password).trim() !== inputPassword) {
+        if (errorMsg) {
+            errorMsg.innerHTML = `<span class="text-xs text-red-400 font-medium">Password salah! Silakan periksa kembali.</span>`; 
+            errorMsg.classList.remove('hidden');
+        }
+        return;
+    }
+
+    // Simpan / hapus kredensial jika opsi Ingat Password dicentang
+    if (rememberElem && rememberElem.checked) {
+        localStorage.setItem('openworld_saved_login', JSON.stringify({
+            username: inputUsername,
+            password: inputPassword
+        }));
+    } else {
+        localStorage.removeItem('openworld_saved_login');
+    }
+
+    if (errorMsg) errorMsg.classList.add('hidden');
+    showLoginLoading("Memasuki dunia game...");
+
+    forceFullscreenAndLandscape();
+
+    setTimeout(() => {
+        hideLoginLoading();
+        startGameSession(matchedUser, null, false);
+    }, 600);
 }
 
 function switchWorldLocation(targetLocId, showNotification = true) {
@@ -842,29 +887,22 @@ window.executeRedeemItem = function() {
         banner.classList.remove('hidden');
     }
 
-    if (db) {
-        db.ref('redeemHistory').push({
-            player: playerCustomName,
-            item: item.name,
-            cost: item.cost,
-            remainingPoints: playerPoints,
-            timestamp: Date.now()
-        });
+    // Simpan redeemHistory ke Google Apps Script (bukan Firebase)
+    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'addRedeem',
+                player: playerCustomName,
+                item: item.name,
+                cost: item.cost,
+                remainingPoints: playerPoints,
+                timestamp: Date.now()
+            })
+        }).catch(err => console.warn("Gagal simpan redeemHistory ke Apps Script:", err));
     }
-
-    // Catat riwayat penukaran item di Google Apps Script / Spreadsheet
-    fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'redeemItem',
-            name: playerCustomName,
-            item: item.name,
-            cost: item.cost,
-            remainingPoints: playerPoints
-        })
-    }).catch(err => console.warn("Gagal kirim riwayat tukar ke Apps Script:", err));
 
     if (typeof window.sendFirebaseChat === 'function') {
         window.sendFirebaseChat("Warung", `🛍️ ${playerCustomName} baru saja menukarkan ${item.cost} Poin dengan "${item.name}"!`);
@@ -945,7 +983,7 @@ async function triggerInteraction() {
                     if (!htmlFile.toLowerCase().endsWith('.html') && !htmlFile.startsWith('http')) {
                         htmlFile += '.html';
                     }
-                    const safeUrl = htmlFile.replace(/'/g, "\\'");
+                    const safeUrl = htmlFile.replace(/'/g, "\'");
 
                     htmlList += `
                         <button onclick="navigateToLocalHtml('${safeUrl}')" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-orange-500/40 hover:border-yellow-400 rounded-xl text-yellow-400 font-bold text-xs transition cursor-pointer w-full text-left active:scale-95">
@@ -1175,6 +1213,7 @@ function handleLogout() {
     }
     if (idleTimer) clearTimeout(idleTimer);
 
+    loadSavedCredentials();
     document.getElementById('gameContainer').classList.add('hidden'); 
     document.getElementById('loginScreen').classList.remove('hidden'); 
 }
@@ -1182,6 +1221,7 @@ function handleLogout() {
 function closeModal() { document.getElementById('dialogModal').classList.add('hidden'); }
 
 window.onload = async function() { 
+    loadSavedCredentials();
     await fetchSpreadsheetUsers(); 
 
     const savedSessionRaw = sessionStorage.getItem('activeUserSession');

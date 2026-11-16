@@ -1,10 +1,13 @@
 // ==========================================
+// LINK GOOGLE APPS SCRIPT (LETAKKAN PALING ATAS)
+// ==========================================
+const KELAS_APPS_SCRIPT_URL = (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http'))
+    ? APPS_SCRIPT_URL
+    : "https://script.google.com/macros/s/AKfycbyXWMZdxNIbh2b8O7qYFAm8dmKoetrn6TGpdI4OT9FthJYwv-u5WFmMk0LyvDkuKYlX/exec";
+
+// ==========================================
 // KONFIGURASI, VISUAL & INTERAKSI KHUSUS LOKASI 3 (RUANG KELAS)
 // ==========================================
-
-// Tempel URL Web App Google Apps Script Anda di sini agar tersimpan ke Sheet "Kelas":
-const KELAS_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLW3IAK0U3lkzglsc0VxKGhHLFtuE3SsNFvSSDbdQxe3TdN8VqNkbYluTY_3iyoKwV/exec"; 
-
 const KELAS_CONFIG = {
     id: 3,
     name: "Lokasi : Ruang Kelas (Interior)",
@@ -253,7 +256,7 @@ function renderCreateTaskForm() {
 
     body.innerHTML = `
         <div class="bg-slate-800/90 border border-slate-700 p-3 rounded-2xl space-y-2.5">
-            <p class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">1. Identitas Tugas (Tersimpan ke Sheet Kelas)</p>
+            <p class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">1. Identitas Tugas (Tersimpan ke Sheet kelasTasks)</p>
             <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="block text-[10px] text-slate-300 font-bold mb-1">Kode Tugas *</label>
@@ -296,7 +299,7 @@ function renderCreateTaskForm() {
             </div>
 
             <button type="button" onclick="publishKelasTask()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition active:scale-95">
-                💾 Simpan ke Sheet Kelas & Kirim ke Murid
+                💾 Simpan ke Apps Script & Kirim ke Murid
             </button>
         </div>
     `;
@@ -369,6 +372,9 @@ function updateDraftQuestionsPreview() {
         draftKelasQuestions.map((item, idx) => `<div class="truncate text-[10px] text-slate-300">${idx + 1}. ${item.question}</div>`).join("");
 }
 
+// ==========================================
+// SIMPAN TUGAS KE APPS SCRIPT (kelasTasks)
+// ==========================================
 window.publishKelasTask = async function() {
     const kode = document.getElementById('taskKodeInput').value.trim();
     const kelas = document.getElementById('taskKelasInput').value.trim();
@@ -383,7 +389,18 @@ window.publishKelasTask = async function() {
         return;
     }
 
+    const modalContent = document.getElementById('modalContent');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <div class="flex flex-col items-center justify-center p-4">
+                <img src="assets/loading.gif" alt="Loading..." class="w-8 h-8 mb-2" />
+                <span class="text-xs text-slate-300">Menyimpan tugas ke Google Spreadsheet...</span>
+            </div>
+        `;
+    }
+
     const taskPayload = {
+        action: 'addTask',
         kode: kode,
         kelas: kelas,
         keterangan: keterangan,
@@ -393,29 +410,21 @@ window.publishKelasTask = async function() {
         createdAt: Date.now()
     };
 
-    if (typeof db !== 'undefined' && db) {
-        const safeId = kode.replace(/[.#$\[\]\/]/g, "_");
-        await db.ref('kelasTasks/' + safeId).set(taskPayload);
-    }
-
-    if (KELAS_APPS_SCRIPT_URL) {
-        try {
-            await fetch(KELAS_APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(taskPayload)
-            });
-        } catch (err) {
-            console.warn("Gagal kirim ke Apps Script Sheet Kelas:", err);
-        }
+    try {
+        await fetch(KELAS_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(taskPayload)
+        });
+    } catch (err) {
+        console.warn("Gagal kirim ke Apps Script kelasTasks:", err);
     }
 
     if (typeof window.sendFirebaseChat === 'function') {
         window.sendFirebaseChat("Ruang Kelas", `📚 ${playerCustomName} baru saja membagikan Tugas PR [${kode}] untuk ${kelas}! Silakan kerjakan di meja murid.`);
     }
 
-    const modalContent = document.getElementById('modalContent');
     if (modalContent) {
         modalContent.innerHTML = `
             <div class="p-4 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-center space-y-2">
@@ -429,9 +438,9 @@ window.publishKelasTask = async function() {
 };
 
 // ==========================================
-// 5. PANEL MURID (LIHAT & JAWAB TUGAS PR DI AREA MEJA MURID)
+// 5. PANEL MURID (AMBIL & JAWAB TUGAS PR DARI APPS SCRIPT)
 // ==========================================
-function openStudentTaskListModal(headerTitle) {
+async function openStudentTaskListModal(headerTitle) {
     const modalTitle = document.getElementById('modalTitle');
     const modalContent = document.getElementById('modalContent');
     const modalActions = document.getElementById('modalActions');
@@ -446,15 +455,15 @@ function openStudentTaskListModal(headerTitle) {
     modalActions.innerHTML = `<button onclick="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
     document.getElementById('dialogModal').classList.remove('hidden');
 
-    if (typeof db === 'undefined' || !db) {
-        modalContent.innerHTML = `<div class="text-xs text-red-400 text-center p-3">Database tidak terhubung.</div>`;
+    if (!KELAS_APPS_SCRIPT_URL || !KELAS_APPS_SCRIPT_URL.startsWith('http')) {
+        modalContent.innerHTML = `<div class="text-xs text-red-400 text-center p-3">URL Apps Script belum diatur di kelas.js / game.js.</div>`;
         return;
     }
 
-    db.ref('kelasTasks').once('value', (snapshot) => {
-        const tasksObj = snapshot.val() || {};
-        const taskList = Object.entries(tasksObj).map(([key, val]) => ({ id: key, ...val }))
-            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    try {
+        const res = await fetch(`${KELAS_APPS_SCRIPT_URL}?action=getTasks`);
+        const data = await res.json();
+        const taskList = (data.tasks || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
         if (taskList.length === 0) {
             modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/70 rounded-xl">Belum ada tugas PR yang diberikan oleh guru saat ini.</div>`;
@@ -490,14 +499,33 @@ function openStudentTaskListModal(headerTitle) {
         });
         html += `</div>`;
         modalContent.innerHTML = html;
-    });
+    } catch (err) {
+        console.error(err);
+        modalContent.innerHTML = `<div class="text-xs text-red-400 text-center p-3">Gagal memuat daftar tugas dari Spreadsheet.</div>`;
+    }
 }
 
-window.deleteKelasTask = function(taskId) {
-    if (!canCreateKelasTask() || !db) return;
-    db.ref('kelasTasks/' + taskId).remove().then(() => {
+window.deleteKelasTask = async function(taskId) {
+    if (!canCreateKelasTask() || !KELAS_APPS_SCRIPT_URL) return;
+    const modalContent = document.getElementById('modalContent');
+    if (modalContent) {
+        modalContent.innerHTML = `<div class="text-center text-xs text-slate-300 p-4">Menghapus tugas...</div>`;
+    }
+
+    try {
+        await fetch(KELAS_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'deleteTask', id: taskId })
+        });
+    } catch (err) {
+        console.warn("Gagal hapus tugas:", err);
+    }
+
+    setTimeout(() => {
         openStudentTaskListModal("Daftar Tugas Aktif");
-    });
+    }, 800);
 };
 
 window.startStudentQuiz = function(taskIndex) {
@@ -550,6 +578,9 @@ window.submitStudentQuizAnswer = function(selectedIdx) {
     }
 };
 
+// ==========================================
+// SIMPAN NILAI SISWA KE APPS SCRIPT (kelasSubmissions)
+// ==========================================
 function finishStudentQuiz() {
     const total = activeStudentQuiz.questions.length;
     const nilaiAkhir = Math.round((studentQuizScore / total) * 100);
@@ -562,16 +593,22 @@ function finishStudentQuiz() {
         }
     }
 
-    if (typeof db !== 'undefined' && db) {
-        db.ref('kelasSubmissions').push({
-            kode: activeStudentQuiz.kode,
-            kelas: activeStudentQuiz.kelas,
-            siswa: playerCustomName,
-            benar: studentQuizScore,
-            totalSoal: total,
-            nilai: nilaiAkhir,
-            timestamp: Date.now()
-        });
+    if (KELAS_APPS_SCRIPT_URL && KELAS_APPS_SCRIPT_URL.startsWith('http')) {
+        fetch(KELAS_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'addSubmission',
+                kode: activeStudentQuiz.kode,
+                kelas: activeStudentQuiz.kelas,
+                siswa: playerCustomName,
+                benar: studentQuizScore,
+                totalSoal: total,
+                nilai: nilaiAkhir,
+                timestamp: Date.now()
+            })
+        }).catch(err => console.warn("Gagal kirim nilai ke Apps Script:", err));
     }
 
     const modalContent = document.getElementById('modalContent');
