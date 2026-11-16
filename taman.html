@@ -475,10 +475,77 @@
     <!-- LOGIKA GAME & AUDIO INTERAKTIF -->
     <script>
         // ==========================================
-        // 0. NAVIGASI KEMBALI KE HALAMAN SEKOLAH
+        // LINK GOOGLE APPS SCRIPT (PALING ATAS)
+        // ==========================================
+        const TAMAN_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBKy8cGnC8qB6ZbQMHWErXThSM34HiiAaKmcWi2h107dh_7mhrKWA7bONvnGUFvTft/exec";
+
+        // ==========================================
+        // 0. SINKRONISASI SESI & TIKET KOLOM G SPREADSHEET
+        // ==========================================
+        let activeTamanUser = null;
+
+        function muatSesiDanTiketPemain() {
+            try {
+                const raw = sessionStorage.getItem('activeUserSession');
+                if (raw) {
+                    activeTamanUser = JSON.parse(raw);
+                    if (activeTamanUser && typeof activeTamanUser.tickets === 'number') {
+                        gameState.tickets = activeTamanUser.tickets;
+                        updateHeaderStats();
+                    }
+                }
+            } catch (e) {
+                console.warn("Gagal membaca sesi pemain:", e);
+            }
+
+            if (activeTamanUser && activeTamanUser.name && TAMAN_APPS_SCRIPT_URL && TAMAN_APPS_SCRIPT_URL.startsWith('http')) {
+                fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(activeTamanUser.name)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.status === 'success' && typeof data.tickets === 'number') {
+                            gameState.tickets = data.tickets;
+                            activeTamanUser.tickets = data.tickets;
+                            sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
+                            updateHeaderStats();
+                        }
+                    })
+                    .catch(err => console.warn("Gagal mengambil tiket dari Spreadsheet:", err));
+            }
+        }
+
+        function simpanTiketKeSpreadsheet(totalTiketBaru) {
+            if (!activeTamanUser || !activeTamanUser.name) return;
+
+            activeTamanUser.tickets = totalTiketBaru;
+            sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
+
+            if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) {
+                console.warn("URL Apps Script di taman.html belum diisi.");
+                return;
+            }
+
+            fetch(TAMAN_APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'updateTickets',
+                    player: activeTamanUser.name,
+                    tickets: totalTiketBaru,
+                    updatedAt: Date.now()
+                })
+            }).catch(err => console.warn("Gagal menyimpan tiket ke Kolom G Spreadsheet:", err));
+        }
+
+        // ==========================================
+        // 0B. NAVIGASI KEMBALI KE HALAMAN SEKOLAH
         // ==========================================
         function kembaliKeSekolah() {
             playSound('click');
+            if (activeTamanUser) {
+                activeTamanUser.tickets = gameState.tickets;
+                sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
+            }
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 120);
@@ -487,8 +554,6 @@
         // ==========================================
         // 1. STATE & KONFIGURASI PERMAINAN
         // ==========================================
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLW3IAK0U3lkzglsc0VxKGhHLFtuE3SsNFvSSDbdQxe3TdN8VqNkbYluTY_3iyoKwV/exec";
-
         const gameState = {
             stars: 0,
             tickets: 0,
@@ -962,29 +1027,11 @@
             if (isPerfectScore) {
                 playSound('win');
                 gameState.tickets += 1;
+                simpanTiketKeSpreadsheet(gameState.tickets);
             } else {
                 playSound('click');
             }
             updateHeaderStats();
-
-            // Ambil nama pemain dari sesi aktif & kirim hasil ke Google Apps Script
-            const sessionRaw = sessionStorage.getItem('activeUserSession');
-            const playerName = sessionRaw ? JSON.parse(sessionRaw).name : "Siswa";
-
-            fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'simpanSkorTaman',
-                    name: playerName,
-                    wahana: gameState.currentRide,
-                    bintangDidapat: gameState.roundStars,
-                    tiketDidapat: isPerfectScore ? 1 : 0,
-                    totalBintang: gameState.stars,
-                    totalTiket: gameState.tickets
-                })
-            }).catch(err => console.warn("Gagal kirim hasil taman ke Apps Script:", err));
 
             document.getElementById('game-arena-view').classList.add('hidden');
             document.getElementById('summary-view').classList.remove('hidden');
@@ -1057,6 +1104,8 @@
                 statusText.textContent = 'Selamat! Semua Lencana Penjelajah Taman Bermain telah terbuka!';
             }
         }
+
+        window.addEventListener('DOMContentLoaded', muatSesiDanTiketPemain);
     </script>
 </body>
 </html>
