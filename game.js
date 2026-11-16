@@ -3,8 +3,8 @@
 // ==========================================
 const SPREADSHEET_ID = "1J4ePsSEV8xE3VCR-10Avf3W8FOQ-R1xSqWO-4IMzyWc", SHEET_NAME = "Login";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLW3IAK0U3lkzglsc0VxKGhHLFtuE3SsNFvSSDbdQxe3TdN8VqNkbYluTY_3iyoKwV/exec";
 
-// Fungsi Memuat Sheet Bangunan Secara Asinkron
 function getSheetCsvUrl(sheetTitle) {
     return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetTitle)}`;
 }
@@ -46,7 +46,6 @@ loadingGif.src = 'assets/loading.gif';
 const poinIconImg = new Image();
 poinIconImg.src = 'assets/poin.png';
 
-// Kontrol Pop-up Loading Login
 function showLoginLoading(text) {
     const popup = document.getElementById('loginLoadingPopup');
     const textElem = document.getElementById('loginLoadingText');
@@ -60,7 +59,7 @@ function hideLoginLoading() {
 }
 
 // ==========================================
-// SISTEM POIN & TAMPILAN POIN (FIREBASE)
+// SISTEM POIN & TAMPILAN POIN (FIREBASE & APPS SCRIPT)
 // ==========================================
 function updatePointsDisplay() {
     const headerPoin = document.getElementById('headerPoinDisplay');
@@ -96,13 +95,28 @@ function initPlayerPointsSync(sheetDefaultPoints) {
 
 function savePlayerPointsToFirebase() {
     updatePointsDisplay();
-    if (!db || !playerCustomName) return;
-    const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
-    db.ref('playerPoints/' + safeKey).update({
-        name: playerCustomName,
-        points: playerPoints,
-        updatedAt: Date.now()
-    });
+    if (!playerCustomName) return;
+
+    if (db) {
+        const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
+        db.ref('playerPoints/' + safeKey).update({
+            name: playerCustomName,
+            points: playerPoints,
+            updatedAt: Date.now()
+        });
+    }
+
+    // Sinkronisasi poin terbaru ke Google Apps Script / Spreadsheet
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'updatePoints',
+            name: playerCustomName,
+            points: playerPoints
+        })
+    }).catch(err => console.warn("Gagal kirim poin ke Apps Script:", err));
 }
 
 // ==========================================
@@ -245,6 +259,31 @@ function initFirebaseSync() {
     });
 }
 
+// ==========================================
+// SISTEM CHAT REALTIME (FIREBASE)
+// ==========================================
+function addChatMessage(sender, text, isSelf) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+
+    const line = document.createElement('div');
+    line.className = 'leading-snug break-words';
+    const nameColor = isSelf ? 'text-yellow-400' : (sender === 'Sistem' || sender === 'Ruang Kelas' || sender === 'Warung' ? 'text-emerald-400' : 'text-sky-300');
+    line.innerHTML = `<strong class="${nameColor}">${sender}:</strong> <span class="text-slate-100">${text}</span>`;
+    container.appendChild(line);
+    container.scrollTop = container.scrollHeight;
+}
+
+function handleChatSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const input = document.getElementById('chatInput');
+    if (!input) return;
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    window.sendFirebaseChat(playerCustomName, msg);
+}
+
 function initFirebaseChatSync() {
     if (!db) return;
 
@@ -279,9 +318,7 @@ function startListeningChat() {
         if (!msgData || !msgData.sender || !msgData.text) return;
 
         const isSelf = (msgData.sender === playerCustomName);
-        if (typeof addChatMessage === 'function') {
-            addChatMessage(msgData.sender, msgData.text, isSelf);
-        }
+        addChatMessage(msgData.sender, msgData.text, isSelf);
     });
 }
 
@@ -328,9 +365,13 @@ function updateOnlinePlayersList(otherPlayersData) {
         const item = document.createElement('div');
         item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800/80 border border-slate-700';
         
+        const locName = (typeof MAP_CONFIGS !== 'undefined' && MAP_CONFIGS[p.location]) 
+            ? MAP_CONFIGS[p.location].name.replace('Lokasi : ', '') 
+            : 'Sekolah';
+
         const kickButtonHTML = isAdminUser 
             ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
-            : `<span class="text-[10px] text-slate-400">${p.location === 3 ? '🏫 Dalam Kelas' : (p.location === 2 ? '🏖️ Pantai' : '🏫 Sekolah')}</span>`;
+            : `<span class="text-[10px] text-slate-400">${locName}</span>`;
 
         item.innerHTML = `
             <div class="flex items-center gap-2">
@@ -410,7 +451,6 @@ function updateMyPositionToFirebase() {
     });
 }
 
-// Fungsi Mulai Permainan (Dipakai saat Login maupun Resume Sesi)
 function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     currentUserAccount = matchedUser; 
     playerCustomName = matchedUser.name;
@@ -494,12 +534,17 @@ function switchWorldLocation(targetLocId, showNotification = true) {
     if (typeof MAP_CONFIGS !== 'undefined' && MAP_CONFIGS[targetLocId]) {
         currentBuildings = MAP_CONFIGS[targetLocId].buildings;
         const locationIndicatorBadge = document.getElementById('locationIndicatorBadge');
-        if (locationIndicatorBadge) locationIndicatorBadge.innerHTML = `<i class="fas fa-map-pin text-${targetLocId === 1 ? 'indigo' : (targetLocId === 2 ? 'cyan' : 'emerald')}-400"></i> <span>${MAP_CONFIGS[targetLocId].name}</span>`;
+        if (locationIndicatorBadge) {
+            const pinColor = targetLocId === 1 ? 'indigo' : (targetLocId === 2 ? 'cyan' : 'emerald');
+            locationIndicatorBadge.innerHTML = `<i class="fas fa-map-pin text-${pinColor}-400"></i> <span id="currentLocationNameText">${MAP_CONFIGS[targetLocId].name}</span>`;
+        }
     }
 
-    if (targetLocId === 3) {
-        player.x = 60;
-        player.y = 730;
+    // Delegasikan posisi spawn Lokasi 3 ke kelas.js & Lokasi 2 ke pantai.js
+    if (targetLocId === 3 && typeof initKelasSpawn === 'function') {
+        initKelasSpawn(player);
+    } else if (targetLocId === 2 && typeof initPantaiSpawn === 'function') {
+        initPantaiSpawn(player);
     } else if (targetLocId === 2) {
         player.x = 240;
         player.y = 240;
@@ -517,6 +562,7 @@ let isCanvasListenerAdded = false;
 
 function setupGameEvents() {
     window.addEventListener('keydown', (e) => {
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
         if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); if (nearbyBuilding) triggerInteraction(); }
         else if (keys.hasOwnProperty(e.key)) { keys[e.key] = true; player.isMovingToTarget = false; }
     });
@@ -568,7 +614,7 @@ function getAdaptiveZoom() {
 }
 
 // ==========================================
-// GAME LOOP
+// GAME LOOP (TERMASUK TILE COLLISION DARI halang.js)
 // ==========================================
 function gameLoop() {
     if (!isGameStarted) return;
@@ -579,7 +625,27 @@ function gameLoop() {
     canvas.width = canvas.parentElement.clientWidth || window.innerWidth; 
     canvas.height = canvas.parentElement.clientHeight || window.innerHeight; 
 
+    // Simpan posisi karakter sebelum bergerak
+    const prevX = player.x;
+    const prevY = player.y;
+
     updateGame();
+
+    // Cek halangan dari halang.js per sumbu (X dan Y) agar bisa meluncur di tepi dinding/meja
+    if (typeof isCollidingWithMap === 'function') {
+        const nextX = player.x;
+        const nextY = player.y;
+
+        if (isCollidingWithMap(nextX, prevY)) {
+            player.x = prevX;
+            player.isMovingToTarget = false;
+        }
+        if (isCollidingWithMap(player.x, nextY)) {
+            player.y = prevY;
+            player.isMovingToTarget = false;
+        }
+    }
+
     updateMyPositionToFirebase();
     
     const currentZoomScale = getAdaptiveZoom();
@@ -591,6 +657,7 @@ function gameLoop() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (typeof drawMap === 'function') drawMap(cameraX, cameraY, currentZoomScale);
+    if (typeof drawCollisionDebug === 'function') drawCollisionDebug(ctx, cameraX, cameraY, currentZoomScale);
 
     const activeWalkTimer = typeof walkTimer !== 'undefined' ? walkTimer : (window.walkTimer || 0);
 
@@ -785,6 +852,20 @@ window.executeRedeemItem = function() {
         });
     }
 
+    // Catat riwayat penukaran item di Google Apps Script / Spreadsheet
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'redeemItem',
+            name: playerCustomName,
+            item: item.name,
+            cost: item.cost,
+            remainingPoints: playerPoints
+        })
+    }).catch(err => console.warn("Gagal kirim riwayat tukar ke Apps Script:", err));
+
     if (typeof window.sendFirebaseChat === 'function') {
         window.sendFirebaseChat("Warung", `🛍️ ${playerCustomName} baru saja menukarkan ${item.cost} Poin dengan "${item.name}"!`);
     }
@@ -793,7 +874,14 @@ window.executeRedeemItem = function() {
 async function triggerInteraction() {
     if (!nearbyBuilding) return;
 
-    // Pindah halaman HTML jika bangunan memiliki targetUrl langsung (seperti Taman -> taman.html)
+    // Cek interaksi khusus Ruang Kelas (kelas.js) atau Pantai (pantai.js)
+    if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function') {
+        if (handleKelasInteraction(nearbyBuilding)) return;
+    }
+    if (currentWorldLocation === 2 && typeof handlePantaiInteraction === 'function') {
+        if (handlePantaiInteraction(nearbyBuilding)) return;
+    }
+
     if (nearbyBuilding.targetUrl) {
         navigateToLocalHtml(nearbyBuilding.targetUrl);
         return;
@@ -845,7 +933,6 @@ async function triggerInteraction() {
             renderShopItemsList();
 
         } else if (nearbyBuilding.sheetName === 'PJOK') {
-            // Sheet PJOK: Kolom A = Nama Aktivitas/HTML, Kolom B = Nama File HTML (satu folder dengan index.html)
             let htmlList = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
             let hasItems = false;
 
@@ -980,6 +1067,7 @@ function renderMiniMap() {
 
     if (typeof currentBuildings !== 'undefined') {
         currentBuildings.forEach(b => {
+            if (b.isSilentZone) return;
             const bx = b.x * scaleX, by = b.y * scaleY, bw = b.width * scaleX, bh = b.height * scaleY;
             mCtx.fillStyle = b.roofColor || '#fde047';
             mCtx.fillRect(bx, by, bw, bh);
@@ -1096,7 +1184,6 @@ function closeModal() { document.getElementById('dialogModal').classList.add('hi
 window.onload = async function() { 
     await fetchSpreadsheetUsers(); 
 
-    // Cek apakah pemain kembali dari halaman lokal (seperti taman.html atau file HTML dari GOR)
     const savedSessionRaw = sessionStorage.getItem('activeUserSession');
     if (savedSessionRaw) {
         try {

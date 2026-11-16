@@ -1,5 +1,5 @@
 // ==========================================
-// ASSET LOADER & MAP CONFIGURATIONS
+// ASSET LOADER & MAP CONFIGURATIONS (LOKASI 1: SEKOLAH)
 // ==========================================
 const ASSETS = {
     tree: new Image(), 
@@ -65,22 +65,6 @@ const MAP_CONFIGS = {
             { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, targetUrl: 'taman.html', color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga', actionLabel: 'Lihat Taman' },
             { id: 'bis', name: 'Bis Sekolah (Ke Pantai)', icon: '🚌', x: 800, y: 820, width: 220, height: 120, isPortal: true, targetLocation: 2, dialogTitle: 'Bis Sekolah Ke Pantai', dialogText: 'Bis kuning sekolah siap mengantar ke Pantai!', actionLabel: 'Naik Bis ke Pantai' }
         ]
-    },
-    2: { 
-        id: 2, 
-        name: "Lokasi : Pantai", 
-        themeColor: "#38bdf8", 
-        buildings: [
-            { id: 'bis_kembali', name: 'Bis Sekolah (Ke Sekolah)', icon: '🚌', x: 80, y: 160, width: 140, height: 90, isPortal: true, targetLocation: 1, dialogTitle: 'Bis Sekolah di Parkiran', dialogText: 'Terparkir rapi di parkiran. Siap kembali ke Sekolah.', actionLabel: 'Naik Bis ke Sekolah' }
-        ]
-    },
-    3: { 
-        id: 3, 
-        name: "Lokasi : Ruang Kelas (Interior)", 
-        themeColor: "#22c55e", 
-        buildings: [
-            { id: 'pintu_keluar', name: 'Pintu Keluar', icon: '🚪', x: 20, y: 730, width: 100, height: 110, isPortal: true, targetLocation: 1, dialogTitle: 'Keluar Gedung Kelas', dialogText: 'Kembali ke Halaman Sekolah.', actionLabel: 'Keluar Halaman' }
-        ]
     }
 };
 
@@ -90,28 +74,26 @@ const NUM_TREES = 8;
 
 function generateTrees() {
     trees.length = 0;
+    const mapW = (typeof MAP_WIDTH !== 'undefined') ? MAP_WIDTH : 2000;
+    const mapH = (typeof MAP_HEIGHT !== 'undefined') ? MAP_HEIGHT : 1200;
+
     if (typeof currentWorldLocation !== 'undefined' && currentWorldLocation === 1) {
         for (let i = 0; i < NUM_TREES; i++) {
             let tx, ty, dist, insideBuilding;
+            let guard = 0;
             do {
-                tx = 350 + Math.random() * (MAP_WIDTH - 400);
-                ty = 350 + Math.random() * (MAP_HEIGHT - 450);
+                tx = 350 + Math.random() * (mapW - 400);
+                ty = 350 + Math.random() * (mapH - 450);
                 dist = Math.hypot(tx - 1000, ty - 600);
                 insideBuilding = currentBuildings.some(b => tx > b.x - 40 && tx < b.x + b.width + 40 && ty > b.y - 40 && ty < b.y + b.height + 40);
-            } while (dist < 200 || insideBuilding);
+                guard++;
+            } while ((dist < 200 || insideBuilding) && guard < 100);
             trees.push({ x: tx, y: ty, size: 35 + Math.random() * 20, trunkHeight: 25 + Math.random() * 10, isKelapa: false });
         }
     } else if (typeof currentWorldLocation !== 'undefined' && currentWorldLocation === 2) {
-        const kelapaPositions = [
-            { x: 380, y: 140, size: 45 }, 
-            { x: 420, y: 380, size: 50 }, 
-            { x: 680, y: 360, size: 48 }, 
-            { x: 860, y: 550, size: 52 }, 
-            { x: 320, y: 640, size: 46 }
-        ];
-        kelapaPositions.forEach(pos => { 
-            trees.push({ x: pos.x, y: pos.y, size: pos.size, trunkHeight: 30, isKelapa: true }); 
-        });
+        if (typeof generatePantaiTrees === 'function') {
+            generatePantaiTrees(trees);
+        }
     }
     trees.sort((a, b) => a.y - b.y);
 }
@@ -120,20 +102,26 @@ function drawMap(cameraX, cameraY, zoomScale) {
     const canvas = document.getElementById('gameCanvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    const mapW = (typeof MAP_WIDTH !== 'undefined') ? MAP_WIDTH : 2000;
+    const mapH = (typeof MAP_HEIGHT !== 'undefined') ? MAP_HEIGHT : 1200;
 
     ctx.save(); 
     ctx.scale(zoomScale, zoomScale);
     
     if (typeof currentWorldLocation !== 'undefined' && currentWorldLocation === 2) {
-        if (assetsLoaded.beach_bg) {
-            ctx.drawImage(ASSETS.beach_bg, -cameraX, -cameraY, MAP_WIDTH, MAP_HEIGHT);
+        if (typeof drawPantaiBackground === 'function') {
+            drawPantaiBackground(ctx, canvas, cameraX, cameraY, zoomScale);
+        } else if (assetsLoaded.beach_bg) {
+            ctx.drawImage(ASSETS.beach_bg, -cameraX, -cameraY, mapW, mapH);
         } else { 
             ctx.fillStyle = '#38bdf8'; 
             ctx.fillRect(0, 0, canvas.width / zoomScale, canvas.height / zoomScale); 
         }
     } else if (typeof currentWorldLocation !== 'undefined' && currentWorldLocation === 3) {
-        if (assetsLoaded.kelas_inside) {
-            ctx.drawImage(ASSETS.kelas_inside, -cameraX, -cameraY, MAP_WIDTH, MAP_HEIGHT);
+        if (typeof drawKelasInterior === 'function') {
+            drawKelasInterior(ctx, canvas, cameraX, cameraY, zoomScale);
+        } else if (assetsLoaded.kelas_inside) {
+            ctx.drawImage(ASSETS.kelas_inside, -cameraX, -cameraY, mapW, mapH);
         } else {
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(0, 0, canvas.width / zoomScale, canvas.height / zoomScale);
@@ -154,28 +142,32 @@ function drawMap(cameraX, cameraY, zoomScale) {
     }
 
     currentBuildings.forEach(b => {
+        if (b.isSilentZone) return;
+
         const bx = b.x - cameraX, by = b.y - cameraY;
         
-        if (assetsLoaded[b.id]) {
-            ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
-        } else if (b.isPortal) {
-            if (currentWorldLocation === 3) {
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
-                ctx.fillRect(bx, by, b.width, b.height);
-            } else if (assetsLoaded.bis && b.id.includes('bis')) {
-                ctx.drawImage(ASSETS.bis, bx, by, b.width, b.height);
-            } else { 
-                ctx.fillStyle = b.roofColor || '#fde047'; 
-                ctx.fillRect(bx, by, b.width, b.height); 
-            }
-        } else {
-            ctx.fillStyle = 'rgba(0,0,0,0.3)'; 
-            ctx.beginPath(); 
-            ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2); 
-            ctx.fill();
+        if (!b.noBoxFill) {
+            if (assetsLoaded[b.id]) {
+                ctx.drawImage(ASSETS[b.id], bx, by, b.width, b.height);
+            } else if (b.isPortal) {
+                if (currentWorldLocation === 3) {
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+                    ctx.fillRect(bx, by, b.width, b.height);
+                } else if (assetsLoaded.bis && b.id.includes('bis')) {
+                    ctx.drawImage(ASSETS.bis, bx, by, b.width, b.height);
+                } else { 
+                    ctx.fillStyle = b.roofColor || '#fde047'; 
+                    ctx.fillRect(bx, by, b.width, b.height); 
+                }
+            } else {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)'; 
+                ctx.beginPath(); 
+                ctx.ellipse(bx + b.width / 2, by + b.height + 5, b.width * 0.52, 15, 0, 0, Math.PI * 2); 
+                ctx.fill();
 
-            if (b.isZone && assetsLoaded.taman) ctx.drawImage(ASSETS.taman, bx, by, b.width, b.height);
-            else { ctx.fillStyle = b.roofColor || '#d97706'; ctx.fillRect(bx, by, b.width, b.height); }
+                if (b.isZone && assetsLoaded.taman) ctx.drawImage(ASSETS.taman, bx, by, b.width, b.height);
+                else { ctx.fillStyle = b.roofColor || '#d97706'; ctx.fillRect(bx, by, b.width, b.height); }
+            }
         }
 
         ctx.save(); 
@@ -183,7 +175,7 @@ function drawMap(cameraX, cameraY, zoomScale) {
         const labelText = `${b.icon} ${b.name}`;
         const textWidth = ctx.measureText(labelText).width;
         const signX = bx + b.width / 2;
-        const signY = by - 22;
+        const signY = by - 12;
 
         ctx.fillStyle = '#0f172a'; 
         ctx.fillRect(signX - (textWidth + 20) / 2, signY - 12, textWidth + 20, 24);
@@ -234,7 +226,9 @@ function drawTree(tree, cameraX, cameraY, zoomScale) {
 function checkBuildingProximity() {
     nearbyBuilding = null;
     const actionBtn = document.getElementById('btnInteract');
-    for (let b of currentBuildings) {
+    const sortedBuildings = [...currentBuildings].sort((a, b) => (a.isSilentZone ? 1 : 0) - (b.isSilentZone ? 1 : 0));
+
+    for (let b of sortedBuildings) {
         if (Math.abs(player.x - (b.x + b.width / 2)) < (b.width / 2 + 50) && Math.abs(player.y - (b.y + b.height / 2)) < (b.height / 2 + 50)) {
             nearbyBuilding = b; break;
         }

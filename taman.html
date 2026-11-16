@@ -487,6 +487,8 @@
         // ==========================================
         // 1. STATE & KONFIGURASI PERMAINAN
         // ==========================================
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLW3IAK0U3lkzglsc0VxKGhHLFtuE3SsNFvSSDbdQxe3TdN8VqNkbYluTY_3iyoKwV/exec";
+
         const gameState = {
             stars: 0,
             tickets: 0,
@@ -964,6 +966,25 @@
                 playSound('click');
             }
             updateHeaderStats();
+
+            // Ambil nama pemain dari sesi aktif & kirim hasil ke Google Apps Script
+            const sessionRaw = sessionStorage.getItem('activeUserSession');
+            const playerName = sessionRaw ? JSON.parse(sessionRaw).name : "Siswa";
+
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'simpanSkorTaman',
+                    name: playerName,
+                    wahana: gameState.currentRide,
+                    bintangDidapat: gameState.roundStars,
+                    tiketDidapat: isPerfectScore ? 1 : 0,
+                    totalBintang: gameState.stars,
+                    totalTiket: gameState.tickets
+                })
+            }).catch(err => console.warn("Gagal kirim hasil taman ke Apps Script:", err));
 
             document.getElementById('game-arena-view').classList.add('hidden');
             document.getElementById('summary-view').classList.remove('hidden');
