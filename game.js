@@ -1,7 +1,7 @@
 // ==========================================
 // LINK GOOGLE APPS SCRIPT (LETAKKAN PALING ATAS)
 // ==========================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXWMZdxNIbh2b8O7qYFAm8dmKoetrn6TGpdI4OT9FthJYwv-u5WFmMk0LyvDkuKYlX/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweLr2mAfN5TA_3VdRnbnlpVYfzMjT23ndlzeW3LoXnPatrNNZuD9WQfglQ9x_eYBa1/exec";
 
 // ==========================================
 // CONFIGURATION, DATABASE & MAIN GAME LOOP
@@ -95,7 +95,7 @@ function loadSavedCredentials() {
 }
 
 // ==========================================
-// SISTEM POIN & TAMPILAN POIN (FIREBASE)
+// SISTEM POIN & TAMPILAN POIN (KOLOM E SPREADSHEET)
 // ==========================================
 function updatePointsDisplay() {
     const headerPoin = document.getElementById('headerPoinDisplay');
@@ -107,37 +107,54 @@ function updatePointsDisplay() {
     if (shopPoin) shopPoin.innerText = playerPoints;
 }
 
-function initPlayerPointsSync(sheetDefaultPoints) {
+async function initPlayerPointsSync(sheetDefaultPoints) {
+    // 1. Tampilkan poin awal dari Kolom E hasil bacaan CSV Login
     playerPoints = parseInt(sheetDefaultPoints, 10) || 0;
     updatePointsDisplay();
 
-    if (!db || !playerCustomName) return;
-    const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
-    const pointsRef = db.ref('playerPoints/' + safeKey);
-
-    pointsRef.once('value', (snapshot) => {
-        if (snapshot.exists() && typeof snapshot.val().points === 'number') {
-            playerPoints = snapshot.val().points;
-        } else {
-            pointsRef.set({
-                name: playerCustomName,
-                points: playerPoints,
-                updatedAt: Date.now()
-            });
+    // 2. Sinkronkan ulang langsung ke Kolom E melalui Apps Script (anti-cache CSV)
+    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http') && playerCustomName) {
+        try {
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=getPlayerPoints&player=${encodeURIComponent(playerCustomName)}`);
+            const data = await res.json();
+            if (data && data.status === 'success' && typeof data.points === 'number') {
+                playerPoints = data.points;
+                updatePointsDisplay();
+                if (currentUserAccount) {
+                    currentUserAccount.points = playerPoints;
+                    sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+                }
+            }
+        } catch (err) {
+            console.warn("Menggunakan poin CSV lokal karena gagal ambil dari Apps Script:", err);
         }
-        updatePointsDisplay();
-    });
+    }
 }
 
 function savePlayerPointsToFirebase() {
+    // Tetap mempertahankan nama fungsi agar kompatibel dengan kelas.js & game mini lainnya,
+    // namun penyimpanan sepenuhnya dikirim ke Kolom E Sheet Login via Apps Script (bukan Firebase).
     updatePointsDisplay();
-    if (!db || !playerCustomName) return;
-    const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
-    db.ref('playerPoints/' + safeKey).update({
-        name: playerCustomName,
-        points: playerPoints,
-        updatedAt: Date.now()
-    });
+    if (!playerCustomName) return;
+
+    if (currentUserAccount) {
+        currentUserAccount.points = playerPoints;
+        sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+    }
+
+    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'updatePoints',
+                player: playerCustomName,
+                points: playerPoints,
+                updatedAt: Date.now()
+            })
+        }).catch(err => console.warn("Gagal simpan poin ke Kolom E Spreadsheet:", err));
+    }
 }
 
 // ==========================================
@@ -210,7 +227,7 @@ async function fetchSpreadsheetUsers() {
                         gender: (cols[1] || "L").toUpperCase(), 
                         role: (cols[2] || "SISWA").toUpperCase(), 
                         status: cols[3] || "User",
-                        points: isNaN(parsedPoints) ? 0 : parsedPoints,
+                        points: isNaN(parsedPoints) ? 0 : parsedPoints, // Kolom E Sheet Login
                         password: cols[5] || "" // Kolom F Sheet Login
                     });
                 }
@@ -392,7 +409,7 @@ function updateOnlinePlayersList(otherPlayersData) {
             : 'Sekolah';
 
         const kickButtonHTML = isAdminUser 
-            ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
+            ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
             : `<span class="text-[10px] text-slate-400">${locName}</span>`;
 
         item.innerHTML = `
@@ -482,6 +499,7 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
 
     sessionStorage.setItem('activeUserSession', JSON.stringify(matchedUser));
 
+    // Baca dan sinkronkan saldo poin dari Kolom E Sheet Login
     initPlayerPointsSync(matchedUser.points);
 
     document.body.classList.add('game-active');
@@ -585,7 +603,6 @@ function switchWorldLocation(targetLocId, showNotification = true) {
         }
     }
 
-    // Delegasikan posisi spawn Lokasi 3 ke kelas.js & Lokasi 2 ke pantai.js
     if (targetLocId === 3 && typeof initKelasSpawn === 'function') {
         initKelasSpawn(player);
     } else if (targetLocId === 2 && typeof initPantaiSpawn === 'function') {
@@ -659,7 +676,7 @@ function getAdaptiveZoom() {
 }
 
 // ==========================================
-// GAME LOOP (TERMASUK TILE COLLISION DARI halang.js)
+// GAME LOOP
 // ==========================================
 function gameLoop() {
     if (!isGameStarted) return;
@@ -670,13 +687,11 @@ function gameLoop() {
     canvas.width = canvas.parentElement.clientWidth || window.innerWidth; 
     canvas.height = canvas.parentElement.clientHeight || window.innerHeight; 
 
-    // Simpan posisi karakter sebelum bergerak
     const prevX = player.x;
     const prevY = player.y;
 
     updateGame();
 
-    // Cek halangan dari halang.js per sumbu (X dan Y) agar bisa meluncur di tepi dinding/meja
     if (typeof isCollidingWithMap === 'function') {
         const nextX = player.x;
         const nextY = player.y;
@@ -876,6 +891,7 @@ window.executeRedeemItem = function() {
     if (playerPoints < item.cost) return;
 
     playerPoints -= item.cost;
+    // Update kolom E Sheet Login via Apps Script
     savePlayerPointsToFirebase();
 
     renderShopItemsList();
@@ -887,7 +903,7 @@ window.executeRedeemItem = function() {
         banner.classList.remove('hidden');
     }
 
-    // Simpan redeemHistory ke Google Apps Script (bukan Firebase)
+    // Simpan riwayat penukaran (redeemHistory) ke Google Apps Script
     if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
         fetch(APPS_SCRIPT_URL, {
             method: 'POST',
@@ -912,7 +928,6 @@ window.executeRedeemItem = function() {
 async function triggerInteraction() {
     if (!nearbyBuilding) return;
 
-    // Cek interaksi khusus Ruang Kelas (kelas.js) atau Pantai (pantai.js)
     if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function') {
         if (handleKelasInteraction(nearbyBuilding)) return;
     }
@@ -983,7 +998,7 @@ async function triggerInteraction() {
                     if (!htmlFile.toLowerCase().endsWith('.html') && !htmlFile.startsWith('http')) {
                         htmlFile += '.html';
                     }
-                    const safeUrl = htmlFile.replace(/'/g, "\'");
+                    const safeUrl = htmlFile.replace(/'/g, "\\'");
 
                     htmlList += `
                         <button onclick="navigateToLocalHtml('${safeUrl}')" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-orange-500/40 hover:border-yellow-400 rounded-xl text-yellow-400 font-bold text-xs transition cursor-pointer w-full text-left active:scale-95">

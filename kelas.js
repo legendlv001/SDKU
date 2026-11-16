@@ -3,7 +3,7 @@
 // ==========================================
 const KELAS_APPS_SCRIPT_URL = (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http'))
     ? APPS_SCRIPT_URL
-    : "https://script.google.com/macros/s/AKfycbyXWMZdxNIbh2b8O7qYFAm8dmKoetrn6TGpdI4OT9FthJYwv-u5WFmMk0LyvDkuKYlX/exec";
+    : "https://script.google.com/macros/s/AKfycbweLr2mAfN5TA_3VdRnbnlpVYfzMjT23ndlzeW3LoXnPatrNNZuD9WQfglQ9x_eYBa1/exec";
 
 // ==========================================
 // KONFIGURASI, VISUAL & INTERAKSI KHUSUS LOKASI 3 (RUANG KELAS)
