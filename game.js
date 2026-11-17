@@ -233,7 +233,6 @@ window.navigateToLocalHtml = function(targetHtmlUrl) {
         const updatedSession = {
             ...currentUserAccount,
             name: playerCustomName,
-            gender: (selectedGender === 'admin') ? 'A' : ((selectedGender === 'female') ? 'P' : 'L'),
             points: playerPoints,
             tickets: playerTickets,
             hasFullCostumes: hasFullCostumes,
@@ -244,7 +243,8 @@ window.navigateToLocalHtml = function(targetHtmlUrl) {
         sessionStorage.setItem('savedPlayerPosition', JSON.stringify({
             x: player.x,
             y: player.y,
-            location: currentWorldLocation
+            location: currentWorldLocation,
+            activeSpriteGender: selectedGender
         }));
     }
     window.location.href = targetHtmlUrl;
@@ -374,6 +374,24 @@ function handleChatSubmit(e) {
     window.sendFirebaseChat(playerCustomName, msg);
 }
 
+function sendChatMessage() {
+    handleChatSubmit();
+}
+
+let isChatOpen = false;
+function toggleChat() {
+    const box = document.getElementById('chatBoxPopup');
+    const badge = document.getElementById('chatBadge');
+    if (!box) return;
+    isChatOpen = !isChatOpen;
+    if (isChatOpen) {
+        box.classList.remove('hidden');
+        if (badge) { badge.innerText = '0'; badge.classList.add('hidden'); }
+    } else {
+        box.classList.add('hidden');
+    }
+}
+
 function initFirebaseChatSync() {
     if (!db) return;
     const chatMessagesContainer = document.getElementById('chatMessages');
@@ -401,6 +419,14 @@ function startListeningChat() {
         const msgData = snapshot.val();
         if (!msgData || !msgData.sender || !msgData.text) return;
         addChatMessage(msgData.sender, msgData.text, msgData.sender === playerCustomName);
+        if (!isChatOpen && msgData.sender !== playerCustomName) {
+            const badge = document.getElementById('chatBadge');
+            if (badge) {
+                const count = (parseInt(badge.innerText, 10) || 0) + 1;
+                badge.innerText = count;
+                badge.classList.remove('hidden');
+            }
+        }
     });
 }
 
@@ -517,16 +543,26 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     currentUserAccount = matchedUser; 
     playerCustomName = matchedUser.name;
 
-    const gCode = (matchedUser.gender || 'L').toUpperCase().trim();
-    if (gCode === 'A') selectedGender = 'admin';
-    else if (gCode === 'P') selectedGender = 'female';
-    else selectedGender = 'male';
+    // Gender asli dari Kolom B Sheet Login ('A', 'L', atau 'P')
+    const accountGenderCode = (matchedUser.gender || 'L').toUpperCase().trim();
+    const isAccountTypeA = (accountGenderCode === 'A');
+
+    // Jika Kolom B = 'A', sprite default awal selalu 'admin' (assets/admin.png) kecuali saat resume sesi
+    if (savedPosition && savedPosition.activeSpriteGender) {
+        selectedGender = savedPosition.activeSpriteGender;
+    } else if (isAccountTypeA) {
+        selectedGender = 'admin';
+    } else if (accountGenderCode === 'P') {
+        selectedGender = 'female';
+    } else {
+        selectedGender = 'male';
+    }
 
     playerRole = matchedUser.role || 'SISWA';
-    isAdminUser = (gCode === 'A' || matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
+    isAdminUser = (isAccountTypeA || matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
 
     // Jika Kolom B = 'A' atau Kolom H = 'full', semua kostum lk_ dan pr_ terbuka
-    hasFullCostumes = (gCode === 'A') || Boolean(matchedUser.hasFullCostumes);
+    hasFullCostumes = isAccountTypeA || Boolean(matchedUser.hasFullCostumes);
     ownedCostumes = Array.isArray(matchedUser.ownedCostumes) ? [...matchedUser.ownedCostumes] : [];
     equippedCostume = (matchedUser.equippedCostume || "").trim();
 
@@ -542,7 +578,7 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     document.getElementById('gameContainer').classList.remove('hidden');
     document.getElementById('charNameDisplay').innerText = playerCustomName;
     document.getElementById('charRoleDisplay').innerText = playerRole;
-    document.getElementById('avatarBadge').innerText = (gCode === 'A') ? '👑' : ((gCode === 'P') ? '🧕' : '👦');
+    document.getElementById('avatarBadge').innerText = (selectedGender === 'admin') ? '👑' : ((selectedGender === 'female') ? '🧕' : '👦');
 
     const targetLoc = (savedPosition && savedPosition.location) ? savedPosition.location : 1;
     switchWorldLocation(targetLoc, false);
@@ -1152,10 +1188,12 @@ function openEditCharacterModal() {
     const nameInput = document.getElementById('editNameInput');
     if (nameInput) nameInput.value = playerCustomName;
 
-    // Cek Kolom D (status === "Full"): jika Full tampilkan ubah nama & gender, jika tidak sembunyikan
     const adminContainer = document.getElementById('adminSettingsContainer');
     const colDStatus = (currentUserAccount && currentUserAccount.status) ? currentUserAccount.status.trim().toLowerCase() : '';
-    const canEditFullProfile = (colDStatus === 'full');
+    const isAccountTypeA = (currentUserAccount && (currentUserAccount.gender || '').toUpperCase().trim() === 'A');
+
+    // Akun dengan Kolom B = 'A' ATAU Kolom D = 'Full' boleh ubah profil
+    const canEditFullProfile = isAccountTypeA || (colDStatus === 'full');
 
     if (adminContainer) {
         if (canEditFullProfile) {
@@ -1170,34 +1208,66 @@ function openEditCharacterModal() {
     renderProfileCostumeWardrobe();
     document.getElementById('editCharModal').classList.remove('hidden');
 }
+
 function closeEditCharacterModal() { document.getElementById('editCharModal').classList.add('hidden'); }
+
 function selectModalGender(g) {
     tempModalGender = g;
-    const optF = document.getElementById('selectOptionFemale'), optM = document.getElementById('selectOptionMale');
-    if (!optF || !optM) return;
-    if (g === 'female') {
-        optF.classList.add('border-yellow-400', 'bg-slate-700'); optF.classList.remove('border-transparent');
-        optM.classList.remove('border-yellow-400', 'bg-slate-700'); optM.classList.add('border-transparent');
-    } else {
-        optM.classList.add('border-yellow-400', 'bg-slate-700'); optM.classList.remove('border-transparent');
-        optF.classList.remove('border-yellow-400', 'bg-slate-700'); optF.classList.add('border-transparent');
+    const optF = document.getElementById('selectOptionFemale');
+    const optM = document.getElementById('selectOptionMale');
+    const optA = document.getElementById('selectOptionAdmin');
+    const grid = document.getElementById('genderChoiceGrid');
+
+    const isAccountTypeA = (currentUserAccount && (currentUserAccount.gender || '').toUpperCase().trim() === 'A');
+
+    // Jika Kolom B = 'A', tampilkan 3 opsi (Aisyah, Ali, Admin); jika bukan 'A', tampilkan 2 opsi saja
+    if (optA && grid) {
+        if (isAccountTypeA) {
+            optA.classList.remove('hidden');
+            grid.classList.remove('grid-cols-2');
+            grid.classList.add('grid-cols-3');
+        } else {
+            optA.classList.add('hidden');
+            grid.classList.remove('grid-cols-3');
+            grid.classList.add('grid-cols-2');
+        }
+    }
+
+    [optF, optM, optA].forEach(el => {
+        if (!el) return;
+        el.classList.remove('border-yellow-400', 'bg-slate-700');
+        el.classList.add('border-transparent');
+    });
+
+    const activeEl = (g === 'female') ? optF : ((g === 'admin') ? optA : optM);
+    if (activeEl) {
+        activeEl.classList.add('border-yellow-400', 'bg-slate-700');
+        activeEl.classList.remove('border-transparent');
     }
 }
+
 function saveCharacterEdits() {
     const colDStatus = (currentUserAccount && currentUserAccount.status) ? currentUserAccount.status.trim().toLowerCase() : '';
-    if (colDStatus !== 'full') {
+    const isAccountTypeA = (currentUserAccount && (currentUserAccount.gender || '').toUpperCase().trim() === 'A');
+
+    if (!isAccountTypeA && colDStatus !== 'full') {
         closeEditCharacterModal();
         return;
     }
 
     const newName = document.getElementById('editNameInput').value.trim();
     if (newName) playerCustomName = newName;
-    if (tempModalGender && selectedGender !== 'admin') selectedGender = tempModalGender;
+    if (tempModalGender) selectedGender = tempModalGender;
+
     if (currentUserAccount) {
         currentUserAccount.name = playerCustomName;
-        if (selectedGender !== 'admin') currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
+        // Jika bukan akun 'A', perbarui kode gender sesi; jika akun 'A', pertahankan 'A' agar semua kostum tetap terbuka
+        if (!isAccountTypeA) {
+            currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
+        }
         sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
     }
+
     document.getElementById('charNameDisplay').innerText = playerCustomName;
     document.getElementById('avatarBadge').innerText = (selectedGender === 'admin') ? '👑' : ((selectedGender === 'female') ? '🧕' : '👦');
     closeEditCharacterModal();

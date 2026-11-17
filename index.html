@@ -193,8 +193,8 @@
                     </div>
                     <div id="chatMessages" class="p-2 sm:p-3 h-32 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs"></div>
                     <div class="p-2 bg-slate-100 border-t flex gap-1">
-                        <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onkeydown="if(event.key==='Enter') sendChatMessage()">
-                        <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold"><i class="fas fa-paper-plane"></i></button>
+                        <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onkeydown="if(event.key==='Enter') handleChatSubmit(event)">
+                        <button onclick="handleChatSubmit(event)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
                 <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base md:text-xl transition-all hover:scale-105 active:scale-95">
@@ -264,7 +264,7 @@
                 </div>
             </div>
 
-            <!-- Pengaturan Nama & Gender (Hanya Muncul Jika Kolom D = Full) -->
+            <!-- Pengaturan Nama & Gender (Muncul Jika Kolom D = Full ATAU Kolom B = A) -->
             <div id="adminSettingsContainer" class="w-full hidden">
                 <div class="w-full mb-3 shrink-0">
                     <label class="block text-xs font-bold text-slate-300 mb-1">Nama Karakter:</label>
@@ -272,16 +272,21 @@
                 </div>
                 <div class="w-full mb-4 shrink-0">
                     <label class="block text-xs font-bold text-slate-300 mb-1.5">Pilih Karakter:</label>
-                    <div class="grid grid-cols-2 gap-2.5">
-                        <div id="selectOptionFemale" onclick="selectModalGender('female')" class="cursor-pointer border-2 rounded-2xl p-2.5 flex flex-col items-center bg-slate-800 transition">
-                            <span class="text-xl mb-0.5">🧕</span>
-                            <span class="text-xs font-bold text-pink-300">Aisyah</span>
+                    <div id="genderChoiceGrid" class="grid grid-cols-2 gap-2">
+                        <div id="selectOptionFemale" onclick="selectModalGender('female')" class="cursor-pointer border-2 rounded-2xl p-2 flex flex-col items-center bg-slate-800 transition">
+                            <span class="text-lg mb-0.5">🧕</span>
+                            <span class="text-[11px] font-bold text-pink-300">Aisyah</span>
                             <span class="text-[9px] text-slate-400">Hijab</span>
                         </div>
-                        <div id="selectOptionMale" onclick="selectModalGender('male')" class="cursor-pointer border-2 rounded-2xl p-2.5 flex flex-col items-center bg-slate-800 transition">
-                            <span class="text-xl mb-0.5">👦</span>
-                            <span class="text-xs font-bold text-blue-300">Ali</span>
+                        <div id="selectOptionMale" onclick="selectModalGender('male')" class="cursor-pointer border-2 rounded-2xl p-2 flex flex-col items-center bg-slate-800 transition">
+                            <span class="text-lg mb-0.5">👦</span>
+                            <span class="text-[11px] font-bold text-blue-300">Ali</span>
                             <span class="text-[9px] text-slate-400">Peci</span>
+                        </div>
+                        <div id="selectOptionAdmin" onclick="selectModalGender('admin')" class="hidden cursor-pointer border-2 rounded-2xl p-2 flex flex-col items-center bg-slate-800 transition">
+                            <span class="text-lg mb-0.5">👑</span>
+                            <span class="text-[11px] font-bold text-yellow-300">Admin</span>
+                            <span class="text-[9px] text-slate-400">Mahkota</span>
                         </div>
                     </div>
                 </div>
