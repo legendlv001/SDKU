@@ -109,13 +109,11 @@ function updatePointsDisplay() {
     const modalPoin = document.getElementById('modalPoinDisplay');
     const shopPoin = document.getElementById('shopPoinBalance');
     const modalTiket = document.getElementById('modalTiketDisplay');
-    const headerTiket = document.getElementById('headerTiketDisplay');
 
     if (headerPoin) headerPoin.innerText = playerPoints;
     if (modalPoin) modalPoin.innerText = playerPoints;
     if (shopPoin) shopPoin.innerText = playerPoints;
     if (modalTiket) modalTiket.innerText = playerTickets;
-    if (headerTiket) headerTiket.innerText = playerTickets;
 }
 
 async function initPlayerPointsSync(sheetDefaultPoints, sheetDefaultTickets = 0) {
@@ -282,7 +280,7 @@ async function fetchSpreadsheetUsers() {
                         name: cols[0], 
                         gender: gCode,
                         role: (cols[2] || "SISWA").toUpperCase(),
-                        status: cols[3] || "User",
+                        status: cols[3] || "User", // Kolom D: Hak akses ubah profil ("Full")
                         points: isNaN(parsedPoints) ? 0 : parsedPoints,
                         password: cols[5] || "",
                         tickets: isNaN(parsedTickets) ? 0 : parsedTickets,
@@ -841,7 +839,10 @@ function renderShopItemsList() {
         <div id="shopFeedbackBanner" class="hidden mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center"></div>
     `;
 
-    // Bangun daftar item toko: jika Kolom B = 'A', tampilkan semua varian lk_ & pr_
+    // Filter kostum di toko berdasarkan gender pemain:
+    // - Jika Kolom B = 'A': semua varian lk_ & pr_ tampil.
+    // - Jika Kolom B = 'L': kostum pr_ disembunyikan (hanya lk_ yang tampil).
+    // - Jika Kolom B = 'P': kostum lk_ disembunyikan (hanya pr_ yang tampil).
     let expandedShopItems = [];
     currentShopItems.forEach((item, idx) => {
         const lowerName = item.rawName.toLowerCase();
@@ -866,7 +867,7 @@ function renderShopItemsList() {
     });
 
     if (expandedShopItems.length === 0) {
-        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada kostum yang dijual di Warung saat ini.</div>`;
+        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada kostum yang tersedia untuk karakter Anda saat ini.</div>`;
     } else {
         html += `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left pr-1">`;
         expandedShopItems.forEach((entry) => {
@@ -966,7 +967,7 @@ window.executeRedeemItem = function() {
                 player: playerCustomName,
                 item: item.targetLabel,
                 costumeFile: costumeFile,
-                equipNow: false, // Beli saja di toko, pakai lewat Profil
+                equipNow: false,
                 cost: item.cost,
                 remainingPoints: playerPoints,
                 timestamp: Date.now()
@@ -1008,15 +1009,15 @@ function renderProfileCostumeWardrobe() {
 
         html += `
             <div class="flex items-center justify-between p-2 rounded-xl bg-slate-800 border ${isEquipped ? 'border-emerald-400 bg-emerald-950/30' : 'border-slate-700'}">
-                <div class="flex items-center gap-2 min-w-0">
-                    <div class="w-8 h-10 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <div class="w-7 h-9 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0">
                         <img src="assets/kostom/${file}" onerror="this.style.display='none'" class="h-full object-cover object-left-top" />
                     </div>
-                    <span class="text-[11px] font-bold text-white truncate">${label}</span>
+                    <span class="text-[10px] font-bold text-white truncate">${label}</span>
                 </div>
                 ${isEquipped
-                    ? `<button type="button" onclick="unequipCostume()" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shrink-0 ml-1">Lepas</button>`
-                    : `<button type="button" onclick="equipCostume('${file}')" class="px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-[10px] font-extrabold shrink-0 ml-1">Pakai</button>`
+                    ? `<button type="button" onclick="unequipCostume()" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-extrabold shrink-0 ml-1">Lepas</button>`
+                    : `<button type="button" onclick="equipCostume('${file}')" class="px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-[9px] font-extrabold shrink-0 ml-1">Pakai</button>`
                 }
             </div>
         `;
@@ -1151,10 +1152,17 @@ function openEditCharacterModal() {
     const nameInput = document.getElementById('editNameInput');
     if (nameInput) nameInput.value = playerCustomName;
 
-    const genderSec = document.getElementById('genderSelectorSection');
-    if (genderSec) {
-        if (selectedGender === 'admin') genderSec.classList.add('hidden');
-        else genderSec.classList.remove('hidden');
+    // Cek Kolom D (status === "Full"): jika Full tampilkan ubah nama & gender, jika tidak sembunyikan
+    const adminContainer = document.getElementById('adminSettingsContainer');
+    const colDStatus = (currentUserAccount && currentUserAccount.status) ? currentUserAccount.status.trim().toLowerCase() : '';
+    const canEditFullProfile = (colDStatus === 'full');
+
+    if (adminContainer) {
+        if (canEditFullProfile) {
+            adminContainer.classList.remove('hidden');
+        } else {
+            adminContainer.classList.add('hidden');
+        }
     }
 
     updatePointsDisplay();
@@ -1176,6 +1184,12 @@ function selectModalGender(g) {
     }
 }
 function saveCharacterEdits() {
+    const colDStatus = (currentUserAccount && currentUserAccount.status) ? currentUserAccount.status.trim().toLowerCase() : '';
+    if (colDStatus !== 'full') {
+        closeEditCharacterModal();
+        return;
+    }
+
     const newName = document.getElementById('editNameInput').value.trim();
     if (newName) playerCustomName = newName;
     if (tempModalGender && selectedGender !== 'admin') selectedGender = tempModalGender;
