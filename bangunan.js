@@ -14,6 +14,7 @@ const ASSETS = {
     beach_bg: new Image(), 
     male_sprite: new Image(), 
     female_sprite: new Image(),
+    admin_sprite: new Image(),
     kelas_inside: new Image()
 };
 
@@ -30,6 +31,7 @@ let assetsLoaded = {
     beach_bg: false, 
     male_sprite: false, 
     female_sprite: false, 
+    admin_sprite: false,
     kelas_inside: false 
 };
 
@@ -45,11 +47,30 @@ ASSETS.bis.src = 'assets/bis.png';
 ASSETS.beach_bg.src = 'assets/beach_bg.png'; 
 ASSETS.male_sprite.src = 'assets/male_sprite.png'; 
 ASSETS.female_sprite.src = 'assets/female_sprite.png'; 
+ASSETS.admin_sprite.src = 'assets/admin.png';
 ASSETS.kelas_inside.src = 'assets/Sprite-0001.png';
 
 Object.keys(ASSETS).forEach(key => { 
     ASSETS[key].onload = () => assetsLoaded[key] = true; 
 });
+
+// ==========================================
+// LOADER DINAMIS KOSTUM (FOLDER: assets/kostom/)
+// ==========================================
+const COSTUME_SPRITES = {};
+const costumeSpritesLoaded = {};
+
+function getCostumeImage(fileName) {
+    if (!fileName) return null;
+    const cleanFile = fileName.toLowerCase().endsWith('.png') ? fileName : `${fileName}.png`;
+    if (!COSTUME_SPRITES[cleanFile]) {
+        const img = new Image();
+        img.src = `assets/kostom/${cleanFile}`;
+        img.onload = () => { costumeSpritesLoaded[cleanFile] = true; };
+        COSTUME_SPRITES[cleanFile] = img;
+    }
+    return costumeSpritesLoaded[cleanFile] ? COSTUME_SPRITES[cleanFile] : null;
+}
 
 const MAP_CONFIGS = {
     1: { 
@@ -61,8 +82,8 @@ const MAP_CONFIGS = {
             { id: 'perpus', name: 'Perpustakaan', icon: '📚', x: 680, y: 100, width: 340, height: 220, sheetName: 'Perpus', color: '#bfdbfe', wallColor: '#3b82f6', roofColor: '#1e3a8a', dialogTitle: 'Perpustakaan Digital', actionLabel: 'Buka Perpus' },
             { id: 'gor', name: 'Gedung Olahraga', icon: '🏀', x: 1100, y: 100, width: 420, height: 250, sheetName: 'PJOK', color: '#fed7aa', wallColor: '#f97316', roofColor: '#9a3412', dialogTitle: 'Gedung Olahraga (GOR)', actionLabel: 'Masuk GOR' },
             { id: 'mading', name: 'Mading Sekolah', icon: '📌', x: 1600, y: 150, width: 260, height: 180, sheetName: 'Info', color: '#fef3c7', wallColor: '#d97706', roofColor: '#78350f', dialogTitle: 'Mading Informasi', actionLabel: 'Baca Mading' },
-            { id: 'warung', name: 'Warung Sekolah', icon: '🍜', x: 160, y: 800, width: 340, height: 250, sheetName: 'Toko', color: '#fbcfe8', wallColor: '#ec4899', roofColor: '#9d174d', dialogTitle: 'Kantin / Warung', actionLabel: 'Buka Warung' },
-            { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, targetUrl: 'taman.html', color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga', actionLabel: 'Lihat Taman' },
+            { id: 'warung', name: 'Warung Sekolah', icon: '🏪', x: 160, y: 800, width: 340, height: 250, sheetName: 'Toko', color: '#fbcfe8', wallColor: '#ec4899', roofColor: '#9d174d', dialogTitle: 'Kantin / Warung Kostum', actionLabel: 'Buka Warung' },
+            { id: 'taman', name: 'Taman Sekolah', icon: '🌺', x: 1400, y: 750, width: 380, height: 280, targetUrl: 'taman.html', color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga', actionLabel: 'Lihat Taman' },
             { id: 'bis', name: 'Bis Sekolah (Ke Pantai)', icon: '🚌', x: 800, y: 820, width: 220, height: 120, isPortal: true, targetLocation: 2, dialogTitle: 'Bis Sekolah Ke Pantai', dialogText: 'Bis kuning sekolah siap mengantar ke Pantai!', actionLabel: 'Naik Bis ke Pantai' }
         ]
     }

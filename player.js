@@ -30,10 +30,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.playerChatBubbles = window.playerChatBubbles || {};
 
-function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, charName, charRole) {
+function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, charName, charRole, activeCostume) {
     c.save();
     let currentDir = (dir === 'idle') ? 'down' : dir;
-    const spriteKey = `${gender}_sprite`, imgAsset = ASSETS[spriteKey], isLoaded = assetsLoaded[spriteKey];
+
+    // 1. Cek apakah pemain memakai kostum dari folder assets/kostom/
+    let imgAsset = null;
+    let isLoaded = false;
+
+    if (activeCostume && typeof getCostumeImage === 'function') {
+        const customImg = getCostumeImage(activeCostume);
+        if (customImg && customImg.width > 0) {
+            imgAsset = customImg;
+            isLoaded = true;
+        }
+    }
+
+    // 2. Jika tidak memakai kostum, gunakan sprite default dengan pengecekan aman (Solusi 1)
+    if (!isLoaded && typeof ASSETS !== 'undefined' && typeof assetsLoaded !== 'undefined') {
+        const spriteKey = (gender === 'admin') ? 'admin_sprite' : `${gender}_sprite`;
+        imgAsset = ASSETS[spriteKey];
+        isLoaded = assetsLoaded[spriteKey];
+    }
 
     let renderX = Math.round(x);
     let renderY = Math.round(y);
@@ -75,14 +93,18 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, char
             height
         );
     } else {
-        // Fallback
+        // Fallback jika ASSETS belum termuat atau gambar sprite gagal dimuat
         c.fillStyle = 'rgba(0,0,0,0.3)'; 
         c.beginPath(); 
         c.ellipse(renderX + width / 2, renderY + height - 2, width * 0.35, 6, 0, 0, Math.PI * 2); 
         c.fill();
 
         const isFemale = (gender === 'female');
-        if (isFemale) {
+        const isAdmin = (gender === 'admin');
+        if (isAdmin) {
+            c.fillStyle = '#facc15'; c.fillRect(renderX + width * 0.25, renderY + height * 0.3, width * 0.5, height * 0.55);
+            c.fillStyle = '#1e293b'; c.fillRect(renderX + width * 0.25, renderY, width * 0.5, 14);
+        } else if (isFemale) {
             c.fillStyle = '#b91c1c'; c.fillRect(renderX + width * 0.25, renderY + height * 0.45, width * 0.5, height * 0.43);
             c.fillStyle = '#ffffff'; c.beginPath(); c.arc(renderX + width * 0.5, renderY + height * 0.25, width * 0.3, 0, Math.PI * 2); c.fill();
         } else {

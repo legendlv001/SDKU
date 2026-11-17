@@ -1,7 +1,7 @@
 // ==========================================
 // LINK GOOGLE APPS SCRIPT (LETAKKAN PALING ATAS)
 // ==========================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBKy8cGnC8qB6ZbQMHWErXThSM34HiiAaKmcWi2h107dh_7mhrKWA7bONvnGUFvTft/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeb8P7lsmjdHT26Kbb0YQn9HA1I1PPwqDeCeBev2Txe3QAk_fgB7PORZ1Or-V3U5U4/exec";
 
 // ==========================================
 // CONFIGURATION, DATABASE & MAIN GAME LOOP
@@ -36,13 +36,18 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 }
 
 let USER_DATABASE = [
-    { name: "Admin", gender: "L", role: "ADMIN", status: "Full", points: 100, password: "123" }, 
-    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, password: "123" }, 
-    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50, password: "123" }
+    { name: "Admin", gender: "A", role: "ADMIN", status: "Full", points: 100, password: "123", hasFullCostumes: true, ownedCostumes: [], equippedCostume: "" }, 
+    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }, 
+    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }
 ];
 
 let isDatabaseReady = false;
 let playerPoints = 0;
+
+// Variabel Sistem Kostum (Kolom H & Kolom I Sheet Login)
+let hasFullCostumes = false;
+let ownedCostumes = [];
+let equippedCostume = "";
 
 const loadingGif = new Image();
 loadingGif.src = 'assets/loading.gif';
@@ -108,11 +113,9 @@ function updatePointsDisplay() {
 }
 
 async function initPlayerPointsSync(sheetDefaultPoints) {
-    // 1. Tampilkan poin awal dari Kolom E hasil bacaan CSV Login
     playerPoints = parseInt(sheetDefaultPoints, 10) || 0;
     updatePointsDisplay();
 
-    // 2. Sinkronkan ulang langsung ke Kolom E melalui Apps Script (anti-cache CSV)
     if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http') && playerCustomName) {
         try {
             const res = await fetch(`${APPS_SCRIPT_URL}?action=getPlayerPoints&player=${encodeURIComponent(playerCustomName)}`);
@@ -132,8 +135,6 @@ async function initPlayerPointsSync(sheetDefaultPoints) {
 }
 
 function savePlayerPointsToFirebase() {
-    // Tetap mempertahankan nama fungsi agar kompatibel dengan kelas.js & game mini lainnya,
-    // namun penyimpanan sepenuhnya dikirim ke Kolom E Sheet Login via Apps Script (bukan Firebase).
     updatePointsDisplay();
     if (!playerCustomName) return;
 
@@ -154,6 +155,40 @@ function savePlayerPointsToFirebase() {
                 updatedAt: Date.now()
             })
         }).catch(err => console.warn("Gagal simpan poin ke Kolom E Spreadsheet:", err));
+    }
+}
+
+// ==========================================
+// SISTEM KOSTUM (KOLOM H & KOLOM I SPREADSHEET)
+// ==========================================
+function resolveCostumeFileName(rawItemName, genderCode) {
+    const clean = rawItemName.trim().toLowerCase().replace(/\s+/g, '_');
+    if (clean.startsWith('pr_') || clean.startsWith('lk_')) {
+        return clean.endsWith('.png') ? clean : `${clean}.png`;
+    }
+    const prefix = (genderCode === 'P') ? 'pr_' : 'lk_';
+    return `${prefix}${clean}.png`;
+}
+
+function saveEquippedCostumeToSheet(costumeFileName) {
+    if (!playerCustomName) return;
+
+    if (currentUserAccount) {
+        currentUserAccount.equippedCostume = costumeFileName;
+        sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+    }
+
+    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'updateEquippedCostume',
+                player: playerCustomName,
+                equippedCostume: costumeFileName || ""
+            })
+        }).catch(err => console.warn("Gagal update Kolom I Spreadsheet:", err));
     }
 }
 
@@ -190,8 +225,11 @@ window.navigateToLocalHtml = function(targetHtmlUrl) {
         const updatedSession = {
             ...currentUserAccount,
             name: playerCustomName,
-            gender: (selectedGender === 'female') ? 'P' : 'L',
-            points: playerPoints
+            gender: (selectedGender === 'admin') ? 'A' : ((selectedGender === 'female') ? 'P' : 'L'),
+            points: playerPoints,
+            hasFullCostumes: hasFullCostumes,
+            ownedCostumes: ownedCostumes,
+            equippedCostume: equippedCostume
         };
         sessionStorage.setItem('activeUserSession', JSON.stringify(updatedSession));
         sessionStorage.setItem('savedPlayerPosition', JSON.stringify({
@@ -222,13 +260,22 @@ async function fetchSpreadsheetUsers() {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
                 if (cols[0] && cols[0].toLowerCase() !== "nama") {
                     const parsedPoints = parseInt((cols[4] || "0").replace(/[^0-9-]/g, ''), 10);
+                    const rawColH = (cols[7] || "").trim(); // Kolom H: daftar kostum atau "full"
+                    const rawColI = (cols[8] || "").trim(); // Kolom I: kostum aktif saat login
+                    const isFullCostume = rawColH.toLowerCase() === 'full';
+
                     fetchedUsers.push({ 
                         name: cols[0], 
-                        gender: (cols[1] || "L").toUpperCase(), 
-                        role: (cols[2] || "SISWA").toUpperCase(), 
-                        status: cols[3] || "User",
-                        points: isNaN(parsedPoints) ? 0 : parsedPoints, // Kolom E Sheet Login
-                        password: cols[5] || "" // Kolom F Sheet Login
+                        gender: (cols[1] || "L").toUpperCase(), // Kolom B: A / P / L
+                        role: (cols[2] || "SISWA").toUpperCase(), // Kolom C
+                        status: cols[3] || "User", // Kolom D
+                        points: isNaN(parsedPoints) ? 0 : parsedPoints, // Kolom E
+                        password: cols[5] || "", // Kolom F
+                        hasFullCostumes: isFullCostume,
+                        ownedCostumes: isFullCostume 
+                            ? [] 
+                            : rawColH.split(',').map(s => s.trim()).filter(Boolean),
+                        equippedCostume: rawColI
                     });
                 }
             }
@@ -386,11 +433,12 @@ function updateOnlinePlayersList(otherPlayersData) {
 
     listElem.innerHTML = '';
     
+    const selfBadge = selectedGender === 'admin' ? '👑' : (selectedGender === 'female' ? '🧕' : '👦');
     const selfItem = document.createElement('div');
     selfItem.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800 border border-yellow-400/50';
     selfItem.innerHTML = `
         <div class="flex items-center gap-2">
-            <span class="text-base">${selectedGender === 'female' ? '🧕' : '👦'}</span>
+            <span class="text-base">${selfBadge}</span>
             <div>
                 <div class="text-xs font-bold text-yellow-400">${playerCustomName} <span class="text-[9px] text-slate-400">(Anda ${isAdminUser ? '- ADMIN' : ''})</span></div>
                 <div class="text-[10px] text-slate-300">${playerRole}</div>
@@ -408,13 +456,14 @@ function updateOnlinePlayersList(otherPlayersData) {
             ? MAP_CONFIGS[p.location].name.replace('Lokasi : ', '') 
             : 'Sekolah';
 
+        const pBadge = p.gender === 'admin' ? '👑' : (p.gender === 'female' ? '🧕' : '👦');
         const kickButtonHTML = isAdminUser 
             ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
             : `<span class="text-[10px] text-slate-400">${locName}</span>`;
 
         item.innerHTML = `
             <div class="flex items-center gap-2">
-                <span class="text-base">${p.gender === 'female' ? '🧕' : '👦'}</span>
+                <span class="text-base">${pBadge}</span>
                 <div>
                     <div class="text-xs font-bold text-white">${p.name}</div>
                     <div class="text-[10px] text-slate-400">${p.role || 'SISWA'}</div>
@@ -483,6 +532,7 @@ function updateMyPositionToFirebase() {
         x: player.x,
         y: player.y,
         gender: selectedGender,
+        costume: equippedCostume || "",
         direction: player.direction,
         location: currentWorldLocation,
         role: playerRole,
@@ -493,13 +543,29 @@ function updateMyPositionToFirebase() {
 function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     currentUserAccount = matchedUser; 
     playerCustomName = matchedUser.name;
-    selectedGender = (matchedUser.gender === 'P') ? 'female' : 'male'; 
+
+    const gCode = (matchedUser.gender || 'L').toUpperCase().trim();
+    if (gCode === 'A') {
+        selectedGender = 'admin';
+    } else if (gCode === 'P') {
+        selectedGender = 'female';
+    } else {
+        selectedGender = 'male';
+    }
+
     playerRole = matchedUser.role || 'SISWA';
-    isAdminUser = (matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
+    isAdminUser = (gCode === 'A' || matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
+
+    // Inisialisasi status kostum dari Kolom H & Kolom I
+    hasFullCostumes = Boolean(matchedUser.hasFullCostumes);
+    ownedCostumes = Array.isArray(matchedUser.ownedCostumes) ? [...matchedUser.ownedCostumes] : [];
+    equippedCostume = (matchedUser.equippedCostume || "").trim();
+
+    if (equippedCostume && !equippedCostume.toLowerCase().endsWith('.png')) {
+        equippedCostume += '.png';
+    }
 
     sessionStorage.setItem('activeUserSession', JSON.stringify(matchedUser));
-
-    // Baca dan sinkronkan saldo poin dari Kolom E Sheet Login
     initPlayerPointsSync(matchedUser.points);
 
     document.body.classList.add('game-active');
@@ -508,7 +574,7 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     document.getElementById('gameContainer').classList.remove('hidden');
     document.getElementById('charNameDisplay').innerText = playerCustomName;
     document.getElementById('charRoleDisplay').innerText = playerRole;
-    document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
+    document.getElementById('avatarBadge').innerText = (gCode === 'A') ? '👑' : ((gCode === 'P') ? '🧕' : '👦');
 
     const targetLoc = (savedPosition && savedPosition.location) ? savedPosition.location : 1;
     switchWorldLocation(targetLoc, false);
@@ -562,7 +628,6 @@ function handleLogin(e) {
         return;
     }
 
-    // Validasi Password dari Kolom F Sheet Login
     if (String(matchedUser.password).trim() !== inputPassword) {
         if (errorMsg) {
             errorMsg.innerHTML = `<span class="text-xs text-red-400 font-medium">Password salah! Silakan periksa kembali.</span>`; 
@@ -571,7 +636,6 @@ function handleLogin(e) {
         return;
     }
 
-    // Simpan / hapus kredensial jika opsi Ingat Password dicentang
     if (rememberElem && rememberElem.checked) {
         localStorage.setItem('openworld_saved_login', JSON.stringify({
             username: inputUsername,
@@ -736,7 +800,8 @@ function gameLoop() {
                 pData.direction || 'down', 
                 activeWalkTimer, 
                 pData.name, 
-                pData.role
+                pData.role,
+                pData.costume || ""
             );
             ctx.restore();
         });
@@ -757,7 +822,8 @@ function gameLoop() {
         player.direction, 
         activeWalkTimer, 
         playerCustomName, 
-        playerRole
+        playerRole,
+        equippedCostume
     );
     ctx.restore();
 
@@ -813,7 +879,7 @@ function setupTouchAnalogStick() {
 }
 
 // ==========================================
-// INTERAKSI DENGAN SPREADSHEET BANGUNAN & TOKO
+// INTERAKSI DENGAN SPREADSHEET BANGUNAN & WARUNG KOSTUM
 // ==========================================
 let currentShopItems = [];
 let pendingRedeemItem = null;
@@ -821,6 +887,8 @@ let pendingRedeemItem = null;
 function renderShopItemsList() {
     const modalContent = document.getElementById('modalContent');
     if (!modalContent) return;
+
+    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
 
     let html = `
         <div class="flex items-center justify-between bg-amber-950/80 border border-amber-500/40 px-3.5 py-2 rounded-xl mb-3">
@@ -830,31 +898,57 @@ function renderShopItemsList() {
                 <span id="shopPoinBalance" class="text-sm font-extrabold text-amber-400">${playerPoints}</span>
             </div>
         </div>
+        ${hasFullCostumes ? `<div class="mb-2.5 px-3 py-1.5 rounded-xl bg-indigo-950/90 border border-indigo-400/50 text-[11px] font-bold text-indigo-200 text-center">✨ Akun VIP (FULL): Semua kostum terbuka!</div>` : ''}
         <div id="shopFeedbackBanner" class="hidden mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center"></div>
     `;
 
-    if (currentShopItems.length === 0) {
-        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada barang yang dijual di Toko saat ini.</div>`;
+    const visibleItems = currentShopItems.filter(item => {
+        const lowerName = item.rawName.toLowerCase();
+        if (lowerName.startsWith('pr_') && genderCode !== 'P') return false;
+        if (lowerName.startsWith('lk_') && genderCode !== 'L') return false;
+        return true;
+    });
+
+    if (visibleItems.length === 0) {
+        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada kostum yang tersedia untuk karakter Anda saat ini.</div>`;
     } else {
         html += `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left pr-1">`;
-        currentShopItems.forEach((item, idx) => {
+        visibleItems.forEach((item) => {
+            const actualIndex = currentShopItems.indexOf(item);
+            const costumeFile = resolveCostumeFileName(item.rawName, genderCode);
+            const isOwned = hasFullCostumes || ownedCostumes.some(c => c.toLowerCase() === costumeFile.toLowerCase());
+            const isEquipped = equippedCostume.toLowerCase() === costumeFile.toLowerCase();
             const canAfford = playerPoints >= item.cost;
-            const btnClass = canAfford
-                ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
-                : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
+
+            let actionButtonHTML = '';
+            if (isEquipped) {
+                actionButtonHTML = `<button onclick="unequipCostume()" class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow cursor-pointer">Lepas</button>`;
+            } else if (isOwned) {
+                actionButtonHTML = `<button onclick="equipCostume('${costumeFile}')" class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 shadow cursor-pointer">Pakai</button>`;
+            } else {
+                const btnClass = canAfford
+                    ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
+                    : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
+                actionButtonHTML = `<button onclick="promptRedeemShopItem(${actualIndex})" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">${canAfford ? 'Beli' : 'Poin Kurang'}</button>`;
+            }
 
             html += `
-                <div class="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-xl">
-                    <div class="pr-2">
-                        <div class="text-xs md:text-sm font-bold text-white">${item.name}</div>
-                        <div class="flex items-center gap-1 mt-1">
-                            <img src="assets/poin.png" alt="Poin" class="w-3.5 h-3.5 object-contain coin-spin" />
-                            <span class="text-xs font-extrabold text-amber-400">${item.cost} Poin</span>
+                <div class="flex items-center justify-between p-3 bg-slate-800 border ${isEquipped ? 'border-emerald-400' : 'border-slate-700'} rounded-xl">
+                    <div class="flex items-center gap-2.5 pr-2">
+                        <div class="w-10 h-12 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0">
+                            <img src="assets/kostom/${costumeFile}" onerror="this.style.display='none'" class="h-full object-cover object-left-top" />
+                        </div>
+                        <div>
+                            <div class="text-xs md:text-sm font-bold text-white">${item.displayName} ${isEquipped ? '<span class="text-[10px] text-emerald-400">(Dipakai)</span>' : ''}</div>
+                            <div class="flex items-center gap-1 mt-1">
+                                ${isOwned 
+                                    ? `<span class="text-[11px] font-bold text-sky-400">${hasFullCostumes ? 'Terbuka (Full)' : 'Sudah Dimiliki'}</span>` 
+                                    : `<img src="assets/poin.png" alt="Poin" class="w-3.5 h-3.5 object-contain coin-spin" /><span class="text-xs font-extrabold text-amber-400">${item.cost} Poin</span>`
+                                }
+                            </div>
                         </div>
                     </div>
-                    <button onclick="promptRedeemShopItem(${idx})" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">
-                        ${canAfford ? 'Tukar' : 'Poin Kurang'}
-                    </button>
+                    ${actionButtonHTML}
                 </div>
             `;
         });
@@ -864,6 +958,20 @@ function renderShopItemsList() {
     modalContent.innerHTML = html;
 }
 
+window.equipCostume = function(costumeFile) {
+    equippedCostume = costumeFile;
+    saveEquippedCostumeToSheet(equippedCostume);
+    updateMyPositionToFirebase();
+    renderShopItemsList();
+};
+
+window.unequipCostume = function() {
+    equippedCostume = "";
+    saveEquippedCostumeToSheet("");
+    updateMyPositionToFirebase();
+    renderShopItemsList();
+};
+
 window.promptRedeemShopItem = function(itemIndex) {
     const item = currentShopItems[itemIndex];
     if (!item || playerPoints < item.cost) return;
@@ -871,7 +979,7 @@ window.promptRedeemShopItem = function(itemIndex) {
     pendingRedeemItem = item;
     const textElem = document.getElementById('buyConfirmText');
     if (textElem) {
-        textElem.innerHTML = `Tukarkan <strong class="text-amber-400">${item.cost} Poin</strong> untuk mendapatkan <strong class="text-white">${item.name}</strong>?`;
+        textElem.innerHTML = `Beli kostum <strong class="text-white">${item.displayName}</strong> seharga <strong class="text-amber-400">${item.cost} Poin</strong>?`;
     }
     const modal = document.getElementById('buyConfirmModal');
     if (modal) modal.classList.remove('hidden');
@@ -890,20 +998,34 @@ window.executeRedeemItem = function() {
 
     if (playerPoints < item.cost) return;
 
-    playerPoints -= item.cost;
-    // Update kolom E Sheet Login via Apps Script
-    savePlayerPointsToFirebase();
+    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
+    const costumeFile = resolveCostumeFileName(item.rawName, genderCode);
 
+    playerPoints -= item.cost;
+
+    if (!hasFullCostumes && !ownedCostumes.some(c => c.toLowerCase() === costumeFile.toLowerCase())) {
+        ownedCostumes.push(costumeFile);
+    }
+    equippedCostume = costumeFile;
+
+    if (currentUserAccount) {
+        currentUserAccount.points = playerPoints;
+        currentUserAccount.ownedCostumes = ownedCostumes;
+        currentUserAccount.equippedCostume = equippedCostume;
+        sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+    }
+
+    savePlayerPointsToFirebase();
+    updateMyPositionToFirebase();
     renderShopItemsList();
 
     const banner = document.getElementById('shopFeedbackBanner');
     if (banner) {
         banner.className = "mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center bg-emerald-950/90 border border-emerald-500 text-emerald-300";
-        banner.innerHTML = `✅ Berhasil menukarkan ${item.cost} Poin dengan <strong>${item.name}</strong>!`;
+        banner.innerHTML = `✅ Berhasil membeli & memakai kostum <strong>${item.displayName}</strong>!`;
         banner.classList.remove('hidden');
     }
 
-    // Simpan riwayat penukaran (redeemHistory) ke Google Apps Script
     if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
         fetch(APPS_SCRIPT_URL, {
             method: 'POST',
@@ -912,16 +1034,18 @@ window.executeRedeemItem = function() {
             body: JSON.stringify({
                 action: 'addRedeem',
                 player: playerCustomName,
-                item: item.name,
+                item: item.displayName,
+                costumeFile: costumeFile,
+                equipNow: true,
                 cost: item.cost,
                 remainingPoints: playerPoints,
                 timestamp: Date.now()
             })
-        }).catch(err => console.warn("Gagal simpan redeemHistory ke Apps Script:", err));
+        }).catch(err => console.warn("Gagal simpan transaksi kostum ke Apps Script:", err));
     }
 
     if (typeof window.sendFirebaseChat === 'function') {
-        window.sendFirebaseChat("Warung", `🛍️ ${playerCustomName} baru saja menukarkan ${item.cost} Poin dengan "${item.name}"!`);
+        window.sendFirebaseChat("Warung", `👕 ${playerCustomName} baru saja membeli kostum "${item.displayName}"!`);
     }
 };
 
@@ -977,8 +1101,16 @@ async function triggerInteraction() {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                 if (cols[0]) {
                     const itemCost = parseInt((cols[1] || "0").replace(/[^0-9]/g, ''), 10);
+                    const cleanDisplay = cols[0]
+                        .replace(/^(pr_|lk_)/i, '')
+                        .replace(/\.png$/i, '')
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, l => l.toUpperCase());
+
                     currentShopItems.push({
-                        name: cols[0],
+                        rawName: cols[0],
+                        name: cleanDisplay,
+                        displayName: cleanDisplay,
                         cost: isNaN(itemCost) ? 0 : itemCost
                     });
                 }
@@ -1177,16 +1309,18 @@ function selectModalGender(g) {
 function saveCharacterEdits() {
     const newName = document.getElementById('editNameInput').value.trim();
     if (newName) playerCustomName = newName;
-    if (tempModalGender) selectedGender = tempModalGender;
+    if (tempModalGender && selectedGender !== 'admin') selectedGender = tempModalGender;
 
     if (currentUserAccount) {
         currentUserAccount.name = playerCustomName;
-        currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
+        if (selectedGender !== 'admin') {
+            currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
+        }
         sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
     }
 
     document.getElementById('charNameDisplay').innerText = playerCustomName;
-    document.getElementById('avatarBadge').innerText = (selectedGender === 'female') ? '🧕' : '👦';
+    document.getElementById('avatarBadge').innerText = (selectedGender === 'admin') ? '👑' : ((selectedGender === 'female') ? '🧕' : '👦');
     closeEditCharacterModal();
     updateMyPositionToFirebase();
 }
