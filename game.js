@@ -1,5 +1,5 @@
 // ==========================================
-// LINK GOOGLE APPS SCRIPT (LETAKKAN PALING ATAS)
+// LINK GOOGLE APPS SCRIPT
 // ==========================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeb8P7lsmjdHT26Kbb0YQn9HA1I1PPwqDeCeBev2Txe3QAk_fgB7PORZ1Or-V3U5U4/exec";
 
@@ -35,25 +35,32 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     db = firebase.database();
 }
 
+// Daftar seluruh file kostum yang tersedia di folder assets/kostom/
+const ALL_AVAILABLE_COSTUMES = [
+    "lk_batik.png",
+    "lk_damkar.png",
+    "lk_pjok.png",
+    "lk_pramuka.png",
+    "pr_batik.png",
+    "pr_perawat.png",
+    "pr_pjok.png",
+    "pr_pramuka.png"
+];
+
 let USER_DATABASE = [
-    { name: "Admin", gender: "A", role: "ADMIN", status: "Full", points: 100, password: "123", hasFullCostumes: true, ownedCostumes: [], equippedCostume: "" }, 
-    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }, 
-    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }
+    { name: "Admin", gender: "A", role: "ADMIN", status: "Full", points: 100, tickets: 10, password: "123", hasFullCostumes: true, ownedCostumes: [], equippedCostume: "" }, 
+    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, tickets: 3, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }, 
+    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50, tickets: 3, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }
 ];
 
 let isDatabaseReady = false;
 let playerPoints = 0;
+let playerTickets = 0;
 
 // Variabel Sistem Kostum (Kolom H & Kolom I Sheet Login)
 let hasFullCostumes = false;
 let ownedCostumes = [];
 let equippedCostume = "";
-
-const loadingGif = new Image();
-loadingGif.src = 'assets/loading.gif';
-
-const poinIconImg = new Image();
-poinIconImg.src = 'assets/poin.png';
 
 function showLoginLoading(text) {
     const popup = document.getElementById('loginLoadingPopup');
@@ -67,9 +74,6 @@ function hideLoginLoading() {
     if (popup) popup.classList.add('hidden');
 }
 
-// ==========================================
-// FUNGSI INTIP & INGAT PASSWORD (LOCALSTORAGE)
-// ==========================================
 window.togglePasswordVisibility = function() {
     const passInput = document.getElementById('loginPassword');
     const icon = document.getElementById('togglePassIcon');
@@ -94,43 +98,53 @@ function loadSavedCredentials() {
         if (userEl && saved.username) userEl.value = saved.username;
         if (passEl && saved.password) passEl.value = saved.password;
         if (remEl) remEl.checked = true;
-    } catch (e) {
-        console.warn("Gagal memuat password tersimpan:", e);
-    }
+    } catch (e) {}
 }
 
 // ==========================================
-// SISTEM POIN & TAMPILAN POIN (KOLOM E SPREADSHEET)
+// SINKRONISASI POIN (KOLOM E) & TIKET (KOLOM G)
 // ==========================================
 function updatePointsDisplay() {
     const headerPoin = document.getElementById('headerPoinDisplay');
     const modalPoin = document.getElementById('modalPoinDisplay');
     const shopPoin = document.getElementById('shopPoinBalance');
+    const modalTiket = document.getElementById('modalTiketDisplay');
+    const headerTiket = document.getElementById('headerTiketDisplay');
 
     if (headerPoin) headerPoin.innerText = playerPoints;
     if (modalPoin) modalPoin.innerText = playerPoints;
     if (shopPoin) shopPoin.innerText = playerPoints;
+    if (modalTiket) modalTiket.innerText = playerTickets;
+    if (headerTiket) headerTiket.innerText = playerTickets;
 }
 
-async function initPlayerPointsSync(sheetDefaultPoints) {
+async function initPlayerPointsSync(sheetDefaultPoints, sheetDefaultTickets = 0) {
     playerPoints = parseInt(sheetDefaultPoints, 10) || 0;
+    playerTickets = parseInt(sheetDefaultTickets, 10) || 0;
     updatePointsDisplay();
 
     if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http') && playerCustomName) {
         try {
-            const res = await fetch(`${APPS_SCRIPT_URL}?action=getPlayerPoints&player=${encodeURIComponent(playerCustomName)}`);
-            const data = await res.json();
-            if (data && data.status === 'success' && typeof data.points === 'number') {
-                playerPoints = data.points;
-                updatePointsDisplay();
-                if (currentUserAccount) {
-                    currentUserAccount.points = playerPoints;
-                    sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
-                }
+            const [resPoin, resTiket] = await Promise.all([
+                fetch(`${APPS_SCRIPT_URL}?action=getPlayerPoints&player=${encodeURIComponent(playerCustomName)}`),
+                fetch(`${APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(playerCustomName)}`)
+            ]);
+            const dataPoin = await resPoin.json();
+            const dataTiket = await resTiket.json();
+
+            if (dataPoin && dataPoin.status === 'success' && typeof dataPoin.points === 'number') {
+                playerPoints = dataPoin.points;
             }
-        } catch (err) {
-            console.warn("Menggunakan poin CSV lokal karena gagal ambil dari Apps Script:", err);
-        }
+            if (dataTiket && dataTiket.status === 'success' && typeof dataTiket.tickets === 'number') {
+                playerTickets = dataTiket.tickets;
+            }
+            updatePointsDisplay();
+            if (currentUserAccount) {
+                currentUserAccount.points = playerPoints;
+                currentUserAccount.tickets = playerTickets;
+                sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+            }
+        } catch (err) {}
     }
 }
 
@@ -154,13 +168,21 @@ function savePlayerPointsToFirebase() {
                 points: playerPoints,
                 updatedAt: Date.now()
             })
-        }).catch(err => console.warn("Gagal simpan poin ke Kolom E Spreadsheet:", err));
+        }).catch(() => {});
     }
 }
 
 // ==========================================
-// SISTEM KOSTUM (KOLOM H & KOLOM I SPREADSHEET)
+// HELPER KOSTUM & PENYIMPANAN KE KOLOM I
 // ==========================================
+function formatCostumeDisplayName(fileName) {
+    return String(fileName || "")
+        .replace(/^(pr_|lk_)/i, '')
+        .replace(/\.png$/i, '')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
 function resolveCostumeFileName(rawItemName, genderCode) {
     const clean = rawItemName.trim().toLowerCase().replace(/\s+/g, '_');
     if (clean.startsWith('pr_') || clean.startsWith('lk_')) {
@@ -188,37 +210,25 @@ function saveEquippedCostumeToSheet(costumeFileName) {
                 player: playerCustomName,
                 equippedCostume: costumeFileName || ""
             })
-        }).catch(err => console.warn("Gagal update Kolom I Spreadsheet:", err));
+        }).catch(() => {});
     }
 }
 
-// ==========================================
-// KONTROL FULLSCREEN & KUNCI LANDSCAPE
-// ==========================================
 window.forceFullscreenAndLandscape = async function() {
     const docEl = document.documentElement;
-
     try {
         const requestFS = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
         if (requestFS && !document.fullscreenElement && !document.webkitFullscreenElement) {
             await requestFS.call(docEl);
         }
-    } catch (err) {
-        console.warn("Fullscreen dibatasi browser:", err);
-    }
-
+    } catch (err) {}
     try {
         if (screen.orientation && screen.orientation.lock) {
             await screen.orientation.lock('landscape');
         }
-    } catch (err) {
-        console.warn("Orientation lock tidak didukung perangkat ini:", err);
-    }
+    } catch (err) {}
 };
 
-// ==========================================
-// FUNGSI SIMPAN SESI & BUKA HALAMAN HTML LOKAL
-// ==========================================
 window.navigateToLocalHtml = function(targetHtmlUrl) {
     if (!targetHtmlUrl) return;
     if (currentUserAccount) {
@@ -227,6 +237,7 @@ window.navigateToLocalHtml = function(targetHtmlUrl) {
             name: playerCustomName,
             gender: (selectedGender === 'admin') ? 'A' : ((selectedGender === 'female') ? 'P' : 'L'),
             points: playerPoints,
+            tickets: playerTickets,
             hasFullCostumes: hasFullCostumes,
             ownedCostumes: ownedCostumes,
             equippedCostume: equippedCostume
@@ -244,7 +255,6 @@ window.navigateToLocalHtml = function(targetHtmlUrl) {
 async function fetchSpreadsheetUsers() {
     const errorMsg = document.getElementById('loginErrorMsg');
     if (errorMsg) errorMsg.classList.add('hidden');
-    
     showLoginLoading("Mengunduh data akun...");
 
     try {
@@ -259,18 +269,23 @@ async function fetchSpreadsheetUsers() {
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
                 if (cols[0] && cols[0].toLowerCase() !== "nama") {
+                    const gCode = (cols[1] || "L").toUpperCase();
                     const parsedPoints = parseInt((cols[4] || "0").replace(/[^0-9-]/g, ''), 10);
-                    const rawColH = (cols[7] || "").trim(); // Kolom H: daftar kostum atau "full"
-                    const rawColI = (cols[8] || "").trim(); // Kolom I: kostum aktif saat login
-                    const isFullCostume = rawColH.toLowerCase() === 'full';
+                    const parsedTickets = parseInt((cols[6] || "0").replace(/[^0-9-]/g, ''), 10); // Kolom G: Tiket
+                    const rawColH = (cols[7] || "").trim(); // Kolom H: Kostum dimiliki / "full"
+                    const rawColI = (cols[8] || "").trim(); // Kolom I: Kostum dipakai saat login
+
+                    // Jika Kolom B = 'A' ATAU Kolom H = 'full', semua kostum terbuka
+                    const isFullCostume = (gCode === 'A') || (rawColH.toLowerCase() === 'full');
 
                     fetchedUsers.push({ 
                         name: cols[0], 
-                        gender: (cols[1] || "L").toUpperCase(), // Kolom B: A / P / L
-                        role: (cols[2] || "SISWA").toUpperCase(), // Kolom C
-                        status: cols[3] || "User", // Kolom D
-                        points: isNaN(parsedPoints) ? 0 : parsedPoints, // Kolom E
-                        password: cols[5] || "", // Kolom F
+                        gender: gCode,
+                        role: (cols[2] || "SISWA").toUpperCase(),
+                        status: cols[3] || "User",
+                        points: isNaN(parsedPoints) ? 0 : parsedPoints,
+                        password: cols[5] || "",
+                        tickets: isNaN(parsedTickets) ? 0 : parsedTickets,
                         hasFullCostumes: isFullCostume,
                         ownedCostumes: isFullCostume 
                             ? [] 
@@ -279,15 +294,11 @@ async function fetchSpreadsheetUsers() {
                     });
                 }
             }
-            if (fetchedUsers.length > 0) {
-                USER_DATABASE = fetchedUsers;
-            }
+            if (fetchedUsers.length > 0) USER_DATABASE = fetchedUsers;
         }
-        
         isDatabaseReady = true;
         hideLoginLoading();
     } catch (err) { 
-        console.warn("Gagal memuat Spreadsheet, menggunakan Local DB fallback.", err); 
         isDatabaseReady = true;
         hideLoginLoading();
     }
@@ -321,7 +332,6 @@ function setupInactivityListeners() {
 
 function initFirebaseSync() {
     if (!db || !playerCustomName) return;
-
     const safeKey = playerCustomName.replace(/[.#$\[\]]/g, "_");
     myPlayerRef = db.ref('players/' + safeKey);
 
@@ -345,13 +355,9 @@ function initFirebaseSync() {
     });
 }
 
-// ==========================================
-// SISTEM CHAT REALTIME (FIREBASE)
-// ==========================================
 function addChatMessage(sender, text, isSelf) {
     const container = document.getElementById('chatMessages');
     if (!container) return;
-
     const line = document.createElement('div');
     line.className = 'leading-snug break-words';
     const nameColor = isSelf ? 'text-yellow-400' : (sender === 'Sistem' || sender === 'Ruang Kelas' || sender === 'Warung' ? 'text-emerald-400' : 'text-sky-300');
@@ -372,18 +378,14 @@ function handleChatSubmit(e) {
 
 function initFirebaseChatSync() {
     if (!db) return;
-
     const chatMessagesContainer = document.getElementById('chatMessages');
     if (chatMessagesContainer) chatMessagesContainer.innerHTML = '';
 
     const otherList = Object.values(window.otherPlayers || {});
-    
     if (otherList.length === 0) {
         db.ref('lastActiveTime').once('value', (snapshot) => {
             const lastActive = snapshot.val();
-            const TEN_MINUTES_MS = 10 * 60 * 1000;
-
-            if (lastActive && (Date.now() - lastActive > TEN_MINUTES_MS)) {
+            if (lastActive && (Date.now() - lastActive > 10 * 60 * 1000)) {
                 db.ref('chats').remove();
             }
             startListeningChat();
@@ -395,24 +397,18 @@ function initFirebaseChatSync() {
 
 function startListeningChat() {
     if (chatRefQuery) chatRefQuery.off();
-
     const loginTimestamp = Date.now() - 1000;
     chatRefQuery = db.ref('chats').orderByChild('timestamp').startAt(loginTimestamp);
-    
     chatRefQuery.on('child_added', (snapshot) => {
         const msgData = snapshot.val();
         if (!msgData || !msgData.sender || !msgData.text) return;
-
-        const isSelf = (msgData.sender === playerCustomName);
-        addChatMessage(msgData.sender, msgData.text, isSelf);
+        addChatMessage(msgData.sender, msgData.text, msgData.sender === playerCustomName);
     });
 }
 
 window.sendFirebaseChat = function(senderName, messageText) {
     if (!db || !messageText) return;
-    
-    const chatRef = db.ref('chats');
-    chatRef.push({
+    db.ref('chats').push({
         sender: senderName || playerCustomName || "Anonim",
         text: messageText,
         timestamp: Date.now()
@@ -425,14 +421,9 @@ function updateOnlinePlayersList(otherPlayersData) {
     if (!listElem) return;
 
     const otherList = Object.values(otherPlayersData || {});
-    const totalOnline = otherList.length + 1;
-
-    if (onlineCountText) {
-        onlineCountText.innerText = `${totalOnline} Online`;
-    }
+    if (onlineCountText) onlineCountText.innerText = `${otherList.length + 1} Online`;
 
     listElem.innerHTML = '';
-    
     const selfBadge = selectedGender === 'admin' ? '👑' : (selectedGender === 'female' ? '🧕' : '👦');
     const selfItem = document.createElement('div');
     selfItem.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800 border border-yellow-400/50';
@@ -451,11 +442,9 @@ function updateOnlinePlayersList(otherPlayersData) {
     otherList.forEach(p => {
         const item = document.createElement('div');
         item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800/80 border border-slate-700';
-        
         const locName = (typeof MAP_CONFIGS !== 'undefined' && MAP_CONFIGS[p.location]) 
             ? MAP_CONFIGS[p.location].name.replace('Lokasi : ', '') 
             : 'Sekolah';
-
         const pBadge = p.gender === 'admin' ? '👑' : (p.gender === 'female' ? '🧕' : '👦');
         const kickButtonHTML = isAdminUser 
             ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
@@ -475,51 +464,37 @@ function updateOnlinePlayersList(otherPlayersData) {
     });
 }
 
-// ==========================================
-// POP-UP KONFIRMASI & INFO KICK
-// ==========================================
 let pendingKickTargetName = null;
-
 window.kickPlayerByAdmin = function(targetPlayerName) {
     if (!isAdminUser || !db || !targetPlayerName) return;
-
     pendingKickTargetName = targetPlayerName;
     const textElem = document.getElementById('kickConfirmText');
-    if (textElem) {
-        textElem.innerHTML = `Apakah Anda yakin ingin mengeluarkan <strong class="text-yellow-400">${targetPlayerName}</strong> dari game?`;
-    }
+    if (textElem) textElem.innerHTML = `Apakah Anda yakin ingin mengeluarkan <strong class="text-yellow-400">${targetPlayerName}</strong> dari game?`;
     const modal = document.getElementById('kickConfirmModal');
     if (modal) modal.classList.remove('hidden');
 };
-
 window.closeKickConfirmModal = function() {
     pendingKickTargetName = null;
     const modal = document.getElementById('kickConfirmModal');
     if (modal) modal.classList.add('hidden');
 };
-
 window.executeKickPlayer = function() {
     if (!isAdminUser || !db || !pendingKickTargetName) return;
-
     const targetPlayerName = pendingKickTargetName;
     closeKickConfirmModal();
-
     const safeKey = targetPlayerName.replace(/[.#$\[\]]/g, "_");
     db.ref('kickedPlayers/' + safeKey).set(true);
     db.ref('players/' + safeKey).remove();
-
     if (typeof window.sendFirebaseChat === 'function') {
         window.sendFirebaseChat("Sistem", `📢 ${targetPlayerName} telah dikeluarkan dari game oleh Admin ${playerCustomName}.`);
     }
 };
-
 function showKickedInfoModal(message) {
     const textElem = document.getElementById('kickedInfoText');
     if (textElem && message) textElem.innerText = message;
     const modal = document.getElementById('kickedInfoModal');
     if (modal) modal.classList.remove('hidden');
 }
-
 window.closeKickedInfoModal = function() {
     const modal = document.getElementById('kickedInfoModal');
     if (modal) modal.classList.add('hidden');
@@ -545,19 +520,15 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     playerCustomName = matchedUser.name;
 
     const gCode = (matchedUser.gender || 'L').toUpperCase().trim();
-    if (gCode === 'A') {
-        selectedGender = 'admin';
-    } else if (gCode === 'P') {
-        selectedGender = 'female';
-    } else {
-        selectedGender = 'male';
-    }
+    if (gCode === 'A') selectedGender = 'admin';
+    else if (gCode === 'P') selectedGender = 'female';
+    else selectedGender = 'male';
 
     playerRole = matchedUser.role || 'SISWA';
     isAdminUser = (gCode === 'A' || matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
 
-    // Inisialisasi status kostum dari Kolom H & Kolom I
-    hasFullCostumes = Boolean(matchedUser.hasFullCostumes);
+    // Jika Kolom B = 'A' atau Kolom H = 'full', semua kostum lk_ dan pr_ terbuka
+    hasFullCostumes = (gCode === 'A') || Boolean(matchedUser.hasFullCostumes);
     ownedCostumes = Array.isArray(matchedUser.ownedCostumes) ? [...matchedUser.ownedCostumes] : [];
     equippedCostume = (matchedUser.equippedCostume || "").trim();
 
@@ -566,10 +537,9 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     }
 
     sessionStorage.setItem('activeUserSession', JSON.stringify(matchedUser));
-    initPlayerPointsSync(matchedUser.points);
+    initPlayerPointsSync(matchedUser.points, matchedUser.tickets || 0);
 
     document.body.classList.add('game-active');
-
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('gameContainer').classList.remove('hidden');
     document.getElementById('charNameDisplay').innerText = playerCustomName;
@@ -601,7 +571,6 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
 
 function handleLogin(e) {
     if (e && e.preventDefault) e.preventDefault();
-    
     const inputElem = document.getElementById('loginUsername');
     const passElem = document.getElementById('loginPassword');
     const rememberElem = document.getElementById('rememberPassword');
@@ -637,17 +606,13 @@ function handleLogin(e) {
     }
 
     if (rememberElem && rememberElem.checked) {
-        localStorage.setItem('openworld_saved_login', JSON.stringify({
-            username: inputUsername,
-            password: inputPassword
-        }));
+        localStorage.setItem('openworld_saved_login', JSON.stringify({ username: inputUsername, password: inputPassword }));
     } else {
         localStorage.removeItem('openworld_saved_login');
     }
 
     if (errorMsg) errorMsg.classList.add('hidden');
     showLoginLoading("Memasuki dunia game...");
-
     forceFullscreenAndLandscape();
 
     setTimeout(() => {
@@ -656,7 +621,7 @@ function handleLogin(e) {
     }, 600);
 }
 
-function switchWorldLocation(targetLocId, showNotification = true) {
+function switchWorldLocation(targetLocId) {
     currentWorldLocation = targetLocId;
     if (typeof MAP_CONFIGS !== 'undefined' && MAP_CONFIGS[targetLocId]) {
         currentBuildings = MAP_CONFIGS[targetLocId].buildings;
@@ -667,17 +632,10 @@ function switchWorldLocation(targetLocId, showNotification = true) {
         }
     }
 
-    if (targetLocId === 3 && typeof initKelasSpawn === 'function') {
-        initKelasSpawn(player);
-    } else if (targetLocId === 2 && typeof initPantaiSpawn === 'function') {
-        initPantaiSpawn(player);
-    } else if (targetLocId === 2) {
-        player.x = 240;
-        player.y = 240;
-    } else {
-        player.x = 390;
-        player.y = 380;
-    }
+    if (targetLocId === 3 && typeof initKelasSpawn === 'function') initKelasSpawn(player);
+    else if (targetLocId === 2 && typeof initPantaiSpawn === 'function') initPantaiSpawn(player);
+    else if (targetLocId === 2) { player.x = 240; player.y = 240; }
+    else { player.x = 390; player.y = 380; }
 
     player.targetX = null; player.targetY = null; player.isMovingToTarget = false;
     if (typeof generateTrees === 'function') generateTrees();
@@ -685,7 +643,6 @@ function switchWorldLocation(targetLocId, showNotification = true) {
 }
 
 let isCanvasListenerAdded = false;
-
 function setupGameEvents() {
     window.addEventListener('keydown', (e) => {
         if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
@@ -697,39 +654,27 @@ function setupGameEvents() {
     const gameCanvasElem = document.getElementById('gameCanvas');
     if (gameCanvasElem && !isCanvasListenerAdded) {
         isCanvasListenerAdded = true;
-        const handleCanvasPointer = (e) => {
+        gameCanvasElem.addEventListener('click', (e) => {
             if (!isGameStarted) return;
             if (e.target.closest('#psAnalogStick') || e.target.closest('#btnInteract') || e.target.closest('#miniMapBtn')) return;
-            
             const rect = gameCanvasElem.getBoundingClientRect();
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            if (clientX === undefined || clientY === undefined) return;
-
             const currentZoom = getAdaptiveZoom();
             const viewW = gameCanvasElem.width / currentZoom;
             const viewH = gameCanvasElem.height / currentZoom;
-
             const camX = Math.max(0, Math.min(MAP_WIDTH - viewW, player.x - viewW / 2));
             const camY = Math.max(0, Math.min(MAP_HEIGHT - viewH, player.y - viewH / 2));
 
-            const canvasX = (clientX - rect.left) / currentZoom;
-            const canvasY = (clientY - rect.top) / currentZoom;
-
-            player.targetX = camX + canvasX;
-            player.targetY = camY + canvasY;
+            player.targetX = camX + ((e.clientX - rect.left) / currentZoom);
+            player.targetY = camY + ((e.clientY - rect.top) / currentZoom);
             player.isMovingToTarget = true;
-
             if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
-        };
-        gameCanvasElem.addEventListener('click', handleCanvasPointer);
+        });
     }
-
     setupTouchAnalogStick(); 
     setupInactivityListeners(); 
 }
 
-let isMiniMapOpen = false, miniMapTimer = null, userZoomModifier = 0;
+let isMiniMapOpen = false, userZoomModifier = 0;
 const MAP_WIDTH = 2000, MAP_HEIGHT = 1200;
 
 function changeZoom(delta) { userZoomModifier = Math.max(-0.4, Math.min(0.8, userZoomModifier + delta)); }
@@ -739,17 +684,14 @@ function getAdaptiveZoom() {
     return Math.max(0.4, Math.min(2.2, baseZoom + userZoomModifier));
 }
 
-// ==========================================
-// GAME LOOP
-// ==========================================
 function gameLoop() {
     if (!isGameStarted) return;
     const canvas = document.getElementById('gameCanvas');
-    if (!canvas || !canvas.parentElement) return;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    canvas.width = canvas.parentElement.clientWidth || window.innerWidth; 
-    canvas.height = canvas.parentElement.clientHeight || window.innerHeight; 
+    canvas.width = (canvas.parentElement && canvas.parentElement.clientWidth) ? canvas.parentElement.clientWidth : window.innerWidth; 
+    canvas.height = (canvas.parentElement && canvas.parentElement.clientHeight) ? canvas.parentElement.clientHeight : window.innerHeight; 
 
     const prevX = player.x;
     const prevY = player.y;
@@ -757,17 +699,9 @@ function gameLoop() {
     updateGame();
 
     if (typeof isCollidingWithMap === 'function') {
-        const nextX = player.x;
-        const nextY = player.y;
-
-        if (isCollidingWithMap(nextX, prevY)) {
-            player.x = prevX;
-            player.isMovingToTarget = false;
-        }
-        if (isCollidingWithMap(player.x, nextY)) {
-            player.y = prevY;
-            player.isMovingToTarget = false;
-        }
+        const nextX = player.x, nextY = player.y;
+        if (isCollidingWithMap(nextX, prevY)) { player.x = prevX; player.isMovingToTarget = false; }
+        if (isCollidingWithMap(player.x, nextY)) { player.y = prevY; player.isMovingToTarget = false; }
     }
 
     updateMyPositionToFirebase();
@@ -780,7 +714,14 @@ function gameLoop() {
     let cameraY = Math.round(Math.max(0, Math.min(MAP_HEIGHT - viewHeight, player.y - viewHeight / 2)));
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (typeof drawMap === 'function') drawMap(cameraX, cameraY, currentZoomScale);
+
+    if (typeof drawMap === 'function') {
+        drawMap(cameraX, cameraY, currentZoomScale);
+    } else {
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
     if (typeof drawCollisionDebug === 'function') drawCollisionDebug(ctx, cameraX, cameraY, currentZoomScale);
 
     const activeWalkTimer = typeof walkTimer !== 'undefined' ? walkTimer : (window.walkTimer || 0);
@@ -832,7 +773,6 @@ function gameLoop() {
     }
 
     if (isMiniMapOpen) renderMiniMap();
-
     requestAnimationFrame(gameLoop);
 }
 
@@ -842,8 +782,7 @@ function setupTouchAnalogStick() {
     let isDragging = false, centerPos = { x: 0, y: 0 }, maxRadius = 35;
 
     const handleStart = (e) => { 
-        e.preventDefault(); 
-        isDragging = true; 
+        e.preventDefault(); isDragging = true; 
         const rect = stick.getBoundingClientRect(); 
         centerPos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }; 
         maxRadius = rect.width * 0.36;
@@ -856,16 +795,13 @@ function setupTouchAnalogStick() {
         let deltaX = clientX - centerPos.x, deltaY = clientY - centerPos.y, dist = Math.hypot(deltaX, deltaY);
         if (dist > maxRadius) { deltaX = (deltaX / dist) * maxRadius; deltaY = (deltaY / dist) * maxRadius; }
         knob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-
         keys.ArrowLeft = deltaX < -6; keys.ArrowRight = deltaX > 6; 
         keys.ArrowUp = deltaY < -6; keys.ArrowDown = deltaY > 6;
         player.isMovingToTarget = false;
-
         if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
     };
     const handleEnd = () => { 
-        if (!isDragging) return; 
-        isDragging = false; 
+        if (!isDragging) return; isDragging = false; 
         knob.style.transform = `translate(0px, 0px)`; 
         keys.ArrowLeft = false; keys.ArrowRight = false; keys.ArrowUp = false; keys.ArrowDown = false; 
     };
@@ -879,7 +815,7 @@ function setupTouchAnalogStick() {
 }
 
 // ==========================================
-// INTERAKSI DENGAN SPREADSHEET BANGUNAN & WARUNG KOSTUM
+// TOKO / WARUNG: KHUSUS TEMPAT BELI KOSTUM
 // ==========================================
 let currentShopItems = [];
 let pendingRedeemItem = null;
@@ -889,6 +825,7 @@ function renderShopItemsList() {
     if (!modalContent) return;
 
     const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
+    const isAdminGender = (genderCode === 'A');
 
     let html = `
         <div class="flex items-center justify-between bg-amber-950/80 border border-amber-500/40 px-3.5 py-2 rounded-xl mb-3">
@@ -898,53 +835,65 @@ function renderShopItemsList() {
                 <span id="shopPoinBalance" class="text-sm font-extrabold text-amber-400">${playerPoints}</span>
             </div>
         </div>
-        ${hasFullCostumes ? `<div class="mb-2.5 px-3 py-1.5 rounded-xl bg-indigo-950/90 border border-indigo-400/50 text-[11px] font-bold text-indigo-200 text-center">✨ Akun VIP (FULL): Semua kostum terbuka!</div>` : ''}
+        <div class="mb-2.5 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-slate-300 text-center">
+            💡 Kostum yang sudah dibeli dapat dipakai melalui menu <strong>Profil (ikon pensil)</strong>.
+        </div>
         <div id="shopFeedbackBanner" class="hidden mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center"></div>
     `;
 
-    const visibleItems = currentShopItems.filter(item => {
+    // Bangun daftar item toko: jika Kolom B = 'A', tampilkan semua varian lk_ & pr_
+    let expandedShopItems = [];
+    currentShopItems.forEach((item, idx) => {
         const lowerName = item.rawName.toLowerCase();
-        if (lowerName.startsWith('pr_') && genderCode !== 'P') return false;
-        if (lowerName.startsWith('lk_') && genderCode !== 'L') return false;
-        return true;
+        const hasExplicitPrefix = lowerName.startsWith('pr_') || lowerName.startsWith('lk_');
+
+        if (isAdminGender) {
+            if (hasExplicitPrefix) {
+                const file = lowerName.endsWith('.png') ? lowerName : `${lowerName}.png`;
+                const tag = lowerName.startsWith('pr_') ? ' (PR)' : ' (LK)';
+                expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: file, labelName: item.displayName + tag });
+            } else {
+                const baseClean = lowerName.replace(/\.png$/i, '').replace(/\s+/g, '_');
+                expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: `lk_${baseClean}.png`, labelName: `${item.displayName} (LK)` });
+                expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: `pr_${baseClean}.png`, labelName: `${item.displayName} (PR)` });
+            }
+        } else {
+            if (lowerName.startsWith('pr_') && genderCode !== 'P') return;
+            if (lowerName.startsWith('lk_') && genderCode !== 'L') return;
+            const file = resolveCostumeFileName(item.rawName, genderCode);
+            expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: file, labelName: item.displayName });
+        }
     });
 
-    if (visibleItems.length === 0) {
-        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada kostum yang tersedia untuk karakter Anda saat ini.</div>`;
+    if (expandedShopItems.length === 0) {
+        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada kostum yang dijual di Warung saat ini.</div>`;
     } else {
         html += `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left pr-1">`;
-        visibleItems.forEach((item) => {
-            const actualIndex = currentShopItems.indexOf(item);
-            const costumeFile = resolveCostumeFileName(item.rawName, genderCode);
-            const isOwned = hasFullCostumes || ownedCostumes.some(c => c.toLowerCase() === costumeFile.toLowerCase());
-            const isEquipped = equippedCostume.toLowerCase() === costumeFile.toLowerCase();
-            const canAfford = playerPoints >= item.cost;
+        expandedShopItems.forEach((entry) => {
+            const isOwned = hasFullCostumes || ownedCostumes.some(c => c.toLowerCase() === entry.costumeFile.toLowerCase());
+            const canAfford = playerPoints >= entry.cost;
 
             let actionButtonHTML = '';
-            if (isEquipped) {
-                actionButtonHTML = `<button onclick="unequipCostume()" class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow cursor-pointer">Lepas</button>`;
-            } else if (isOwned) {
-                actionButtonHTML = `<button onclick="equipCostume('${costumeFile}')" class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 shadow cursor-pointer">Pakai</button>`;
+            if (isOwned) {
+                actionButtonHTML = `<span class="px-3 py-1.5 rounded-xl font-extrabold text-[11px] bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 shrink-0">Sudah Dimiliki</span>`;
             } else {
                 const btnClass = canAfford
                     ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
                     : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
-                actionButtonHTML = `<button onclick="promptRedeemShopItem(${actualIndex})" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">${canAfford ? 'Beli' : 'Poin Kurang'}</button>`;
+                actionButtonHTML = `<button onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${entry.labelName.replace(/'/g, "\\'")}')" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">${canAfford ? 'Beli' : 'Poin Kurang'}</button>`;
             }
 
             html += `
-                <div class="flex items-center justify-between p-3 bg-slate-800 border ${isEquipped ? 'border-emerald-400' : 'border-slate-700'} rounded-xl">
+                <div class="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-xl">
                     <div class="flex items-center gap-2.5 pr-2">
                         <div class="w-10 h-12 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0">
-                            <img src="assets/kostom/${costumeFile}" onerror="this.style.display='none'" class="h-full object-cover object-left-top" />
+                            <img src="assets/kostom/${entry.costumeFile}" onerror="this.style.display='none'" class="h-full object-cover object-left-top" />
                         </div>
                         <div>
-                            <div class="text-xs md:text-sm font-bold text-white">${item.displayName} ${isEquipped ? '<span class="text-[10px] text-emerald-400">(Dipakai)</span>' : ''}</div>
+                            <div class="text-xs md:text-sm font-bold text-white">${entry.labelName}</div>
                             <div class="flex items-center gap-1 mt-1">
-                                ${isOwned 
-                                    ? `<span class="text-[11px] font-bold text-sky-400">${hasFullCostumes ? 'Terbuka (Full)' : 'Sudah Dimiliki'}</span>` 
-                                    : `<img src="assets/poin.png" alt="Poin" class="w-3.5 h-3.5 object-contain coin-spin" /><span class="text-xs font-extrabold text-amber-400">${item.cost} Poin</span>`
-                                }
+                                <img src="assets/poin.png" alt="Poin" class="w-3.5 h-3.5 object-contain coin-spin" />
+                                <span class="text-xs font-extrabold text-amber-400">${entry.cost} Poin</span>
                             </div>
                         </div>
                     </div>
@@ -954,33 +903,20 @@ function renderShopItemsList() {
         });
         html += `</div>`;
     }
-
     modalContent.innerHTML = html;
 }
 
-window.equipCostume = function(costumeFile) {
-    equippedCostume = costumeFile;
-    saveEquippedCostumeToSheet(equippedCostume);
-    updateMyPositionToFirebase();
-    renderShopItemsList();
-};
-
-window.unequipCostume = function() {
-    equippedCostume = "";
-    saveEquippedCostumeToSheet("");
-    updateMyPositionToFirebase();
-    renderShopItemsList();
-};
-
-window.promptRedeemShopItem = function(itemIndex) {
+window.promptRedeemShopItem = function(itemIndex, specificCostumeFile, specificLabelName) {
     const item = currentShopItems[itemIndex];
     if (!item || playerPoints < item.cost) return;
 
-    pendingRedeemItem = item;
+    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
+    const targetFile = specificCostumeFile || resolveCostumeFileName(item.rawName, genderCode);
+    const targetLabel = specificLabelName || item.displayName;
+
+    pendingRedeemItem = { ...item, targetFile, targetLabel };
     const textElem = document.getElementById('buyConfirmText');
-    if (textElem) {
-        textElem.innerHTML = `Beli kostum <strong class="text-white">${item.displayName}</strong> seharga <strong class="text-amber-400">${item.cost} Poin</strong>?`;
-    }
+    if (textElem) textElem.innerHTML = `Beli kostum <strong class="text-white">${targetLabel}</strong> seharga <strong class="text-amber-400">${item.cost} Poin</strong>?`;
     const modal = document.getElementById('buyConfirmModal');
     if (modal) modal.classList.remove('hidden');
 };
@@ -995,34 +931,28 @@ window.executeRedeemItem = function() {
     if (!pendingRedeemItem) return;
     const item = pendingRedeemItem;
     closeBuyConfirmModal();
-
     if (playerPoints < item.cost) return;
 
-    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
-    const costumeFile = resolveCostumeFileName(item.rawName, genderCode);
+    const costumeFile = item.targetFile;
 
     playerPoints -= item.cost;
-
     if (!hasFullCostumes && !ownedCostumes.some(c => c.toLowerCase() === costumeFile.toLowerCase())) {
         ownedCostumes.push(costumeFile);
     }
-    equippedCostume = costumeFile;
 
     if (currentUserAccount) {
         currentUserAccount.points = playerPoints;
         currentUserAccount.ownedCostumes = ownedCostumes;
-        currentUserAccount.equippedCostume = equippedCostume;
         sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
     }
 
     savePlayerPointsToFirebase();
-    updateMyPositionToFirebase();
     renderShopItemsList();
 
     const banner = document.getElementById('shopFeedbackBanner');
     if (banner) {
         banner.className = "mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center bg-emerald-950/90 border border-emerald-500 text-emerald-300";
-        banner.innerHTML = `✅ Berhasil membeli & memakai kostum <strong>${item.displayName}</strong>!`;
+        banner.innerHTML = `✅ Berhasil membeli <strong>${item.targetLabel}</strong>! Silakan pakai di menu <strong>Profil</strong>.`;
         banner.classList.remove('hidden');
     }
 
@@ -1034,52 +964,94 @@ window.executeRedeemItem = function() {
             body: JSON.stringify({
                 action: 'addRedeem',
                 player: playerCustomName,
-                item: item.displayName,
+                item: item.targetLabel,
                 costumeFile: costumeFile,
-                equipNow: true,
+                equipNow: false, // Beli saja di toko, pakai lewat Profil
                 cost: item.cost,
                 remainingPoints: playerPoints,
                 timestamp: Date.now()
             })
-        }).catch(err => console.warn("Gagal simpan transaksi kostum ke Apps Script:", err));
+        }).catch(() => {});
     }
 
     if (typeof window.sendFirebaseChat === 'function') {
-        window.sendFirebaseChat("Warung", `👕 ${playerCustomName} baru saja membeli kostum "${item.displayName}"!`);
+        window.sendFirebaseChat("Warung", `🛍️ ${playerCustomName} baru saja membeli kostum "${item.targetLabel}"!`);
     }
+};
+
+// ==========================================
+// PROFIL: LEMARI GANTI KOSTUM (PAKAI / LEPAS)
+// ==========================================
+function renderProfileCostumeWardrobe() {
+    const wardrobeEl = document.getElementById('profileCostumeWardrobe');
+    if (!wardrobeEl) return;
+
+    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
+    const isAdminOrFull = (genderCode === 'A') || hasFullCostumes;
+
+    // Jika Kolom B = 'A' atau Kolom H = 'full', tampilkan semua kostum lk_ dan pr_
+    const availableList = isAdminOrFull
+        ? [...ALL_AVAILABLE_COSTUMES]
+        : ownedCostumes;
+
+    if (!availableList || availableList.length === 0) {
+        wardrobeEl.innerHTML = `<div class="col-span-2 text-center text-[11px] text-slate-400 py-3">Belum ada kostum dimiliki. Beli kostum di 🏪 Warung Sekolah!</div>`;
+        return;
+    }
+
+    let html = '';
+    availableList.forEach(rawFile => {
+        const file = rawFile.toLowerCase().endsWith('.png') ? rawFile : `${rawFile}.png`;
+        const isEquipped = equippedCostume.toLowerCase() === file.toLowerCase();
+        const tagGender = file.startsWith('pr_') ? ' (PR)' : (file.startsWith('lk_') ? ' (LK)' : '');
+        const label = formatCostumeDisplayName(file) + (isAdminOrFull ? tagGender : '');
+
+        html += `
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-800 border ${isEquipped ? 'border-emerald-400 bg-emerald-950/30' : 'border-slate-700'}">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-8 h-10 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0">
+                        <img src="assets/kostom/${file}" onerror="this.style.display='none'" class="h-full object-cover object-left-top" />
+                    </div>
+                    <span class="text-[11px] font-bold text-white truncate">${label}</span>
+                </div>
+                ${isEquipped
+                    ? `<button type="button" onclick="unequipCostume()" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shrink-0 ml-1">Lepas</button>`
+                    : `<button type="button" onclick="equipCostume('${file}')" class="px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-[10px] font-extrabold shrink-0 ml-1">Pakai</button>`
+                }
+            </div>
+        `;
+    });
+
+    wardrobeEl.innerHTML = html;
+}
+
+window.equipCostume = function(costumeFile) {
+    equippedCostume = costumeFile;
+    saveEquippedCostumeToSheet(equippedCostume);
+    updateMyPositionToFirebase();
+    renderProfileCostumeWardrobe();
+};
+
+window.unequipCostume = function() {
+    equippedCostume = "";
+    saveEquippedCostumeToSheet("");
+    updateMyPositionToFirebase();
+    renderProfileCostumeWardrobe();
 };
 
 async function triggerInteraction() {
     if (!nearbyBuilding) return;
-
-    if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function') {
-        if (handleKelasInteraction(nearbyBuilding)) return;
-    }
-    if (currentWorldLocation === 2 && typeof handlePantaiInteraction === 'function') {
-        if (handlePantaiInteraction(nearbyBuilding)) return;
-    }
-
-    if (nearbyBuilding.targetUrl) {
-        navigateToLocalHtml(nearbyBuilding.targetUrl);
-        return;
-    }
-    
-    if (nearbyBuilding.isPortal) {
-        switchWorldLocation(nearbyBuilding.targetLocation);
-        return;
-    }
+    if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function' && handleKelasInteraction(nearbyBuilding)) return;
+    if (currentWorldLocation === 2 && typeof handlePantaiInteraction === 'function' && handlePantaiInteraction(nearbyBuilding)) return;
+    if (nearbyBuilding.targetUrl) { navigateToLocalHtml(nearbyBuilding.targetUrl); return; }
+    if (nearbyBuilding.isPortal) { switchWorldLocation(nearbyBuilding.targetLocation); return; }
 
     const modalTitle = document.getElementById('modalTitle');
     const modalContent = document.getElementById('modalContent');
     const modalActions = document.getElementById('modalActions');
 
     modalTitle.innerHTML = `${nearbyBuilding.icon} ${nearbyBuilding.dialogTitle}`;
-    modalContent.innerHTML = `
-        <div class="flex flex-col items-center justify-center p-4">
-            <img src="assets/loading.gif" alt="Loading..." class="w-8 h-8 mb-2" />
-            <span class="text-xs text-slate-300">Memuat data ${nearbyBuilding.name}...</span>
-        </div>
-    `;
+    modalContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4"><img src="assets/loading.gif" alt="Loading..." class="w-8 h-8 mb-2" /><span class="text-xs text-slate-300">Memuat data ${nearbyBuilding.name}...</span></div>`;
     modalActions.innerHTML = `<button onclick="closeModal()" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
     document.getElementById('dialogModal').classList.remove('hidden');
 
@@ -1091,7 +1063,6 @@ async function triggerInteraction() {
     try {
         const response = await fetch(getSheetCsvUrl(nearbyBuilding.sheetName));
         if (!response.ok) throw new Error("Gagal mengambil sheet");
-        
         const csvText = await response.text();
         const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
@@ -1101,202 +1072,101 @@ async function triggerInteraction() {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                 if (cols[0]) {
                     const itemCost = parseInt((cols[1] || "0").replace(/[^0-9]/g, ''), 10);
-                    const cleanDisplay = cols[0]
-                        .replace(/^(pr_|lk_)/i, '')
-                        .replace(/\.png$/i, '')
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, l => l.toUpperCase());
-
-                    currentShopItems.push({
-                        rawName: cols[0],
-                        name: cleanDisplay,
-                        displayName: cleanDisplay,
-                        cost: isNaN(itemCost) ? 0 : itemCost
-                    });
+                    const cleanDisplay = formatCostumeDisplayName(cols[0]);
+                    currentShopItems.push({ rawName: cols[0], name: cleanDisplay, displayName: cleanDisplay, cost: isNaN(itemCost) ? 0 : itemCost });
                 }
             }
             renderShopItemsList();
-
         } else if (nearbyBuilding.sheetName === 'PJOK') {
             let htmlList = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
             let hasItems = false;
-
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                 if (cols[0] && cols[1]) {
                     hasItems = true;
-                    const activityTitle = cols[0];
                     let htmlFile = cols[1];
-                    if (!htmlFile.toLowerCase().endsWith('.html') && !htmlFile.startsWith('http')) {
-                        htmlFile += '.html';
-                    }
-                    const safeUrl = htmlFile.replace(/'/g, "\\'");
-
-                    htmlList += `
-                        <button onclick="navigateToLocalHtml('${safeUrl}')" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-orange-500/40 hover:border-yellow-400 rounded-xl text-yellow-400 font-bold text-xs transition cursor-pointer w-full text-left active:scale-95">
-                            <span>🏀 ${activityTitle}</span>
-                            <span class="px-2.5 py-1 bg-orange-500/20 text-orange-300 rounded-lg text-[10px] flex items-center gap-1">
-                                Buka <i class="fas fa-play text-[9px]"></i>
-                            </span>
-                        </button>
-                    `;
+                    if (!htmlFile.toLowerCase().endsWith('.html') && !htmlFile.startsWith('http')) htmlFile += '.html';
+                    htmlList += `<button onclick="navigateToLocalHtml('${htmlFile.replace(/'/g, "\\'")}')" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-orange-500/40 hover:border-yellow-400 rounded-xl text-yellow-400 font-bold text-xs transition cursor-pointer w-full text-left active:scale-95"><span>🏀 ${cols[0]}</span><span class="px-2.5 py-1 bg-orange-500/20 text-orange-300 rounded-lg text-[10px] flex items-center gap-1">Buka <i class="fas fa-play text-[9px]"></i></span></button>`;
                 }
             }
             htmlList += `</div>`;
-
-            if (!hasItems) {
-                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada kegiatan / permainan PJOK tersedia saat ini.</div>`;
-            } else {
-                modalContent.innerHTML = htmlList;
-            }
-
+            modalContent.innerHTML = hasItems ? htmlList : `<div class="text-center text-xs text-slate-400 p-3">Belum ada kegiatan / permainan PJOK tersedia saat ini.</div>`;
         } else if (nearbyBuilding.sheetName === 'Perpus') {
             let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
             let hasItems = false;
-
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                 if (cols[0]) {
                     hasItems = true;
-                    const classTitle = cols[0];
-                    const classLink = cols[1] || "#";
-                    htmlHTML += `
-                        <a href="${classLink}" target="_blank" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-yellow-400 font-semibold text-xs transition">
-                            <span>📖 ${classTitle}</span>
-                            <i class="fas fa-external-link-alt text-[10px] text-slate-400"></i>
-                        </a>
-                    `;
+                    htmlHTML += `<a href="${cols[1] || "#"}" target="_blank" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-yellow-400 font-semibold text-xs transition"><span>📖 ${cols[0]}</span><i class="fas fa-external-link-alt text-[10px] text-slate-400"></i></a>`;
                 }
             }
             htmlHTML += `</div>`;
-            
-            if (!hasItems) {
-                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-2">Belum ada koleksi buku / link kelas di Perpustakaan.</div>`;
-            } else {
-                modalContent.innerHTML = htmlHTML;
-            }
-
-        } else if (nearbyBuilding.sheetName === 'Info') {
-            let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
-            let hasItems = false;
-
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
-                if (cols[0]) {
-                    hasItems = true;
-                    htmlHTML += `
-                        <div class="p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 text-xs leading-relaxed">
-                            📌 ${cols[0]}
-                        </div>
-                    `;
-                }
-            }
-            htmlHTML += `</div>`;
-
-            if (!hasItems) {
-                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-2">Belum ada pengumuman baru di Mading.</div>`;
-            } else {
-                modalContent.innerHTML = htmlHTML;
-            }
-
+            modalContent.innerHTML = hasItems ? htmlHTML : `<div class="text-center text-xs text-slate-400 p-2">Belum ada koleksi buku / link kelas di Perpustakaan.</div>`;
         } else {
             let hasItems = false;
             let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
-
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                 if (cols[0]) {
                     hasItems = true;
-                    htmlHTML += `<div class="p-2.5 bg-slate-800 rounded-xl text-xs text-slate-200">• ${cols[0]}</div>`;
+                    htmlHTML += `<div class="p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 text-xs leading-relaxed">📌 ${cols[0]}</div>`;
                 }
             }
             htmlHTML += `</div>`;
-
-            if (!hasItems) {
-                modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada konten / informasi tersedia saat ini.</div>`;
-            } else {
-                modalContent.innerHTML = htmlHTML;
-            }
+            modalContent.innerHTML = hasItems ? htmlHTML : `<div class="text-center text-xs text-slate-400 p-2">Belum ada informasi baru.</div>`;
         }
-
     } catch (err) {
-        console.warn("Gagal membaca sheet gedung:", err);
         modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada informasi / konten tersedia saat ini.</div>`;
     }
 }
 
 function toggleMiniMap() { if (isMiniMapOpen) closeMiniMap(); else openMiniMap(); }
-function openMiniMap() {
-    isMiniMapOpen = true;
-    const popup = document.getElementById('miniMapPopup');
-    if (popup) popup.classList.remove('hidden');
-    if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
-}
-function closeMiniMap() {
-    isMiniMapOpen = false;
-    const popup = document.getElementById('miniMapPopup');
-    if (popup) popup.classList.add('hidden');
-}
+function openMiniMap() { isMiniMapOpen = true; const p = document.getElementById('miniMapPopup'); if (p) p.classList.remove('hidden'); if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer(); }
+function closeMiniMap() { isMiniMapOpen = false; const p = document.getElementById('miniMapPopup'); if (p) p.classList.add('hidden'); }
 function renderMiniMap() {
     const largeMapCanvas = document.getElementById('largeMapCanvas');
     if (!largeMapCanvas) return;
     const mCtx = largeMapCanvas.getContext('2d');
-    largeMapCanvas.width = 400; 
-    largeMapCanvas.height = 240;
-
+    largeMapCanvas.width = 400; largeMapCanvas.height = 240;
     mCtx.fillStyle = (currentWorldLocation === 3) ? '#166534' : ((currentWorldLocation === 2) ? '#0284c7' : '#15803d');
     mCtx.fillRect(0, 0, largeMapCanvas.width, largeMapCanvas.height);
 
-    const scaleX = largeMapCanvas.width / MAP_WIDTH;
-    const scaleY = largeMapCanvas.height / MAP_HEIGHT;
-
+    const scaleX = largeMapCanvas.width / MAP_WIDTH, scaleY = largeMapCanvas.height / MAP_HEIGHT;
     if (typeof currentBuildings !== 'undefined') {
         currentBuildings.forEach(b => {
             if (b.isSilentZone) return;
             const bx = b.x * scaleX, by = b.y * scaleY, bw = b.width * scaleX, bh = b.height * scaleY;
-            mCtx.fillStyle = b.roofColor || '#fde047';
-            mCtx.fillRect(bx, by, bw, bh);
-            mCtx.strokeStyle = '#ffffff';
-            mCtx.lineWidth = 1;
-            mCtx.strokeRect(bx, by, bw, bh);
-
-            mCtx.save();
-            mCtx.font = 'bold 9px Fredoka, sans-serif';
-            const labelText = `${b.icon || ''} ${b.name}`;
-            const textWidth = mCtx.measureText(labelText).width;
-            mCtx.fillStyle = 'rgba(15, 23, 42, 0.75)';
-            mCtx.fillRect(bx + bw / 2 - textWidth / 2 - 3, by - 12, textWidth + 6, 11);
-            mCtx.fillStyle = '#fde047';
-            mCtx.textAlign = 'center';
-            mCtx.textBaseline = 'bottom';
-            mCtx.fillText(labelText, bx + bw / 2, by - 2);
-            mCtx.restore();
+            mCtx.fillStyle = b.roofColor || '#fde047'; mCtx.fillRect(bx, by, bw, bh);
+            mCtx.strokeStyle = '#ffffff'; mCtx.lineWidth = 1; mCtx.strokeRect(bx, by, bw, bh);
         });
     }
-
     const px = player.x * scaleX, py = player.y * scaleY;
-    mCtx.fillStyle = '#ef4444';
-    mCtx.beginPath();
-    mCtx.arc(px, py, 6, 0, Math.PI * 2);
-    mCtx.fill();
-    mCtx.strokeStyle = '#ffffff';
-    mCtx.lineWidth = 2;
-    mCtx.stroke();
+    mCtx.fillStyle = '#ef4444'; mCtx.beginPath(); mCtx.arc(px, py, 6, 0, Math.PI * 2); mCtx.fill();
+    mCtx.strokeStyle = '#ffffff'; mCtx.lineWidth = 2; mCtx.stroke();
 }
 
 function openEditCharacterModal() {
     tempModalGender = selectedGender;
-    document.getElementById('editNameInput').value = playerCustomName;
+    const nameInput = document.getElementById('editNameInput');
+    if (nameInput) nameInput.value = playerCustomName;
+
+    const genderSec = document.getElementById('genderSelectorSection');
+    if (genderSec) {
+        if (selectedGender === 'admin') genderSec.classList.add('hidden');
+        else genderSec.classList.remove('hidden');
+    }
+
     updatePointsDisplay();
     selectModalGender(selectedGender);
+    renderProfileCostumeWardrobe();
     document.getElementById('editCharModal').classList.remove('hidden');
 }
 function closeEditCharacterModal() { document.getElementById('editCharModal').classList.add('hidden'); }
-
 function selectModalGender(g) {
     tempModalGender = g;
-    const optF = document.getElementById('selectOptionFemale');
-    const optM = document.getElementById('selectOptionMale');
+    const optF = document.getElementById('selectOptionFemale'), optM = document.getElementById('selectOptionMale');
+    if (!optF || !optM) return;
     if (g === 'female') {
         optF.classList.add('border-yellow-400', 'bg-slate-700'); optF.classList.remove('border-transparent');
         optM.classList.remove('border-yellow-400', 'bg-slate-700'); optM.classList.add('border-transparent');
@@ -1305,20 +1175,15 @@ function selectModalGender(g) {
         optF.classList.remove('border-yellow-400', 'bg-slate-700'); optF.classList.add('border-transparent');
     }
 }
-
 function saveCharacterEdits() {
     const newName = document.getElementById('editNameInput').value.trim();
     if (newName) playerCustomName = newName;
     if (tempModalGender && selectedGender !== 'admin') selectedGender = tempModalGender;
-
     if (currentUserAccount) {
         currentUserAccount.name = playerCustomName;
-        if (selectedGender !== 'admin') {
-            currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
-        }
+        if (selectedGender !== 'admin') currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
         sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
     }
-
     document.getElementById('charNameDisplay').innerText = playerCustomName;
     document.getElementById('avatarBadge').innerText = (selectedGender === 'admin') ? '👑' : ((selectedGender === 'female') ? '🧕' : '👦');
     closeEditCharacterModal();
@@ -1330,38 +1195,19 @@ function closeOnlinePlayersModal() { document.getElementById('onlinePlayersModal
 
 function handleLogout() { 
     isGameStarted = false; 
-
     sessionStorage.removeItem('activeUserSession');
     sessionStorage.removeItem('savedPlayerPosition');
-
     document.body.classList.remove('game-active');
-    try {
-        if (screen.orientation && screen.orientation.unlock) {
-            screen.orientation.unlock();
-        }
-    } catch (e) {}
-
+    try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
     if (typeof closeEditCharacterModal === 'function') closeEditCharacterModal();
     if (typeof closeOnlinePlayersModal === 'function') closeOnlinePlayersModal();
     if (typeof closeModal === 'function') closeModal();
     if (typeof closeKickConfirmModal === 'function') closeKickConfirmModal();
     if (typeof closeBuyConfirmModal === 'function') closeBuyConfirmModal();
-
-    if (myPlayerRef) {
-        myPlayerRef.remove();
-        myPlayerRef = null;
-    }
-
-    if (db) {
-        db.ref('lastActiveTime').set(Date.now());
-    }
-
-    if (chatRefQuery) {
-        chatRefQuery.off();
-        chatRefQuery = null;
-    }
+    if (myPlayerRef) { myPlayerRef.remove(); myPlayerRef = null; }
+    if (db) db.ref('lastActiveTime').set(Date.now());
+    if (chatRefQuery) { chatRefQuery.off(); chatRefQuery = null; }
     if (idleTimer) clearTimeout(idleTimer);
-
     loadSavedCredentials();
     document.getElementById('gameContainer').classList.add('hidden'); 
     document.getElementById('loginScreen').classList.remove('hidden'); 
@@ -1372,7 +1218,6 @@ function closeModal() { document.getElementById('dialogModal').classList.add('hi
 window.onload = async function() { 
     loadSavedCredentials();
     await fetchSpreadsheetUsers(); 
-
     const savedSessionRaw = sessionStorage.getItem('activeUserSession');
     if (savedSessionRaw) {
         try {
@@ -1380,12 +1225,7 @@ window.onload = async function() {
             const savedPosRaw = sessionStorage.getItem('savedPlayerPosition');
             const savedPos = savedPosRaw ? JSON.parse(savedPosRaw) : null;
             sessionStorage.removeItem('savedPlayerPosition');
-
-            if (savedUser && savedUser.name) {
-                startGameSession(savedUser, savedPos, true);
-            }
-        } catch (err) {
-            console.warn("Gagal memulihkan sesi:", err);
-        }
+            if (savedUser && savedUser.name) startGameSession(savedUser, savedPos, true);
+        } catch (err) {}
     }
 };
