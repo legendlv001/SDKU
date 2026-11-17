@@ -171,7 +171,7 @@ function savePlayerPointsToFirebase() {
 }
 
 // ==========================================
-// HELPER KOSTUM & PENYIMPANAN KE KOLOM I
+// HELPER KOSTUM & PREVIEW 1 SPRITE UTUH
 // ==========================================
 function formatCostumeDisplayName(fileName) {
     return String(fileName || "")
@@ -188,6 +188,36 @@ function resolveCostumeFileName(rawItemName, genderCode) {
     }
     const prefix = (genderCode === 'P') ? 'pr_' : 'lk_';
     return `${prefix}${clean}.png`;
+}
+
+function createSingleSpritePreviewHTML(costumeFile, boxClass = "w-11 h-11") {
+    const safeFile = costumeFile.replace(/'/g, "\\'");
+    return `
+        <div class="${boxClass} bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0 relative">
+            <canvas data-costume-preview="${safeFile}" width="48" height="48" class="w-full h-full object-contain"></canvas>
+        </div>
+    `;
+}
+
+function renderAllCostumePreviewCanvases() {
+    const canvases = document.querySelectorAll('canvas[data-costume-preview]');
+    canvases.forEach(cvs => {
+        const fileName = cvs.getAttribute('data-costume-preview');
+        if (!fileName) return;
+        const img = new Image();
+        img.src = `assets/kostom/${fileName}`;
+        img.onload = () => {
+            const ctx = cvs.getContext('2d');
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+            // Potong HANYA 1 sprite (kolom 0, baris 0 = posisi berdiri menghadap depan)
+            const cols = (img.width % 4 === 0 && img.width >= img.height) ? 4 : 3;
+            const rows = 4;
+            const frameW = Math.floor(img.width / cols);
+            const frameH = Math.floor(img.height / rows);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(img, 0, 0, frameW, frameH, 4, 2, cvs.width - 8, cvs.height - 4);
+        };
+    });
 }
 
 function saveEquippedCostumeToSheet(costumeFileName) {
@@ -303,7 +333,7 @@ async function fetchSpreadsheetUsers() {
 }
 
 let currentUserAccount = null, selectedGender = 'male', playerCustomName = "", playerRole = "", isAdminUser = false;
-window.walkTimer = 0; let walkTimer = 0; let tempModalGender = null, nearbyBuilding = null, isGameStarted = false, currentWorldLocation = 1;
+window.walkTimer = 0; let tempModalGender = null, nearbyBuilding = null, isGameStarted = false, currentWorldLocation = 1;
 let idleTimer = null; const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 function resetIdleTimer() {
@@ -336,14 +366,17 @@ function initFirebaseSync() {
     myPlayerRef.onDisconnect().remove();
     db.ref('lastActiveTime').onDisconnect().set(Date.now());
 
+    // Hapus sisa kick lama terlebih dahulu sebelum memasang listener kick baru
     const myKickRef = db.ref('kickedPlayers/' + safeKey);
-    myKickRef.on('value', (snapshot) => {
-        if (snapshot.exists() && snapshot.val() === true) {
-            myKickRef.remove();
-            handleLogout();
-            showKickedInfoModal("Anda telah dikeluarkan dari permainan oleh Admin.");
-        }
-    });
+    myKickRef.remove().then(() => {
+        myKickRef.on('value', (snapshot) => {
+            if (isGameStarted && snapshot.exists() && snapshot.val() === true) {
+                myKickRef.remove();
+                handleLogout();
+                showKickedInfoModal("Anda telah dikeluarkan dari permainan oleh Admin.");
+            }
+        });
+    }).catch(() => {});
 
     db.ref('players').on('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -364,7 +397,7 @@ function addChatMessage(sender, text, isSelf) {
     container.scrollTop = container.scrollHeight;
 }
 
-function handleChatSubmit(e) {
+window.handleChatSubmit = function(e) {
     if (e && e.preventDefault) e.preventDefault();
     const input = document.getElementById('chatInput');
     if (!input) return;
@@ -372,25 +405,25 @@ function handleChatSubmit(e) {
     if (!msg) return;
     input.value = '';
     window.sendFirebaseChat(playerCustomName, msg);
-}
+};
 
 function sendChatMessage() {
     handleChatSubmit();
 }
 
-let isChatOpen = false;
-function toggleChat() {
+window.isChatOpen = false;
+window.toggleChat = function() {
     const box = document.getElementById('chatBoxPopup');
     const badge = document.getElementById('chatBadge');
     if (!box) return;
-    isChatOpen = !isChatOpen;
-    if (isChatOpen) {
+    window.isChatOpen = !window.isChatOpen;
+    if (window.isChatOpen) {
         box.classList.remove('hidden');
         if (badge) { badge.innerText = '0'; badge.classList.add('hidden'); }
     } else {
         box.classList.add('hidden');
     }
-}
+};
 
 function initFirebaseChatSync() {
     if (!db) return;
@@ -419,7 +452,7 @@ function startListeningChat() {
         const msgData = snapshot.val();
         if (!msgData || !msgData.sender || !msgData.text) return;
         addChatMessage(msgData.sender, msgData.text, msgData.sender === playerCustomName);
-        if (!isChatOpen && msgData.sender !== playerCustomName) {
+        if (!window.isChatOpen && msgData.sender !== playerCustomName) {
             const badge = document.getElementById('chatBadge');
             if (badge) {
                 const count = (parseInt(badge.innerText, 10) || 0) + 1;
@@ -471,7 +504,7 @@ function updateOnlinePlayersList(otherPlayersData) {
             : 'Sekolah';
         const pBadge = p.gender === 'admin' ? '👑' : (p.gender === 'female' ? '🧕' : '👦');
         const kickButtonHTML = isAdminUser 
-            ? `<button onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
+            ? `<button type="button" onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
             : `<span class="text-[10px] text-slate-400">${locName}</span>`;
 
         item.innerHTML = `
@@ -603,7 +636,7 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     }
 }
 
-function handleLogin(e) {
+window.handleLogin = function(e) {
     if (e && e.preventDefault) e.preventDefault();
     const inputElem = document.getElementById('loginUsername');
     const passElem = document.getElementById('loginPassword');
@@ -653,7 +686,7 @@ function handleLogin(e) {
         hideLoginLoading();
         startGameSession(matchedUser, null, false);
     }, 600);
-}
+};
 
 function switchWorldLocation(targetLocId) {
     currentWorldLocation = targetLocId;
@@ -711,7 +744,7 @@ function setupGameEvents() {
 let isMiniMapOpen = false, userZoomModifier = 0;
 const MAP_WIDTH = 2000, MAP_HEIGHT = 1200;
 
-function changeZoom(delta) { userZoomModifier = Math.max(-0.4, Math.min(0.8, userZoomModifier + delta)); }
+window.changeZoom = function(delta) { userZoomModifier = Math.max(-0.4, Math.min(0.8, userZoomModifier + delta)); };
 function getAdaptiveZoom() {
     const screenW = window.innerWidth, screenH = window.innerHeight;
     let baseZoom = (screenW < 900 || screenH < 500) ? Math.max(0.6, Math.min(0.8, screenW / 1150)) : 1.25;
@@ -758,7 +791,7 @@ function gameLoop() {
 
     if (typeof drawCollisionDebug === 'function') drawCollisionDebug(ctx, cameraX, cameraY, currentZoomScale);
 
-    const activeWalkTimer = typeof walkTimer !== 'undefined' ? walkTimer : (window.walkTimer || 0);
+    const activeWalkTimer = window.walkTimer || 0;
 
     if (window.otherPlayers) {
         Object.keys(window.otherPlayers).forEach(id => {
@@ -875,10 +908,6 @@ function renderShopItemsList() {
         <div id="shopFeedbackBanner" class="hidden mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center"></div>
     `;
 
-    // Filter kostum di toko berdasarkan gender pemain:
-    // - Jika Kolom B = 'A': semua varian lk_ & pr_ tampil.
-    // - Jika Kolom B = 'L': kostum pr_ disembunyikan (hanya lk_ yang tampil).
-    // - Jika Kolom B = 'P': kostum lk_ disembunyikan (hanya pr_ yang tampil).
     let expandedShopItems = [];
     currentShopItems.forEach((item, idx) => {
         const lowerName = item.rawName.toLowerCase();
@@ -917,15 +946,13 @@ function renderShopItemsList() {
                 const btnClass = canAfford
                     ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
                     : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
-                actionButtonHTML = `<button onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${entry.labelName.replace(/'/g, "\\'")}')" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">${canAfford ? 'Beli' : 'Poin Kurang'}</button>`;
+                actionButtonHTML = `<button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${entry.labelName.replace(/'/g, "\\'")}')" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">${canAfford ? 'Beli' : 'Poin Kurang'}</button>`;
             }
 
             html += `
                 <div class="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-xl">
                     <div class="flex items-center gap-2.5 pr-2">
-                        <div class="w-10 h-12 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0">
-                            <img src="assets/kostom/${entry.costumeFile}" onerror="this.style.display='none'" class="h-full object-cover object-left-top" />
-                        </div>
+                        ${createSingleSpritePreviewHTML(entry.costumeFile, "w-11 h-11")}
                         <div>
                             <div class="text-xs md:text-sm font-bold text-white">${entry.labelName}</div>
                             <div class="flex items-center gap-1 mt-1">
@@ -941,6 +968,7 @@ function renderShopItemsList() {
         html += `</div>`;
     }
     modalContent.innerHTML = html;
+    renderAllCostumePreviewCanvases();
 }
 
 window.promptRedeemShopItem = function(itemIndex, specificCostumeFile, specificLabelName) {
@@ -1046,9 +1074,7 @@ function renderProfileCostumeWardrobe() {
         html += `
             <div class="flex items-center justify-between p-2 rounded-xl bg-slate-800 border ${isEquipped ? 'border-emerald-400 bg-emerald-950/30' : 'border-slate-700'}">
                 <div class="flex items-center gap-1.5 min-w-0">
-                    <div class="w-7 h-9 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0">
-                        <img src="assets/kostom/${file}" onerror="this.style.display='none'" class="h-full object-cover object-left-top" />
-                    </div>
+                    ${createSingleSpritePreviewHTML(file, "w-8 h-8")}
                     <span class="text-[10px] font-bold text-white truncate">${label}</span>
                 </div>
                 ${isEquipped
@@ -1060,6 +1086,7 @@ function renderProfileCostumeWardrobe() {
     });
 
     wardrobeEl.innerHTML = html;
+    renderAllCostumePreviewCanvases();
 }
 
 window.equipCostume = function(costumeFile) {
@@ -1076,7 +1103,7 @@ window.unequipCostume = function() {
     renderProfileCostumeWardrobe();
 };
 
-async function triggerInteraction() {
+window.triggerInteraction = async function() {
     if (!nearbyBuilding) return;
     if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function' && handleKelasInteraction(nearbyBuilding)) return;
     if (currentWorldLocation === 2 && typeof handlePantaiInteraction === 'function' && handlePantaiInteraction(nearbyBuilding)) return;
@@ -1089,7 +1116,7 @@ async function triggerInteraction() {
 
     modalTitle.innerHTML = `${nearbyBuilding.icon} ${nearbyBuilding.dialogTitle}`;
     modalContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4"><img src="assets/loading.gif" alt="Loading..." class="w-8 h-8 mb-2" /><span class="text-xs text-slate-300">Memuat data ${nearbyBuilding.name}...</span></div>`;
-    modalActions.innerHTML = `<button onclick="closeModal()" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
+    modalActions.innerHTML = `<button type="button" onclick="closeModal()" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
     document.getElementById('dialogModal').classList.remove('hidden');
 
     if (!nearbyBuilding.sheetName) {
@@ -1123,7 +1150,7 @@ async function triggerInteraction() {
                     hasItems = true;
                     let htmlFile = cols[1];
                     if (!htmlFile.toLowerCase().endsWith('.html') && !htmlFile.startsWith('http')) htmlFile += '.html';
-                    htmlList += `<button onclick="navigateToLocalHtml('${htmlFile.replace(/'/g, "\\'")}')" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-orange-500/40 hover:border-yellow-400 rounded-xl text-yellow-400 font-bold text-xs transition cursor-pointer w-full text-left active:scale-95"><span>🏀 ${cols[0]}</span><span class="px-2.5 py-1 bg-orange-500/20 text-orange-300 rounded-lg text-[10px] flex items-center gap-1">Buka <i class="fas fa-play text-[9px]"></i></span></button>`;
+                    htmlList += `<button type="button" onclick="navigateToLocalHtml('${htmlFile.replace(/'/g, "\\'")}')" class="flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 border border-orange-500/40 hover:border-yellow-400 rounded-xl text-yellow-400 font-bold text-xs transition cursor-pointer w-full text-left active:scale-95"><span>🏀 ${cols[0]}</span><span class="px-2.5 py-1 bg-orange-500/20 text-orange-300 rounded-lg text-[10px] flex items-center gap-1">Buka <i class="fas fa-play text-[9px]"></i></span></button>`;
                 }
             }
             htmlList += `</div>`;
@@ -1156,11 +1183,11 @@ async function triggerInteraction() {
     } catch (err) {
         modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada informasi / konten tersedia saat ini.</div>`;
     }
-}
+};
 
-function toggleMiniMap() { if (isMiniMapOpen) closeMiniMap(); else openMiniMap(); }
+window.toggleMiniMap = function() { if (isMiniMapOpen) closeMiniMap(); else openMiniMap(); };
 function openMiniMap() { isMiniMapOpen = true; const p = document.getElementById('miniMapPopup'); if (p) p.classList.remove('hidden'); if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer(); }
-function closeMiniMap() { isMiniMapOpen = false; const p = document.getElementById('miniMapPopup'); if (p) p.classList.add('hidden'); }
+window.closeMiniMap = function() { isMiniMapOpen = false; const p = document.getElementById('miniMapPopup'); if (p) p.classList.add('hidden'); };
 function renderMiniMap() {
     const largeMapCanvas = document.getElementById('largeMapCanvas');
     if (!largeMapCanvas) return;
@@ -1183,7 +1210,7 @@ function renderMiniMap() {
     mCtx.strokeStyle = '#ffffff'; mCtx.lineWidth = 2; mCtx.stroke();
 }
 
-function openEditCharacterModal() {
+window.openEditCharacterModal = function() {
     tempModalGender = selectedGender;
     const nameInput = document.getElementById('editNameInput');
     if (nameInput) nameInput.value = playerCustomName;
@@ -1207,11 +1234,11 @@ function openEditCharacterModal() {
     selectModalGender(selectedGender);
     renderProfileCostumeWardrobe();
     document.getElementById('editCharModal').classList.remove('hidden');
-}
+};
 
-function closeEditCharacterModal() { document.getElementById('editCharModal').classList.add('hidden'); }
+window.closeEditCharacterModal = function() { document.getElementById('editCharModal').classList.add('hidden'); };
 
-function selectModalGender(g) {
+window.selectModalGender = function(g) {
     tempModalGender = g;
     const optF = document.getElementById('selectOptionFemale');
     const optM = document.getElementById('selectOptionMale');
@@ -1244,9 +1271,9 @@ function selectModalGender(g) {
         activeEl.classList.add('border-yellow-400', 'bg-slate-700');
         activeEl.classList.remove('border-transparent');
     }
-}
+};
 
-function saveCharacterEdits() {
+window.saveCharacterEdits = function() {
     const colDStatus = (currentUserAccount && currentUserAccount.status) ? currentUserAccount.status.trim().toLowerCase() : '';
     const isAccountTypeA = (currentUserAccount && (currentUserAccount.gender || '').toUpperCase().trim() === 'A');
 
@@ -1272,12 +1299,12 @@ function saveCharacterEdits() {
     document.getElementById('avatarBadge').innerText = (selectedGender === 'admin') ? '👑' : ((selectedGender === 'female') ? '🧕' : '👦');
     closeEditCharacterModal();
     updateMyPositionToFirebase();
-}
+};
 
-function openOnlinePlayersModal() { document.getElementById('onlinePlayersModal').classList.remove('hidden'); }
-function closeOnlinePlayersModal() { document.getElementById('onlinePlayersModal').classList.add('hidden'); }
+window.openOnlinePlayersModal = function() { document.getElementById('onlinePlayersModal').classList.remove('hidden'); };
+window.closeOnlinePlayersModal = function() { document.getElementById('onlinePlayersModal').classList.add('hidden'); };
 
-function handleLogout() { 
+window.handleLogout = function() { 
     isGameStarted = false; 
     sessionStorage.removeItem('activeUserSession');
     sessionStorage.removeItem('savedPlayerPosition');
@@ -1295,11 +1322,11 @@ function handleLogout() {
     loadSavedCredentials();
     document.getElementById('gameContainer').classList.add('hidden'); 
     document.getElementById('loginScreen').classList.remove('hidden'); 
-}
+};
 
-function closeModal() { document.getElementById('dialogModal').classList.add('hidden'); }
+window.closeModal = function() { document.getElementById('dialogModal').classList.add('hidden'); };
 
-window.onload = async function() { 
+window.addEventListener('load', async function() { 
     loadSavedCredentials();
     await fetchSpreadsheetUsers(); 
     const savedSessionRaw = sessionStorage.getItem('activeUserSession');
@@ -1312,4 +1339,4 @@ window.onload = async function() {
             if (savedUser && savedUser.name) startGameSession(savedUser, savedPos, true);
         } catch (err) {}
     }
-};
+});

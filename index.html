@@ -62,26 +62,26 @@
         <div class="w-20 h-20 mb-4 rounded-3xl bg-yellow-400 text-slate-950 flex items-center justify-center text-4xl shadow-2xl animate-bounce">📱</div>
         <h2 class="text-xl md:text-2xl font-extrabold text-yellow-400 mb-2">Putar Layar HP Anda</h2>
         <p class="text-xs md:text-sm text-slate-300 max-w-xs leading-relaxed mb-4">Untuk pengalaman bermain petualangan yang terbaik dan luas, silakan putar HP Anda ke posisi <strong>Landscape (Mendatar)</strong>.</p>
-        <button onclick="forceFullscreenAndLandscape()" class="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg flex items-center gap-2 transition active:scale-95">
+        <button type="button" onclick="forceFullscreenAndLandscape()" class="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg flex items-center gap-2 transition active:scale-95">
             <i class="fas fa-rotate text-sm"></i> Aktifkan Fullscreen & Landscape
         </button>
     </div>
 
-    <!-- Layar Login -->
+    <!-- Layar Login (Menggunakan div agar browser tidak pernah reload otomatis) -->
     <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
         <div class="bg-slate-900 border-2 border-yellow-400/85 rounded-3xl p-5 md:p-8 max-w-md w-full text-center shadow-2xl text-white">
             <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-2.5 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-2xl md:text-3xl font-black shadow-lg">🏫</div>
             <h1 class="text-xl md:text-3xl font-extrabold text-yellow-400 mb-1">OpenWorld Multi-Lokasi</h1>
             <p class="text-xs md:text-sm text-slate-300 mb-4 md:mb-6">Masukkan Nama & Password terdaftar untuk mulai menjelajah.</p>
-            <form onsubmit="handleLogin(event)" class="space-y-3 md:space-y-4 text-left">
+            <div class="space-y-3 md:space-y-4 text-left">
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Nama Lengkap (Sesuai Database):</label>
-                    <input type="text" id="loginUsername" required placeholder="Masukkan Nama..." class="w-full px-4 py-2 md:py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="loginUsername" required placeholder="Masukkan Nama..." onkeydown="if(event.key==='Enter') handleLogin(event)" class="w-full px-4 py-2 md:py-2.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Password:</label>
                     <div class="relative">
-                        <input type="password" id="loginPassword" required placeholder="Masukkan Password..." class="w-full px-4 py-2 md:py-2.5 pr-10 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
+                        <input type="password" id="loginPassword" required placeholder="Masukkan Password..." onkeydown="if(event.key==='Enter') handleLogin(event)" class="w-full px-4 py-2 md:py-2.5 pr-10 rounded-xl bg-slate-800 border-2 border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
                         <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-yellow-400 text-sm" title="Tampilkan / Sembunyikan Password">
                             <i id="togglePassIcon" class="fas fa-eye"></i>
                         </button>
@@ -94,8 +94,8 @@
                     </label>
                 </div>
                 <div id="loginErrorMsg" class="hidden text-red-400 text-xs font-semibold bg-red-950/60 p-2.5 rounded-xl border border-red-800/80">Nama atau Password salah!</div>
-                <button type="submit" class="w-full py-2.5 md:py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl text-sm shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"><i class="fas fa-right-to-bracket"></i> Masuk Ke Permainan</button>
-            </form>
+                <button type="button" onclick="handleLogin(event)" class="w-full py-2.5 md:py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl text-sm shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"><i class="fas fa-right-to-bracket"></i> Masuk Ke Permainan</button>
+            </div>
         </div>
     </div>
 
@@ -148,13 +148,13 @@
             
             <!-- Tombol Peta & Zoom (Kiri Atas) -->
             <div class="absolute top-2.5 left-2.5 md:top-3 md:left-3 z-30 flex flex-col gap-1.5 md:gap-2">
-                <button id="miniMapBtn" onclick="toggleMiniMap()" class="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-800/90 hover:bg-slate-700 border-2 border-yellow-400 text-yellow-400 shadow-2xl flex flex-col items-center justify-center text-xs transition-all hover:scale-105 active:scale-95 backdrop-blur-md">
+                <button type="button" id="miniMapBtn" onclick="toggleMiniMap()" class="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-800/90 hover:bg-slate-700 border-2 border-yellow-400 text-yellow-400 shadow-2xl flex flex-col items-center justify-center text-xs transition-all hover:scale-105 active:scale-95 backdrop-blur-md">
                     <i class="fas fa-map-marked-alt text-xs md:text-base mb-0.5"></i>
                     <span class="text-[7px] md:text-[8px] font-extrabold tracking-wider">PETA</span>
                 </button>
                 <div class="flex flex-col gap-1 bg-slate-800/90 border-2 border-slate-600 rounded-xl md:rounded-2xl p-0.5 md:p-1 backdrop-blur-md shadow-2xl">
-                    <button onclick="changeZoom(0.15)" class="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-xs md:text-base transition-colors" title="Zoom In (+)"><i class="fas fa-plus"></i></button>
-                    <button onclick="changeZoom(-0.15)" class="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-xs md:text-base transition-colors" title="Zoom Out (-)"><i class="fas fa-minus"></i></button>
+                    <button type="button" onclick="changeZoom(0.15)" class="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-xs md:text-base transition-colors" title="Zoom In (+)"><i class="fas fa-plus"></i></button>
+                    <button type="button" onclick="changeZoom(-0.15)" class="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-yellow-400 active:text-slate-900 text-yellow-400 flex items-center justify-center font-bold text-xs md:text-base transition-colors" title="Zoom Out (-)"><i class="fas fa-minus"></i></button>
                 </div>
             </div>
 
@@ -165,7 +165,7 @@
                         <div class="w-4 h-4 md:w-6 md:h-6 rounded-full bg-slate-500 shadow-sm flex items-center justify-center"><div class="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400"></div></div>
                     </div>
                 </div>
-                <button id="btnInteract" onclick="triggerInteraction()" class="w-14 h-14 md:w-20 md:h-20 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
+                <button type="button" id="btnInteract" onclick="triggerInteraction()" class="w-14 h-14 md:w-20 md:h-20 rounded-full bg-yellow-400 hover:bg-yellow-300 border-2 border-white text-slate-900 font-extrabold text-xs shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform cursor-pointer shrink-0">
                     <i class="fas fa-hand-pointer text-sm md:text-lg mb-0.5"></i>
                     <span class="text-[9px] md:text-[10px] font-black leading-none">AKSI</span>
                 </button>
@@ -176,7 +176,7 @@
                 <div class="bg-slate-900/95 backdrop-blur-md border-2 border-yellow-400 rounded-2xl w-80 sm:w-[28rem] shadow-2xl overflow-hidden flex flex-col pointer-events-auto transition-all duration-300">
                     <div class="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
                         <div class="flex items-center gap-2"><i class="fas fa-map text-yellow-400 text-sm"></i><span id="mapPopupTitle" class="font-bold text-xs text-yellow-400">Peta Area</span></div>
-                        <button onclick="closeMiniMap()" class="text-slate-400 hover:text-white text-xs"><i class="fas fa-times"></i></button>
+                        <button type="button" onclick="closeMiniMap()" class="text-slate-400 hover:text-white text-xs"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="p-2 flex-1 flex items-center justify-center bg-slate-950">
                         <canvas id="largeMapCanvas" class="w-full h-48 sm:h-64 block rounded-lg"></canvas>
@@ -189,15 +189,15 @@
                 <div id="chatBoxPopup" class="mb-2 sm:mb-3 w-64 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300">
                     <div class="bg-indigo-600 text-white px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between">
                         <div class="flex items-center gap-2"><i class="fas fa-comments text-yellow-300"></i><span class="font-bold text-xs">Obrolan Ruangan</span></div>
-                        <button onclick="toggleChat()" class="text-white hover:text-slate-200 text-xs"><i class="fas fa-times"></i></button>
+                        <button type="button" onclick="toggleChat()" class="text-white hover:text-slate-200 text-xs"><i class="fas fa-times"></i></button>
                     </div>
                     <div id="chatMessages" class="p-2 sm:p-3 h-32 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs"></div>
                     <div class="p-2 bg-slate-100 border-t flex gap-1">
                         <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onkeydown="if(event.key==='Enter') handleChatSubmit(event)">
-                        <button onclick="handleChatSubmit(event)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold"><i class="fas fa-paper-plane"></i></button>
+                        <button type="button" onclick="handleChatSubmit(event)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
-                <button id="chatToggleBtn" onclick="toggleChat()" class="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base md:text-xl transition-all hover:scale-105 active:scale-95">
+                <button type="button" id="chatToggleBtn" onclick="toggleChat()" class="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base md:text-xl transition-all hover:scale-105 active:scale-95">
                     <i class="fas fa-comment-dots"></i>
                     <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] md:text-[10px] font-extrabold w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
                 </button>
@@ -210,11 +210,11 @@
         <div class="bg-slate-900 text-white rounded-3xl max-w-md w-full p-5 md:p-6 shadow-2xl border-2 border-yellow-400">
             <div class="flex justify-between items-center mb-3 md:mb-4 border-b border-slate-700 pb-2">
                 <h3 id="modalTitle" class="text-base md:text-lg font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-school text-yellow-400"></i> Judul</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-white text-lg"><i class="fas fa-times"></i></button>
             </div>
             <div id="modalContent" class="text-slate-200 text-xs md:text-sm mb-4 md:mb-5 leading-relaxed">Pesan interaksi...</div>
             <div class="flex justify-end gap-3" id="modalActions">
-                <button onclick="closeModal()" class="px-4 py-2 md:px-5 md:py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold rounded-xl text-xs md:text-sm transition">Tutup</button>
+                <button type="button" onclick="closeModal()" class="px-4 py-2 md:px-5 md:py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold rounded-xl text-xs md:text-sm transition">Tutup</button>
             </div>
         </div>
     </div>
@@ -223,9 +223,9 @@
     <div id="editCharModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
-                <button onclick="handleLogout()" class="px-3 py-1 bg-red-600/90 hover:bg-red-600 text-white text-[11px] font-bold rounded-xl transition flex items-center gap-1.5 shadow-md"><i class="fas fa-right-from-bracket"></i> Logout</button>
+                <button type="button" onclick="handleLogout()" class="px-3 py-1 bg-red-600/90 hover:bg-red-600 text-white text-[11px] font-bold rounded-xl transition flex items-center gap-1.5 shadow-md"><i class="fas fa-right-from-bracket"></i> Logout</button>
                 <h3 class="text-sm md:text-base font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-user-pen text-yellow-400"></i> Profil & Poin</h3>
-                <button onclick="closeEditCharacterModal()" class="text-slate-400 hover:text-white text-base"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="closeEditCharacterModal()" class="text-slate-400 hover:text-white text-base"><i class="fas fa-times"></i></button>
             </div>
 
             <!-- Info Saldo Poin & Tiket Pengguna -->
@@ -291,8 +291,8 @@
                     </div>
                 </div>
                 <div class="flex gap-2 w-full mb-1 shrink-0">
-                    <button onclick="closeEditCharacterModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-xl transition">Batal</button>
-                    <button onclick="saveCharacterEdits()" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-xs font-bold rounded-xl transition">Simpan</button>
+                    <button type="button" onclick="closeEditCharacterModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-xl transition">Batal</button>
+                    <button type="button" onclick="saveCharacterEdits()" class="flex-1 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-xs font-bold rounded-xl transition">Simpan</button>
                 </div>
             </div>
         </div>
@@ -303,10 +303,10 @@
         <div class="bg-slate-900 border-2 border-emerald-400/80 rounded-3xl max-w-sm w-full p-5 shadow-2xl text-white flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
                 <h3 class="text-sm md:text-base font-bold text-emerald-400 flex items-center gap-2"><i class="fas fa-users"></i> Pemain Sedang Online</h3>
-                <button onclick="closeOnlinePlayersModal()" class="text-slate-400 hover:text-white text-base"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="closeOnlinePlayersModal()" class="text-slate-400 hover:text-white text-base"><i class="fas fa-times"></i></button>
             </div>
             <div id="onlinePlayersList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
-            <button onclick="closeOnlinePlayersModal()" class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-600 transition">Tutup</button>
+            <button type="button" onclick="closeOnlinePlayersModal()" class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-600 transition">Tutup</button>
         </div>
     </div>
 
@@ -319,8 +319,8 @@
             <h3 class="text-base font-extrabold text-amber-400 mb-1">Tukar Poin?</h3>
             <p id="buyConfirmText" class="text-xs text-slate-300 mb-5 leading-relaxed">Konfirmasi penukaran barang...</p>
             <div class="flex gap-2.5">
-                <button onclick="closeBuyConfirmModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-600 transition">Batal</button>
-                <button onclick="executeRedeemItem()" class="flex-1 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition">Ya, Tukar</button>
+                <button type="button" onclick="closeBuyConfirmModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-600 transition">Batal</button>
+                <button type="button" onclick="executeRedeemItem()" class="flex-1 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition">Ya, Tukar</button>
             </div>
         </div>
     </div>
@@ -334,8 +334,8 @@
             <h3 class="text-base font-extrabold text-white mb-1">Keluarkan Pemain?</h3>
             <p id="kickConfirmText" class="text-xs text-slate-300 mb-5 leading-relaxed">Apakah Anda yakin ingin mengeluarkan pemain ini?</p>
             <div class="flex gap-2.5">
-                <button onclick="closeKickConfirmModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-600 transition">Batal</button>
-                <button onclick="executeKickPlayer()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-lg transition">Ya, Kick</button>
+                <button type="button" onclick="closeKickConfirmModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-600 transition">Batal</button>
+                <button type="button" onclick="executeKickPlayer()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-lg transition">Ya, Kick</button>
             </div>
         </div>
     </div>
@@ -348,7 +348,7 @@
             </div>
             <h3 class="text-base font-extrabold text-red-400 mb-1">Akses Dihentikan</h3>
             <p id="kickedInfoText" class="text-xs text-slate-300 mb-5 leading-relaxed">Anda telah dikeluarkan dari permainan oleh Admin.</p>
-            <button onclick="closeKickedInfoModal()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition">OK, Mengerti</button>
+            <button type="button" onclick="closeKickedInfoModal()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition">OK, Mengerti</button>
         </div>
     </div>
 
