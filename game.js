@@ -1,7 +1,7 @@
 // ==========================================
 // LINK GOOGLE APPS SCRIPT
 // ==========================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeb8P7lsmjdHT26Kbb0YQn9HA1I1PPwqDeCeBev2Txe3QAk_fgB7PORZ1Or-V3U5U4/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQJDchWo3MdnTSCh194FdNB94IYSVHLrKiHKh9N4C8e_RzUeSQ_K2cXVnIVfYrJ8WG/exec";
 
 // ==========================================
 // CONFIGURATION, DATABASE & MAIN GAME LOOP
@@ -35,18 +35,6 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     db = firebase.database();
 }
 
-// Daftar seluruh file kostum yang tersedia di folder assets/kostom/
-const ALL_AVAILABLE_COSTUMES = [
-    "lk_batik.png",
-    "lk_damkar.png",
-    "lk_pjok.png",
-    "lk_pramuka.png",
-    "pr_batik.png",
-    "pr_perawat.png",
-    "pr_pjok.png",
-    "pr_pramuka.png"
-];
-
 let USER_DATABASE = [
     { name: "Admin", gender: "A", role: "ADMIN", status: "Full", points: 100, tickets: 10, password: "123", hasFullCostumes: true, ownedCostumes: [], equippedCostume: "" }, 
     { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, tickets: 3, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }, 
@@ -56,11 +44,6 @@ let USER_DATABASE = [
 let isDatabaseReady = false;
 let playerPoints = 0;
 let playerTickets = 0;
-
-// Variabel Sistem Kostum (Kolom H & Kolom I Sheet Login)
-let hasFullCostumes = false;
-let ownedCostumes = [];
-let equippedCostume = "";
 
 function showLoginLoading(text) {
     const popup = document.getElementById('loginLoadingPopup');
@@ -109,11 +92,13 @@ function updatePointsDisplay() {
     const modalPoin = document.getElementById('modalPoinDisplay');
     const shopPoin = document.getElementById('shopPoinBalance');
     const modalTiket = document.getElementById('modalTiketDisplay');
+    const shopTiket = document.getElementById('shopTiketBalance');
 
     if (headerPoin) headerPoin.innerText = playerPoints;
     if (modalPoin) modalPoin.innerText = playerPoints;
     if (shopPoin) shopPoin.innerText = playerPoints;
     if (modalTiket) modalTiket.innerText = playerTickets;
+    if (shopTiket) shopTiket.innerText = playerTickets;
 }
 
 async function initPlayerPointsSync(sheetDefaultPoints, sheetDefaultTickets = 0) {
@@ -152,6 +137,7 @@ function savePlayerPointsToFirebase() {
 
     if (currentUserAccount) {
         currentUserAccount.points = playerPoints;
+        currentUserAccount.tickets = playerTickets;
         sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
     }
 
@@ -164,79 +150,8 @@ function savePlayerPointsToFirebase() {
                 action: 'updatePoints',
                 player: playerCustomName,
                 points: playerPoints,
+                tickets: playerTickets,
                 updatedAt: Date.now()
-            })
-        }).catch(() => {});
-    }
-}
-
-// ==========================================
-// HELPER KOSTUM & PREVIEW 1 SPRITE UTUH
-// ==========================================
-function formatCostumeDisplayName(fileName) {
-    return String(fileName || "")
-        .replace(/^(pr_|lk_)/i, '')
-        .replace(/\.png$/i, '')
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-}
-
-function resolveCostumeFileName(rawItemName, genderCode) {
-    const clean = rawItemName.trim().toLowerCase().replace(/\s+/g, '_');
-    if (clean.startsWith('pr_') || clean.startsWith('lk_')) {
-        return clean.endsWith('.png') ? clean : `${clean}.png`;
-    }
-    const prefix = (genderCode === 'P') ? 'pr_' : 'lk_';
-    return `${prefix}${clean}.png`;
-}
-
-function createSingleSpritePreviewHTML(costumeFile, boxClass = "w-11 h-11") {
-    const safeFile = costumeFile.replace(/'/g, "\\'");
-    return `
-        <div class="${boxClass} bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0 relative">
-            <canvas data-costume-preview="${safeFile}" width="48" height="48" class="w-full h-full object-contain"></canvas>
-        </div>
-    `;
-}
-
-function renderAllCostumePreviewCanvases() {
-    const canvases = document.querySelectorAll('canvas[data-costume-preview]');
-    canvases.forEach(cvs => {
-        const fileName = cvs.getAttribute('data-costume-preview');
-        if (!fileName) return;
-        const img = new Image();
-        img.src = `assets/kostom/${fileName}`;
-        img.onload = () => {
-            const ctx = cvs.getContext('2d');
-            ctx.clearRect(0, 0, cvs.width, cvs.height);
-            // Potong HANYA 1 sprite (kolom 0, baris 0 = posisi berdiri menghadap depan)
-            const cols = (img.width % 4 === 0 && img.width >= img.height) ? 4 : 3;
-            const rows = 4;
-            const frameW = Math.floor(img.width / cols);
-            const frameH = Math.floor(img.height / rows);
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(img, 0, 0, frameW, frameH, 4, 2, cvs.width - 8, cvs.height - 4);
-        };
-    });
-}
-
-function saveEquippedCostumeToSheet(costumeFileName) {
-    if (!playerCustomName) return;
-
-    if (currentUserAccount) {
-        currentUserAccount.equippedCostume = costumeFileName;
-        sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
-    }
-
-    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
-        fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'updateEquippedCostume',
-                player: playerCustomName,
-                equippedCostume: costumeFileName || ""
             })
         }).catch(() => {});
     }
@@ -303,14 +218,13 @@ async function fetchSpreadsheetUsers() {
                     const rawColH = (cols[7] || "").trim(); // Kolom H: Kostum dimiliki / "full"
                     const rawColI = (cols[8] || "").trim(); // Kolom I: Kostum dipakai saat login
 
-                    // Jika Kolom B = 'A' ATAU Kolom H = 'full', semua kostum terbuka
                     const isFullCostume = (gCode === 'A') || (rawColH.toLowerCase() === 'full');
 
                     fetchedUsers.push({ 
                         name: cols[0], 
                         gender: gCode,
                         role: (cols[2] || "SISWA").toUpperCase(),
-                        status: cols[3] || "User", // Kolom D: Hak akses ubah profil ("Full")
+                        status: cols[3] || "User",
                         points: isNaN(parsedPoints) ? 0 : parsedPoints,
                         password: cols[5] || "",
                         tickets: isNaN(parsedTickets) ? 0 : parsedTickets,
@@ -334,7 +248,13 @@ async function fetchSpreadsheetUsers() {
 
 let currentUserAccount = null, selectedGender = 'male', playerCustomName = "", playerRole = "", isAdminUser = false;
 window.walkTimer = 0; let tempModalGender = null, nearbyBuilding = null, isGameStarted = false, currentWorldLocation = 1;
-let idleTimer = null; const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+
+// ==========================================
+// SISTEM AFK (AUTO LOGOUT 5 MENIT DIAM)
+// ==========================================
+let idleTimer = null;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 menit
+let isInactivityListenerRegistered = false;
 
 function resetIdleTimer() {
     if (!isGameStarted) return;
@@ -344,19 +264,57 @@ function resetIdleTimer() {
 
 function triggerAutoLogout() {
     if (!isGameStarted) return;
+    handleLogout();
     const errorMsg = document.getElementById('loginErrorMsg');
     if (errorMsg) { 
-        errorMsg.innerText = "AFK karena tidak ada aktivitas. Silakan login kembali."; 
+        errorMsg.innerText = "AFK selama 5 menit karena tidak ada aktivitas. Silakan login kembali."; 
         errorMsg.classList.remove('hidden'); 
     }
-    handleLogout();
 }
 
 function setupInactivityListeners() {
-    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'click', 'scroll'].forEach(ev => {
+    if (isInactivityListenerRegistered) return;
+    isInactivityListenerRegistered = true;
+    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'click', 'scroll', 'input'].forEach(ev => {
         window.addEventListener(ev, () => { resetIdleTimer(); }, { passive: true });
     });
 }
+
+// ==========================================
+// AUTO-CLOSE POP-UP BANGUNAN (30 DETIK), CHAT & PETA (5 DETIK)
+// ==========================================
+let dialogAutoCloseTimer = null;
+const DIALOG_AUTO_CLOSE_MS = 30 * 1000; // 30 detik untuk pop-up bangunan
+
+window.resetDialogAutoCloseTimer = function() {
+    if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
+    const dialogModal = document.getElementById('dialogModal');
+    if (!dialogModal || dialogModal.classList.contains('hidden')) return;
+    dialogAutoCloseTimer = setTimeout(() => {
+        const buyModal = document.getElementById('buyConfirmModal');
+        if (buyModal && !buyModal.classList.contains('hidden')) {
+            closeBuyConfirmModal();
+        }
+        closeModal();
+    }, DIALOG_AUTO_CLOSE_MS);
+};
+
+let uiAutoCloseTimer = null;
+const UI_AUTO_CLOSE_DELAY_MS = 5 * 1000; // 5 detik untuk chat & peta
+
+window.resetUIAutoCloseTimer = function() {
+    if (uiAutoCloseTimer) clearTimeout(uiAutoCloseTimer);
+    uiAutoCloseTimer = setTimeout(() => {
+        if (isMiniMapOpen && typeof closeMiniMap === 'function') {
+            closeMiniMap();
+        }
+        const chatInput = document.getElementById('chatInput');
+        const isTypingChat = (document.activeElement === chatInput);
+        if (window.isChatOpen && !isTypingChat && typeof toggleChat === 'function') {
+            toggleChat();
+        }
+    }, UI_AUTO_CLOSE_DELAY_MS);
+};
 
 function initFirebaseSync() {
     if (!db || !playerCustomName) return;
@@ -366,7 +324,6 @@ function initFirebaseSync() {
     myPlayerRef.onDisconnect().remove();
     db.ref('lastActiveTime').onDisconnect().set(Date.now());
 
-    // Hapus sisa kick lama terlebih dahulu sebelum memasang listener kick baru
     const myKickRef = db.ref('kickedPlayers/' + safeKey);
     myKickRef.remove().then(() => {
         myKickRef.on('value', (snapshot) => {
@@ -386,13 +343,104 @@ function initFirebaseSync() {
     });
 }
 
+// ==========================================
+// SISTEM OBROLAN (KOTAK CHAT + BALON DI ATAS KEPALA PLAYER)
+// ==========================================
+window.activeChatBubbles = window.activeChatBubbles || {};
+
+function triggerPlayerChatBubble(senderName, messageText) {
+    if (!senderName || !messageText) return;
+    window.activeChatBubbles[senderName] = {
+        text: messageText,
+        expiresAt: Date.now() + 5000 // Tampil di atas kepala karakter selama 5 detik
+    };
+}
+
+function drawActiveChatBubblesOnCanvas(ctx, cameraX, cameraY, zoomScale) {
+    if (!window.activeChatBubbles) return;
+    const now = Date.now();
+
+    Object.keys(window.activeChatBubbles).forEach(senderName => {
+        const bubble = window.activeChatBubbles[senderName];
+        if (!bubble || now >= bubble.expiresAt || !bubble.text) {
+            delete window.activeChatBubbles[senderName];
+            return;
+        }
+
+        let targetX = null;
+        let targetY = null;
+
+        if (senderName === playerCustomName) {
+            targetX = player.x;
+            targetY = player.y;
+        } else if (window.otherPlayers) {
+            const other = Object.values(window.otherPlayers).find(p => p && p.name === senderName && (p.location || 1) === currentWorldLocation);
+            if (other) {
+                targetX = other.x;
+                targetY = other.y;
+            }
+        }
+
+        if (targetX === null || targetY === null) return;
+
+        ctx.save();
+        ctx.scale(zoomScale, zoomScale);
+        ctx.font = 'bold 11px Fredoka, sans-serif';
+        const displayText = bubble.text.length > 34 ? bubble.text.substring(0, 34) + '...' : bubble.text;
+        const textW = ctx.measureText(displayText).width;
+        const padX = 10;
+        const boxW = Math.max(46, textW + padX * 2);
+        const boxH = 22;
+
+        const screenCenterX = targetX - cameraX;
+        const screenTopY = (targetY - cameraY) - (player.height / 2) - 44;
+        const boxX = screenCenterX - boxW / 2;
+        const boxY = screenTopY - boxH;
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+        ctx.strokeStyle = '#4f46e5';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(boxX, boxY, boxW, boxH, 8);
+        } else {
+            ctx.rect(boxX, boxY, boxW, boxH);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(screenCenterX - 4, boxY + boxH);
+        ctx.lineTo(screenCenterX + 4, boxY + boxH);
+        ctx.lineTo(screenCenterX, boxY + boxH + 5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(displayText, screenCenterX, boxY + boxH / 2);
+        ctx.restore();
+    });
+}
+
 function addChatMessage(sender, text, isSelf) {
     const container = document.getElementById('chatMessages');
     if (!container) return;
     const line = document.createElement('div');
-    line.className = 'leading-snug break-words';
+    line.className = 'leading-snug break-words text-white bg-slate-800/90 px-2.5 py-1.5 rounded-xl border border-slate-700/80';
     const nameColor = isSelf ? 'text-yellow-400' : (sender === 'Sistem' || sender === 'Ruang Kelas' || sender === 'Warung' ? 'text-emerald-400' : 'text-sky-300');
-    line.innerHTML = `<strong class="${nameColor}">${sender}:</strong> <span class="text-slate-100">${text}</span>`;
+
+    const nameEl = document.createElement('strong');
+    nameEl.className = nameColor;
+    nameEl.textContent = `${sender}: `;
+
+    const textEl = document.createElement('span');
+    textEl.className = 'text-slate-100 font-normal';
+    textEl.textContent = text;
+
+    line.appendChild(nameEl);
+    line.appendChild(textEl);
     container.appendChild(line);
     container.scrollTop = container.scrollHeight;
 }
@@ -405,6 +453,7 @@ window.handleChatSubmit = function(e) {
     if (!msg) return;
     input.value = '';
     window.sendFirebaseChat(playerCustomName, msg);
+    resetUIAutoCloseTimer();
 };
 
 function sendChatMessage() {
@@ -420,6 +469,7 @@ window.toggleChat = function() {
     if (window.isChatOpen) {
         box.classList.remove('hidden');
         if (badge) { badge.innerText = '0'; badge.classList.add('hidden'); }
+        resetUIAutoCloseTimer();
     } else {
         box.classList.add('hidden');
     }
@@ -450,8 +500,27 @@ function startListeningChat() {
     chatRefQuery = db.ref('chats').orderByChild('timestamp').startAt(loginTimestamp);
     chatRefQuery.on('child_added', (snapshot) => {
         const msgData = snapshot.val();
-        if (!msgData || !msgData.sender || !msgData.text) return;
-        addChatMessage(msgData.sender, msgData.text, msgData.sender === playerCustomName);
+        if (!msgData || !msgData.sender) return;
+
+        const chatBody = msgData.text || msgData.message || "";
+        if (!chatBody) return;
+
+        addChatMessage(msgData.sender, chatBody, msgData.sender === playerCustomName);
+        triggerPlayerChatBubble(msgData.sender, chatBody);
+
+        // Jika pemain menerima gift tiket secara real-time, perbarui saldonya
+        if (msgData.giftReceiver && msgData.giftReceiver.toLowerCase() === playerCustomName.toLowerCase()) {
+            const added = parseInt(msgData.giftAmount, 10) || 0;
+            if (added > 0) {
+                playerTickets += added;
+                if (currentUserAccount) {
+                    currentUserAccount.tickets = playerTickets;
+                    sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+                }
+                updatePointsDisplay();
+            }
+        }
+
         if (!window.isChatOpen && msgData.sender !== playerCustomName) {
             const badge = document.getElementById('chatBadge');
             if (badge) {
@@ -463,15 +532,20 @@ function startListeningChat() {
     });
 }
 
-window.sendFirebaseChat = function(senderName, messageText) {
+window.sendFirebaseChat = function(senderName, messageText, extraData = {}) {
     if (!db || !messageText) return;
     db.ref('chats').push({
         sender: senderName || playerCustomName || "Anonim",
         text: messageText,
-        timestamp: Date.now()
+        message: messageText,
+        timestamp: Date.now(),
+        ...extraData
     });
 };
 
+// ==========================================
+// DAFTAR PEMAIN ONLINE (POSISI KICK & LOKASI RAPI)
+// ==========================================
 function updateOnlinePlayersList(otherPlayersData) {
     const listElem = document.getElementById('onlinePlayersList');
     const onlineCountText = document.getElementById('onlineCountText');
@@ -482,40 +556,45 @@ function updateOnlinePlayersList(otherPlayersData) {
 
     listElem.innerHTML = '';
     const selfBadge = selectedGender === 'admin' ? '👑' : (selectedGender === 'female' ? '🧕' : '👦');
+    const selfLocName = (typeof MAP_CONFIGS !== 'undefined' && MAP_CONFIGS[currentWorldLocation])
+        ? MAP_CONFIGS[currentWorldLocation].name.replace('Lokasi : ', '')
+        : 'Sekolah';
+
     const selfItem = document.createElement('div');
-    selfItem.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800 border border-yellow-400/50';
+    selfItem.className = 'flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-800 border border-yellow-400/50';
     selfItem.innerHTML = `
-        <div class="flex items-center gap-2">
-            <span class="text-base">${selfBadge}</span>
-            <div>
-                <div class="text-xs font-bold text-yellow-400">${playerCustomName} <span class="text-[9px] text-slate-400">(Anda ${isAdminUser ? '- ADMIN' : ''})</span></div>
-                <div class="text-[10px] text-slate-300">${playerRole}</div>
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="text-base shrink-0">${selfBadge}</span>
+            <div class="min-w-0">
+                <div class="text-xs font-bold text-yellow-400 truncate">${playerCustomName} <span class="text-[9px] text-slate-400">(Anda ${isAdminUser ? '- ADMIN' : ''})</span></div>
+                <div class="text-[10px] text-slate-300 truncate">${playerRole} • <span class="text-indigo-300">📍 ${selfLocName}</span></div>
             </div>
         </div>
-        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40">Aktif</span>
+        <span class="text-[10px] px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40 shrink-0">Aktif</span>
     `;
     listElem.appendChild(selfItem);
 
     otherList.forEach(p => {
         const item = document.createElement('div');
-        item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-800/80 border border-slate-700';
+        item.className = 'flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-800/80 border border-slate-700';
         const locName = (typeof MAP_CONFIGS !== 'undefined' && MAP_CONFIGS[p.location]) 
             ? MAP_CONFIGS[p.location].name.replace('Lokasi : ', '') 
             : 'Sekolah';
         const pBadge = p.gender === 'admin' ? '👑' : (p.gender === 'female' ? '🧕' : '👦');
-        const kickButtonHTML = isAdminUser 
-            ? `<button type="button" onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow"><i class="fas fa-user-xmark"></i> Kick</button>`
-            : `<span class="text-[10px] text-slate-400">${locName}</span>`;
+        
+        const rightActionHTML = isAdminUser 
+            ? `<button type="button" onclick="kickPlayerByAdmin('${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white text-[10px] font-bold rounded-lg transition flex items-center gap-1 shadow shrink-0"><i class="fas fa-user-xmark"></i> Kick</button>`
+            : `<span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-900 text-slate-300 border border-slate-700 shrink-0">📍 ${locName}</span>`;
 
         item.innerHTML = `
-            <div class="flex items-center gap-2">
-                <span class="text-base">${pBadge}</span>
-                <div>
-                    <div class="text-xs font-bold text-white">${p.name}</div>
-                    <div class="text-[10px] text-slate-400">${p.role || 'SISWA'}</div>
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-base shrink-0">${pBadge}</span>
+                <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">${p.name}</div>
+                    <div class="text-[10px] text-slate-400 truncate">${p.role || 'SISWA'} • <span class="text-indigo-300">📍 ${locName}</span></div>
                 </div>
             </div>
-            ${kickButtonHTML}
+            ${rightActionHTML}
         `;
         listElem.appendChild(item);
     });
@@ -576,11 +655,9 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     currentUserAccount = matchedUser; 
     playerCustomName = matchedUser.name;
 
-    // Gender asli dari Kolom B Sheet Login ('A', 'L', atau 'P')
     const accountGenderCode = (matchedUser.gender || 'L').toUpperCase().trim();
     const isAccountTypeA = (accountGenderCode === 'A');
 
-    // Jika Kolom B = 'A', sprite default awal selalu 'admin' (assets/admin.png) kecuali saat resume sesi
     if (savedPosition && savedPosition.activeSpriteGender) {
         selectedGender = savedPosition.activeSpriteGender;
     } else if (isAccountTypeA) {
@@ -594,7 +671,6 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     playerRole = matchedUser.role || 'SISWA';
     isAdminUser = (isAccountTypeA || matchedUser.role === 'ADMIN' || (matchedUser.status || "").toLowerCase().trim() === 'full' || (matchedUser.status || "").toLowerCase().trim() === 'admin');
 
-    // Jika Kolom B = 'A' atau Kolom H = 'full', semua kostum lk_ dan pr_ terbuka
     hasFullCostumes = isAccountTypeA || Boolean(matchedUser.hasFullCostumes);
     ownedCostumes = Array.isArray(matchedUser.ownedCostumes) ? [...matchedUser.ownedCostumes] : [];
     equippedCostume = (matchedUser.equippedCostume || "").trim();
@@ -723,6 +799,11 @@ function setupGameEvents() {
         isCanvasListenerAdded = true;
         gameCanvasElem.addEventListener('click', (e) => {
             if (!isGameStarted) return;
+            const isAnyModalOpen = !document.getElementById('dialogModal')?.classList.contains('hidden') ||
+                                   !document.getElementById('editCharModal')?.classList.contains('hidden') ||
+                                   !document.getElementById('onlinePlayersModal')?.classList.contains('hidden');
+            if (isAnyModalOpen) return;
+
             if (e.target.closest('#psAnalogStick') || e.target.closest('#btnInteract') || e.target.closest('#miniMapBtn')) return;
             const rect = gameCanvasElem.getBoundingClientRect();
             const currentZoom = getAdaptiveZoom();
@@ -734,9 +815,17 @@ function setupGameEvents() {
             player.targetX = camX + ((e.clientX - rect.left) / currentZoom);
             player.targetY = camY + ((e.clientY - rect.top) / currentZoom);
             player.isMovingToTarget = true;
-            if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
+            resetUIAutoCloseTimer();
         });
     }
+
+    const chatInputElem = document.getElementById('chatInput');
+    if (chatInputElem) {
+        chatInputElem.addEventListener('input', () => resetUIAutoCloseTimer());
+        chatInputElem.addEventListener('focus', () => resetUIAutoCloseTimer());
+        chatInputElem.addEventListener('blur', () => resetUIAutoCloseTimer());
+    }
+
     setupTouchAnalogStick(); 
     setupInactivityListeners(); 
 }
@@ -839,6 +928,9 @@ function gameLoop() {
         trees.forEach(tree => { if (tree.y > player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
+    // Gambar balon chat di atas kepala karakter yang baru mengirim pesan
+    drawActiveChatBubblesOnCanvas(ctx, cameraX, cameraY, currentZoomScale);
+
     if (isMiniMapOpen) renderMiniMap();
     requestAnimationFrame(gameLoop);
 }
@@ -865,7 +957,7 @@ function setupTouchAnalogStick() {
         keys.ArrowLeft = deltaX < -6; keys.ArrowRight = deltaX > 6; 
         keys.ArrowUp = deltaY < -6; keys.ArrowDown = deltaY > 6;
         player.isMovingToTarget = false;
-        if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer();
+        resetUIAutoCloseTimer();
     };
     const handleEnd = () => { 
         if (!isDragging) return; isDragging = false; 
@@ -882,227 +974,8 @@ function setupTouchAnalogStick() {
 }
 
 // ==========================================
-// TOKO / WARUNG: KHUSUS TEMPAT BELI KOSTUM
+// INTERAKSI BANGUNAN (AUTO-CLOSE 30 DETIK)
 // ==========================================
-let currentShopItems = [];
-let pendingRedeemItem = null;
-
-function renderShopItemsList() {
-    const modalContent = document.getElementById('modalContent');
-    if (!modalContent) return;
-
-    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
-    const isAdminGender = (genderCode === 'A');
-
-    let html = `
-        <div class="flex items-center justify-between bg-amber-950/80 border border-amber-500/40 px-3.5 py-2 rounded-xl mb-3">
-            <span class="text-xs font-bold text-amber-200">Poin Anda Saat Ini:</span>
-            <div class="flex items-center gap-1.5">
-                <img src="assets/poin.png" alt="Poin" class="w-4 h-4 object-contain coin-spin" />
-                <span id="shopPoinBalance" class="text-sm font-extrabold text-amber-400">${playerPoints}</span>
-            </div>
-        </div>
-        <div class="mb-2.5 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-slate-300 text-center">
-            💡 Kostum yang sudah dibeli dapat dipakai melalui menu <strong>Profil (ikon pensil)</strong>.
-        </div>
-        <div id="shopFeedbackBanner" class="hidden mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center"></div>
-    `;
-
-    let expandedShopItems = [];
-    currentShopItems.forEach((item, idx) => {
-        const lowerName = item.rawName.toLowerCase();
-        const hasExplicitPrefix = lowerName.startsWith('pr_') || lowerName.startsWith('lk_');
-
-        if (isAdminGender) {
-            if (hasExplicitPrefix) {
-                const file = lowerName.endsWith('.png') ? lowerName : `${lowerName}.png`;
-                const tag = lowerName.startsWith('pr_') ? ' (PR)' : ' (LK)';
-                expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: file, labelName: item.displayName + tag });
-            } else {
-                const baseClean = lowerName.replace(/\.png$/i, '').replace(/\s+/g, '_');
-                expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: `lk_${baseClean}.png`, labelName: `${item.displayName} (LK)` });
-                expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: `pr_${baseClean}.png`, labelName: `${item.displayName} (PR)` });
-            }
-        } else {
-            if (lowerName.startsWith('pr_') && genderCode !== 'P') return;
-            if (lowerName.startsWith('lk_') && genderCode !== 'L') return;
-            const file = resolveCostumeFileName(item.rawName, genderCode);
-            expandedShopItems.push({ ...item, actualIndex: idx, costumeFile: file, labelName: item.displayName });
-        }
-    });
-
-    if (expandedShopItems.length === 0) {
-        html += `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/60 rounded-xl">Belum ada kostum yang tersedia untuk karakter Anda saat ini.</div>`;
-    } else {
-        html += `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left pr-1">`;
-        expandedShopItems.forEach((entry) => {
-            const isOwned = hasFullCostumes || ownedCostumes.some(c => c.toLowerCase() === entry.costumeFile.toLowerCase());
-            const canAfford = playerPoints >= entry.cost;
-
-            let actionButtonHTML = '';
-            if (isOwned) {
-                actionButtonHTML = `<span class="px-3 py-1.5 rounded-xl font-extrabold text-[11px] bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 shrink-0">Sudah Dimiliki</span>`;
-            } else {
-                const btnClass = canAfford
-                    ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
-                    : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
-                actionButtonHTML = `<button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${entry.labelName.replace(/'/g, "\\'")}')" ${canAfford ? '' : 'disabled'} class="px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition shrink-0 shadow ${btnClass}">${canAfford ? 'Beli' : 'Poin Kurang'}</button>`;
-            }
-
-            html += `
-                <div class="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-xl">
-                    <div class="flex items-center gap-2.5 pr-2">
-                        ${createSingleSpritePreviewHTML(entry.costumeFile, "w-11 h-11")}
-                        <div>
-                            <div class="text-xs md:text-sm font-bold text-white">${entry.labelName}</div>
-                            <div class="flex items-center gap-1 mt-1">
-                                <img src="assets/poin.png" alt="Poin" class="w-3.5 h-3.5 object-contain coin-spin" />
-                                <span class="text-xs font-extrabold text-amber-400">${entry.cost} Poin</span>
-                            </div>
-                        </div>
-                    </div>
-                    ${actionButtonHTML}
-                </div>
-            `;
-        });
-        html += `</div>`;
-    }
-    modalContent.innerHTML = html;
-    renderAllCostumePreviewCanvases();
-}
-
-window.promptRedeemShopItem = function(itemIndex, specificCostumeFile, specificLabelName) {
-    const item = currentShopItems[itemIndex];
-    if (!item || playerPoints < item.cost) return;
-
-    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
-    const targetFile = specificCostumeFile || resolveCostumeFileName(item.rawName, genderCode);
-    const targetLabel = specificLabelName || item.displayName;
-
-    pendingRedeemItem = { ...item, targetFile, targetLabel };
-    const textElem = document.getElementById('buyConfirmText');
-    if (textElem) textElem.innerHTML = `Beli kostum <strong class="text-white">${targetLabel}</strong> seharga <strong class="text-amber-400">${item.cost} Poin</strong>?`;
-    const modal = document.getElementById('buyConfirmModal');
-    if (modal) modal.classList.remove('hidden');
-};
-
-window.closeBuyConfirmModal = function() {
-    pendingRedeemItem = null;
-    const modal = document.getElementById('buyConfirmModal');
-    if (modal) modal.classList.add('hidden');
-};
-
-window.executeRedeemItem = function() {
-    if (!pendingRedeemItem) return;
-    const item = pendingRedeemItem;
-    closeBuyConfirmModal();
-    if (playerPoints < item.cost) return;
-
-    const costumeFile = item.targetFile;
-
-    playerPoints -= item.cost;
-    if (!hasFullCostumes && !ownedCostumes.some(c => c.toLowerCase() === costumeFile.toLowerCase())) {
-        ownedCostumes.push(costumeFile);
-    }
-
-    if (currentUserAccount) {
-        currentUserAccount.points = playerPoints;
-        currentUserAccount.ownedCostumes = ownedCostumes;
-        sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
-    }
-
-    savePlayerPointsToFirebase();
-    renderShopItemsList();
-
-    const banner = document.getElementById('shopFeedbackBanner');
-    if (banner) {
-        banner.className = "mb-2.5 px-3 py-2 rounded-xl text-xs font-bold text-center bg-emerald-950/90 border border-emerald-500 text-emerald-300";
-        banner.innerHTML = `✅ Berhasil membeli <strong>${item.targetLabel}</strong>! Silakan pakai di menu <strong>Profil</strong>.`;
-        banner.classList.remove('hidden');
-    }
-
-    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
-        fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'addRedeem',
-                player: playerCustomName,
-                item: item.targetLabel,
-                costumeFile: costumeFile,
-                equipNow: false,
-                cost: item.cost,
-                remainingPoints: playerPoints,
-                timestamp: Date.now()
-            })
-        }).catch(() => {});
-    }
-
-    if (typeof window.sendFirebaseChat === 'function') {
-        window.sendFirebaseChat("Warung", `🛍️ ${playerCustomName} baru saja membeli kostum "${item.targetLabel}"!`);
-    }
-};
-
-// ==========================================
-// PROFIL: LEMARI GANTI KOSTUM (PAKAI / LEPAS)
-// ==========================================
-function renderProfileCostumeWardrobe() {
-    const wardrobeEl = document.getElementById('profileCostumeWardrobe');
-    if (!wardrobeEl) return;
-
-    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
-    const isAdminOrFull = (genderCode === 'A') || hasFullCostumes;
-
-    // Jika Kolom B = 'A' atau Kolom H = 'full', tampilkan semua kostum lk_ dan pr_
-    const availableList = isAdminOrFull
-        ? [...ALL_AVAILABLE_COSTUMES]
-        : ownedCostumes;
-
-    if (!availableList || availableList.length === 0) {
-        wardrobeEl.innerHTML = `<div class="col-span-2 text-center text-[11px] text-slate-400 py-3">Belum ada kostum dimiliki. Beli kostum di 🏪 Warung Sekolah!</div>`;
-        return;
-    }
-
-    let html = '';
-    availableList.forEach(rawFile => {
-        const file = rawFile.toLowerCase().endsWith('.png') ? rawFile : `${rawFile}.png`;
-        const isEquipped = equippedCostume.toLowerCase() === file.toLowerCase();
-        const tagGender = file.startsWith('pr_') ? ' (PR)' : (file.startsWith('lk_') ? ' (LK)' : '');
-        const label = formatCostumeDisplayName(file) + (isAdminOrFull ? tagGender : '');
-
-        html += `
-            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-800 border ${isEquipped ? 'border-emerald-400 bg-emerald-950/30' : 'border-slate-700'}">
-                <div class="flex items-center gap-1.5 min-w-0">
-                    ${createSingleSpritePreviewHTML(file, "w-8 h-8")}
-                    <span class="text-[10px] font-bold text-white truncate">${label}</span>
-                </div>
-                ${isEquipped
-                    ? `<button type="button" onclick="unequipCostume()" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-extrabold shrink-0 ml-1">Lepas</button>`
-                    : `<button type="button" onclick="equipCostume('${file}')" class="px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-[9px] font-extrabold shrink-0 ml-1">Pakai</button>`
-                }
-            </div>
-        `;
-    });
-
-    wardrobeEl.innerHTML = html;
-    renderAllCostumePreviewCanvases();
-}
-
-window.equipCostume = function(costumeFile) {
-    equippedCostume = costumeFile;
-    saveEquippedCostumeToSheet(equippedCostume);
-    updateMyPositionToFirebase();
-    renderProfileCostumeWardrobe();
-};
-
-window.unequipCostume = function() {
-    equippedCostume = "";
-    saveEquippedCostumeToSheet("");
-    updateMyPositionToFirebase();
-    renderProfileCostumeWardrobe();
-};
-
 window.triggerInteraction = async function() {
     if (!nearbyBuilding) return;
     if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function' && handleKelasInteraction(nearbyBuilding)) return;
@@ -1118,31 +991,33 @@ window.triggerInteraction = async function() {
     modalContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4"><img src="assets/loading.gif" alt="Loading..." class="w-8 h-8 mb-2" /><span class="text-xs text-slate-300">Memuat data ${nearbyBuilding.name}...</span></div>`;
     modalActions.innerHTML = `<button type="button" onclick="closeModal()" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
     document.getElementById('dialogModal').classList.remove('hidden');
+    resetDialogAutoCloseTimer();
 
     if (!nearbyBuilding.sheetName) {
         modalContent.innerText = nearbyBuilding.dialogText || "Tidak ada informasi.";
+        resetDialogAutoCloseTimer();
         return;
     }
 
     try {
+        if (nearbyBuilding.sheetName === 'Toko') {
+            if (typeof ensureShopCatalogLoaded === 'function') {
+                await ensureShopCatalogLoaded(true);
+            }
+            if (typeof renderShopItemsList === 'function') {
+                renderShopItemsList();
+            }
+            resetDialogAutoCloseTimer();
+            return;
+        }
+
         const response = await fetch(getSheetCsvUrl(nearbyBuilding.sheetName));
         if (!response.ok) throw new Error("Gagal mengambil sheet");
         const csvText = await response.text();
         const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-        if (nearbyBuilding.sheetName === 'Toko') {
-            currentShopItems = [];
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
-                if (cols[0]) {
-                    const itemCost = parseInt((cols[1] || "0").replace(/[^0-9]/g, ''), 10);
-                    const cleanDisplay = formatCostumeDisplayName(cols[0]);
-                    currentShopItems.push({ rawName: cols[0], name: cleanDisplay, displayName: cleanDisplay, cost: isNaN(itemCost) ? 0 : itemCost });
-                }
-            }
-            renderShopItemsList();
-        } else if (nearbyBuilding.sheetName === 'PJOK') {
-            let htmlList = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
+        if (nearbyBuilding.sheetName === 'PJOK') {
+            let htmlList = `<div class="flex flex-col gap-2 w-full text-left">`;
             let hasItems = false;
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
@@ -1156,7 +1031,7 @@ window.triggerInteraction = async function() {
             htmlList += `</div>`;
             modalContent.innerHTML = hasItems ? htmlList : `<div class="text-center text-xs text-slate-400 p-3">Belum ada kegiatan / permainan PJOK tersedia saat ini.</div>`;
         } else if (nearbyBuilding.sheetName === 'Perpus') {
-            let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
+            let htmlHTML = `<div class="flex flex-col gap-2 w-full text-left">`;
             let hasItems = false;
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
@@ -1169,7 +1044,7 @@ window.triggerInteraction = async function() {
             modalContent.innerHTML = hasItems ? htmlHTML : `<div class="text-center text-xs text-slate-400 p-2">Belum ada koleksi buku / link kelas di Perpustakaan.</div>`;
         } else {
             let hasItems = false;
-            let htmlHTML = `<div class="flex flex-col gap-2 max-h-60 overflow-y-auto w-full text-left">`;
+            let htmlHTML = `<div class="flex flex-col gap-2 w-full text-left">`;
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                 if (cols[0]) {
@@ -1180,13 +1055,15 @@ window.triggerInteraction = async function() {
             htmlHTML += `</div>`;
             modalContent.innerHTML = hasItems ? htmlHTML : `<div class="text-center text-xs text-slate-400 p-2">Belum ada informasi baru.</div>`;
         }
+        resetDialogAutoCloseTimer();
     } catch (err) {
         modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-3">Belum ada informasi / konten tersedia saat ini.</div>`;
+        resetDialogAutoCloseTimer();
     }
 };
 
 window.toggleMiniMap = function() { if (isMiniMapOpen) closeMiniMap(); else openMiniMap(); };
-function openMiniMap() { isMiniMapOpen = true; const p = document.getElementById('miniMapPopup'); if (p) p.classList.remove('hidden'); if (typeof resetUIAutoCloseTimer === 'function') resetUIAutoCloseTimer(); }
+function openMiniMap() { isMiniMapOpen = true; const p = document.getElementById('miniMapPopup'); if (p) p.classList.remove('hidden'); resetUIAutoCloseTimer(); }
 window.closeMiniMap = function() { isMiniMapOpen = false; const p = document.getElementById('miniMapPopup'); if (p) p.classList.add('hidden'); };
 function renderMiniMap() {
     const largeMapCanvas = document.getElementById('largeMapCanvas');
@@ -1219,7 +1096,6 @@ window.openEditCharacterModal = function() {
     const colDStatus = (currentUserAccount && currentUserAccount.status) ? currentUserAccount.status.trim().toLowerCase() : '';
     const isAccountTypeA = (currentUserAccount && (currentUserAccount.gender || '').toUpperCase().trim() === 'A');
 
-    // Akun dengan Kolom B = 'A' ATAU Kolom D = 'Full' boleh ubah profil
     const canEditFullProfile = isAccountTypeA || (colDStatus === 'full');
 
     if (adminContainer) {
@@ -1230,10 +1106,97 @@ window.openEditCharacterModal = function() {
         }
     }
 
+    // Pengaturan Panel Gift Tiket (Khusus Kolom D = Full)
+    const giftSection = document.getElementById('giftTicketSection');
+    const giftSelect = document.getElementById('giftTargetPlayerSelect');
+    const giftFeedback = document.getElementById('giftTicketFeedback');
+    if (giftFeedback) giftFeedback.classList.add('hidden');
+
+    if (giftSection && giftSelect) {
+        if (colDStatus === 'full') {
+            giftSection.classList.remove('hidden');
+            const otherUsers = (USER_DATABASE || []).filter(u => u.name && u.name.trim().toLowerCase() !== playerCustomName.trim().toLowerCase());
+            giftSelect.innerHTML = `<option value="">-- Pilih Pemain --</option>` +
+                otherUsers.map(u => `<option value="${u.name}">${u.name} (${u.role})</option>`).join('');
+        } else {
+            giftSection.classList.add('hidden');
+        }
+    }
+
     updatePointsDisplay();
     selectModalGender(selectedGender);
     renderProfileCostumeWardrobe();
     document.getElementById('editCharModal').classList.remove('hidden');
+};
+
+window.handleGiftTickets = function() {
+    const colDStatus = (currentUserAccount && currentUserAccount.status) ? currentUserAccount.status.trim().toLowerCase() : '';
+    if (colDStatus !== 'full') return;
+
+    const selectEl = document.getElementById('giftTargetPlayerSelect');
+    const amountEl = document.getElementById('giftTicketAmountInput');
+    const feedbackEl = document.getElementById('giftTicketFeedback');
+    if (!selectEl || !amountEl || !feedbackEl) return;
+
+    const targetName = selectEl.value.trim();
+    const amount = parseInt(amountEl.value, 10) || 0;
+
+    const showFeedback = (msg, isOk) => {
+        feedbackEl.className = `mt-1.5 text-[10px] font-bold text-center px-2 py-1 rounded-lg ${isOk ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' : 'bg-red-950 text-red-300 border border-red-500/40'}`;
+        feedbackEl.innerText = msg;
+        feedbackEl.classList.remove('hidden');
+    };
+
+    if (!targetName) {
+        showFeedback("Pilih pemain penerima terlebih dahulu!", false);
+        return;
+    }
+    if (amount < 1 || amount > 5) {
+        showFeedback("Jumlah gift minimal 1 dan maksimal 5 tiket!", false);
+        return;
+    }
+    if (playerTickets < amount) {
+        showFeedback(`Tiket Anda tidak cukup (sisa ${playerTickets} tiket).`, false);
+        return;
+    }
+
+    // Pengirim berkurang (-amount), penerima bertambah (+amount)
+    playerTickets -= amount;
+    const targetUserObj = USER_DATABASE.find(u => u.name.trim().toLowerCase() === targetName.toLowerCase());
+    if (targetUserObj) {
+        targetUserObj.tickets = (targetUserObj.tickets || 0) + amount;
+    }
+
+    if (currentUserAccount) {
+        currentUserAccount.tickets = playerTickets;
+        sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+    }
+
+    updatePointsDisplay();
+    showFeedback(`✅ Berhasil mengirim ${amount} Tiket ke ${targetName}!`, true);
+
+    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'giftTickets',
+                sender: playerCustomName,
+                receiver: targetName,
+                amount: amount,
+                timestamp: Date.now()
+            })
+        }).catch(() => {});
+    }
+
+    if (typeof window.sendFirebaseChat === 'function') {
+        window.sendFirebaseChat(
+            "Sistem",
+            `🎁 ${playerCustomName} baru saja menghadiahkan ${amount} Tiket kepada ${targetName}!`,
+            { giftReceiver: targetName, giftAmount: amount }
+        );
+    }
 };
 
 window.closeEditCharacterModal = function() { document.getElementById('editCharModal').classList.add('hidden'); };
@@ -1247,7 +1210,6 @@ window.selectModalGender = function(g) {
 
     const isAccountTypeA = (currentUserAccount && (currentUserAccount.gender || '').toUpperCase().trim() === 'A');
 
-    // Jika Kolom B = 'A', tampilkan 3 opsi (Aisyah, Ali, Admin); jika bukan 'A', tampilkan 2 opsi saja
     if (optA && grid) {
         if (isAccountTypeA) {
             optA.classList.remove('hidden');
@@ -1288,7 +1250,6 @@ window.saveCharacterEdits = function() {
 
     if (currentUserAccount) {
         currentUserAccount.name = playerCustomName;
-        // Jika bukan akun 'A', perbarui kode gender sesi; jika akun 'A', pertahankan 'A' agar semua kostum tetap terbuka
         if (!isAccountTypeA) {
             currentUserAccount.gender = (selectedGender === 'female') ? 'P' : 'L';
         }
@@ -1319,12 +1280,19 @@ window.handleLogout = function() {
     if (db) db.ref('lastActiveTime').set(Date.now());
     if (chatRefQuery) { chatRefQuery.off(); chatRefQuery = null; }
     if (idleTimer) clearTimeout(idleTimer);
+    if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
+    if (uiAutoCloseTimer) clearTimeout(uiAutoCloseTimer);
+    window.activeChatBubbles = {};
     loadSavedCredentials();
     document.getElementById('gameContainer').classList.add('hidden'); 
     document.getElementById('loginScreen').classList.remove('hidden'); 
 };
 
-window.closeModal = function() { document.getElementById('dialogModal').classList.add('hidden'); };
+window.closeModal = function() {
+    if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
+    const modal = document.getElementById('dialogModal');
+    if (modal) modal.classList.add('hidden');
+};
 
 window.addEventListener('load', async function() { 
     loadSavedCredentials();

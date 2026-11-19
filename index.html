@@ -57,7 +57,7 @@
     </style>
 </head>
 <body>
-    <!-- Peringatan Putar Layar (Fallback jika HP tidak mendukung auto-rotate landscape) -->
+    <!-- Peringatan Putar Layar -->
     <div id="rotateNotice" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white">
         <div class="w-20 h-20 mb-4 rounded-3xl bg-yellow-400 text-slate-950 flex items-center justify-center text-4xl shadow-2xl animate-bounce">📱</div>
         <h2 class="text-xl md:text-2xl font-extrabold text-yellow-400 mb-2">Putar Layar HP Anda</h2>
@@ -67,7 +67,7 @@
         </button>
     </div>
 
-    <!-- Layar Login (Menggunakan div agar browser tidak pernah reload otomatis) -->
+    <!-- Layar Login -->
     <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
         <div class="bg-slate-900 border-2 border-yellow-400/85 rounded-3xl p-5 md:p-8 max-w-md w-full text-center shadow-2xl text-white">
             <div class="w-14 h-14 md:w-16 md:h-16 mx-auto mb-2.5 bg-yellow-400 rounded-2xl flex items-center justify-center text-slate-900 text-2xl md:text-3xl font-black shadow-lg">🏫</div>
@@ -184,20 +184,20 @@
                 </div>
             </div>
 
-            <!-- Tombol & Kotak Chat (Kanan Bawah) -->
-            <div class="absolute bottom-2.5 right-2.5 md:bottom-4 md:right-4 z-40 flex flex-col items-end">
-                <div id="chatBoxPopup" class="mb-2 sm:mb-3 w-64 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300">
-                    <div class="bg-indigo-600 text-white px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between">
-                        <div class="flex items-center gap-2"><i class="fas fa-comments text-yellow-300"></i><span class="font-bold text-xs">Obrolan Ruangan</span></div>
-                        <button type="button" onclick="toggleChat()" class="text-white hover:text-slate-200 text-xs"><i class="fas fa-times"></i></button>
+            <!-- Tombol & Kotak Chat (Kanan Bawah - Responsif Anti-Terpotong di HP Landscape) -->
+            <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-40 flex flex-col items-end max-h-[calc(100dvh-3.5rem)]">
+                <div id="chatBoxPopup" class="mb-1.5 sm:mb-3 w-64 sm:w-80 max-h-[calc(100dvh-7.5rem)] flex flex-col bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300">
+                    <div class="bg-indigo-600 text-white px-3 py-1.5 sm:px-4 sm:py-2.5 flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-2"><i class="fas fa-comments text-yellow-300 text-xs"></i><span class="font-bold text-[11px] sm:text-xs">Obrolan Ruangan</span></div>
+                        <button type="button" onclick="toggleChat()" class="w-6 h-6 rounded-full hover:bg-indigo-500 text-white text-xs flex items-center justify-center"><i class="fas fa-times"></i></button>
                     </div>
-                    <div id="chatMessages" class="p-2 sm:p-3 h-32 sm:h-48 overflow-y-auto flex flex-col gap-2 text-xs"></div>
-                    <div class="p-2 bg-slate-100 border-t flex gap-1">
-                        <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-3 py-1 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 text-slate-800" onkeydown="if(event.key==='Enter') handleChatSubmit(event)">
-                        <button type="button" onclick="handleChatSubmit(event)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold"><i class="fas fa-paper-plane"></i></button>
+                    <div id="chatMessages" class="p-2 sm:p-3 flex-1 min-h-[75px] max-h-36 sm:max-h-48 overflow-y-auto flex flex-col gap-1.5 text-xs bg-slate-900"></div>
+                    <div class="p-1.5 sm:p-2 bg-slate-800 border-t border-slate-700 flex gap-1 shrink-0">
+                        <input type="text" id="chatInput" placeholder="Tulis pesan..." class="flex-1 px-2.5 py-1 text-xs rounded-xl bg-slate-900 border border-slate-600 focus:outline-none focus:border-indigo-400 text-white placeholder-slate-400" onkeydown="if(event.key==='Enter') handleChatSubmit(event)">
+                        <button type="button" onclick="handleChatSubmit(event)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-xl text-xs font-bold shrink-0"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
-                <button type="button" id="chatToggleBtn" onclick="toggleChat()" class="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base md:text-xl transition-all hover:scale-105 active:scale-95">
+                <button type="button" id="chatToggleBtn" onclick="toggleChat()" class="relative w-11 h-11 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-2 border-white text-white shadow-2xl flex items-center justify-center text-base md:text-xl transition-all hover:scale-105 active:scale-95 shrink-0">
                     <i class="fas fa-comment-dots"></i>
                     <span id="chatBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] md:text-[10px] font-extrabold w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white hidden animate-badge">0</span>
                 </button>
@@ -205,27 +205,27 @@
         </div>
     </div>
 
-    <!-- Modal Dialog Bangunan & Toko -->
-    <div id="dialogModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 text-white rounded-3xl max-w-md w-full p-5 md:p-6 shadow-2xl border-2 border-yellow-400">
-            <div class="flex justify-between items-center mb-3 md:mb-4 border-b border-slate-700 pb-2">
-                <h3 id="modalTitle" class="text-base md:text-lg font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-school text-yellow-400"></i> Judul</h3>
-                <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-white text-lg"><i class="fas fa-times"></i></button>
+    <!-- Modal Dialog Bangunan & Toko (Klik di luar kotak menutup + Auto-close 30 detik) -->
+    <div id="dialogModal" onclick="if(event.target === this) closeModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4 hidden">
+        <div onclick="resetDialogAutoCloseTimer()" onscroll="resetDialogAutoCloseTimer()" class="bg-slate-900 text-white rounded-3xl max-w-md w-full max-h-[85dvh] flex flex-col p-4 md:p-6 shadow-2xl border-2 border-yellow-400">
+            <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2 shrink-0">
+                <h3 id="modalTitle" class="text-sm md:text-lg font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-school text-yellow-400"></i> Judul</h3>
+                <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-base shrink-0"><i class="fas fa-times"></i></button>
             </div>
-            <div id="modalContent" class="text-slate-200 text-xs md:text-sm mb-4 md:mb-5 leading-relaxed">Pesan interaksi...</div>
-            <div class="flex justify-end gap-3" id="modalActions">
+            <div id="modalContent" onscroll="resetDialogAutoCloseTimer()" class="text-slate-200 text-xs md:text-sm mb-3 md:mb-4 leading-relaxed overflow-y-auto flex-1 pr-1">Pesan interaksi...</div>
+            <div class="flex justify-end gap-3 shrink-0" id="modalActions">
                 <button type="button" onclick="closeModal()" class="px-4 py-2 md:px-5 md:py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold rounded-xl text-xs md:text-sm transition">Tutup</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Edit Karakter, Cek Poin, Tiket & Ganti Kostum -->
-    <div id="editCharModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[90vh] overflow-y-auto relative">
+    <!-- Modal Edit Karakter, Cek Poin, Tiket, Gift & Ganti Kostum (Klik luar kotak menutup) -->
+    <div id="editCharModal" onclick="if(event.target === this) closeEditCharacterModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4 hidden">
+        <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[88dvh] overflow-y-auto relative">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
                 <button type="button" onclick="handleLogout()" class="px-3 py-1 bg-red-600/90 hover:bg-red-600 text-white text-[11px] font-bold rounded-xl transition flex items-center gap-1.5 shadow-md"><i class="fas fa-right-from-bracket"></i> Logout</button>
                 <h3 class="text-sm md:text-base font-bold text-yellow-400 flex items-center gap-2"><i class="fas fa-user-pen text-yellow-400"></i> Profil & Poin</h3>
-                <button type="button" onclick="closeEditCharacterModal()" class="text-slate-400 hover:text-white text-base"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="closeEditCharacterModal()" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-sm"><i class="fas fa-times"></i></button>
             </div>
 
             <!-- Info Saldo Poin & Tiket Pengguna -->
@@ -251,16 +251,32 @@
                     </div>
                     <div class="text-xs md:text-sm font-extrabold text-sky-400"><span id="modalTiketDisplay">0</span> Tiket</div>
                 </div>
+
+                <!-- Panel Gift Tiket (Hanya muncul jika Kolom D = Full) -->
+                <div id="giftTicketSection" class="hidden pt-2 mt-1 border-t border-slate-700/80">
+                    <div class="text-[11px] font-bold text-emerald-300 mb-1.5 flex items-center justify-between">
+                        <span>🎁 Gift Tiket ke Pemain</span>
+                        <span class="text-[9px] text-slate-400 font-normal">Maks. 5 tiket/kirim</span>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <select id="giftTargetPlayerSelect" class="flex-1 px-2 py-1.5 text-[11px] rounded-xl bg-slate-900 border border-slate-600 text-white font-semibold focus:outline-none focus:border-emerald-400">
+                            <option value="">-- Pilih Pemain --</option>
+                        </select>
+                        <input type="number" id="giftTicketAmountInput" min="1" max="5" value="1" class="w-12 px-2 py-1.5 text-center text-xs rounded-xl bg-slate-900 border border-slate-600 text-sky-300 font-extrabold focus:outline-none focus:border-emerald-400">
+                        <button type="button" onclick="handleGiftTickets()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-[11px] rounded-xl transition active:scale-95 shrink-0">Kirim</button>
+                    </div>
+                    <div id="giftTicketFeedback" class="hidden mt-1.5 text-[10px] font-bold text-center px-2 py-1 rounded-lg"></div>
+                </div>
             </div>
 
-            <!-- Lemari Kostum (Semua Akun Bisa Ganti/Pakai/Lepas Kostum di Sini) -->
+            <!-- Lemari Kostum -->
             <div class="w-full mb-3 shrink-0">
                 <div class="flex items-center justify-between mb-1.5">
                     <label class="text-xs font-bold text-emerald-300">👕 Kostum Dimiliki:</label>
                     <button type="button" onclick="unequipCostume()" class="text-[10px] px-2.5 py-0.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">Baju Default</button>
                 </div>
                 <div id="profileCostumeWardrobe" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 bg-slate-950/60 p-2 rounded-2xl border border-slate-800">
-                    <!-- Daftar kostum diisi otomatis oleh game.js -->
+                    <!-- Daftar kostum diisi otomatis oleh kostom.js -->
                 </div>
             </div>
 
@@ -298,25 +314,25 @@
         </div>
     </div>
 
-    <!-- Modal Pemain Online -->
-    <div id="onlinePlayersModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border-2 border-emerald-400/80 rounded-3xl max-w-sm w-full p-5 shadow-2xl text-white flex flex-col max-h-[80vh]">
+    <!-- Modal Pemain Online (Klik luar kotak menutup) -->
+    <div id="onlinePlayersModal" onclick="if(event.target === this) closeOnlinePlayersModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4 hidden">
+        <div class="bg-slate-900 border-2 border-emerald-400/80 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col max-h-[82dvh]">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
                 <h3 class="text-sm md:text-base font-bold text-emerald-400 flex items-center gap-2"><i class="fas fa-users"></i> Pemain Sedang Online</h3>
-                <button type="button" onclick="closeOnlinePlayersModal()" class="text-slate-400 hover:text-white text-base"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="closeOnlinePlayersModal()" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-sm"><i class="fas fa-times"></i></button>
             </div>
             <div id="onlinePlayersList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
-            <button type="button" onclick="closeOnlinePlayersModal()" class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-600 transition">Tutup</button>
+            <button type="button" onclick="closeOnlinePlayersModal()" class="mt-3 w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-600 transition shrink-0">Tutup</button>
         </div>
     </div>
 
-    <!-- Pop-Up Konfirmasi Penukaran Poin di Toko -->
-    <div id="buyConfirmModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+    <!-- Pop-Up Konfirmasi Penukaran Poin / Tiket di Toko -->
+    <div id="buyConfirmModal" onclick="if(event.target === this) closeBuyConfirmModal()" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-amber-400 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-white text-center">
             <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center p-2.5 shadow-inner">
                 <img src="assets/poin.png" alt="Poin" class="w-full h-full object-contain coin-spin" />
             </div>
-            <h3 class="text-base font-extrabold text-amber-400 mb-1">Tukar Poin?</h3>
+            <h3 class="text-base font-extrabold text-amber-400 mb-1">Konfirmasi Penukaran</h3>
             <p id="buyConfirmText" class="text-xs text-slate-300 mb-5 leading-relaxed">Konfirmasi penukaran barang...</p>
             <div class="flex gap-2.5">
                 <button type="button" onclick="closeBuyConfirmModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-600 transition">Batal</button>
@@ -326,7 +342,7 @@
     </div>
 
     <!-- Pop-Up Konfirmasi Kick (Khusus Admin) -->
-    <div id="kickConfirmModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+    <div id="kickConfirmModal" onclick="if(event.target === this) closeKickConfirmModal()" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-red-500 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-white text-center">
             <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-red-500/20 border border-red-500/50 text-red-400 flex items-center justify-center text-2xl shadow-inner">
                 <i class="fas fa-user-xmark"></i>
@@ -340,7 +356,7 @@
         </div>
     </div>
 
-    <!-- Pop-Up Info Setelah Di-Kick (Untuk Pemain yang Dikeluarkan) -->
+    <!-- Pop-Up Info Setelah Di-Kick -->
     <div id="kickedInfoModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[80] flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-red-500 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-white text-center">
             <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-red-500/20 border border-red-500/50 text-red-400 flex items-center justify-center text-2xl animate-bounce">
@@ -362,6 +378,8 @@
     <script src="pantai.js"></script>
     <script src="kelas.js"></script>
     <script src="player.js"></script>
+    <script src="kostom.js"></script>
+    <script src="toko.js"></script>
     <script src="game.js"></script>
     <script src="halang.js"></script>
 </body>
