@@ -184,7 +184,7 @@
                 </div>
             </div>
 
-            <!-- Tombol & Kotak Chat (Kanan Bawah - Responsif Anti-Terpotong di HP Landscape) -->
+            <!-- Tombol & Kotak Chat (Kanan Bawah) -->
             <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-40 flex flex-col items-end max-h-[calc(100dvh-3.5rem)]">
                 <div id="chatBoxPopup" class="mb-1.5 sm:mb-3 w-64 sm:w-80 max-h-[calc(100dvh-7.5rem)] flex flex-col bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-400 overflow-hidden hidden transition-all duration-300">
                     <div class="bg-indigo-600 text-white px-3 py-1.5 sm:px-4 sm:py-2.5 flex items-center justify-between shrink-0">
@@ -205,7 +205,7 @@
         </div>
     </div>
 
-    <!-- Modal Dialog Bangunan & Toko (Klik di luar kotak menutup + Auto-close 30 detik) -->
+    <!-- Modal Dialog Bangunan & Toko -->
     <div id="dialogModal" onclick="if(event.target === this) closeModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4 hidden">
         <div onclick="resetDialogAutoCloseTimer()" onscroll="resetDialogAutoCloseTimer()" class="bg-slate-900 text-white rounded-3xl max-w-md w-full max-h-[85dvh] flex flex-col p-4 md:p-6 shadow-2xl border-2 border-yellow-400">
             <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2 shrink-0">
@@ -219,7 +219,7 @@
         </div>
     </div>
 
-    <!-- Modal Edit Karakter, Cek Poin, Tiket, Gift & Ganti Kostum (Klik luar kotak menutup) -->
+    <!-- Modal Edit Karakter, Cek Poin, Tiket, Gift & Ganti Kostum -->
     <div id="editCharModal" onclick="if(event.target === this) closeEditCharacterModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4 hidden">
         <div class="bg-slate-900 border-2 border-yellow-400 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col items-center max-h-[88dvh] overflow-y-auto relative">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
@@ -314,7 +314,7 @@
         </div>
     </div>
 
-    <!-- Modal Pemain Online (Klik luar kotak menutup) -->
+    <!-- Modal Pemain Online -->
     <div id="onlinePlayersModal" onclick="if(event.target === this) closeOnlinePlayersModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4 hidden">
         <div class="bg-slate-900 border-2 border-emerald-400/80 rounded-3xl max-w-sm w-full p-4 md:p-5 shadow-2xl text-white flex flex-col max-h-[82dvh]">
             <div class="flex justify-between items-center w-full mb-3 border-b border-slate-700 pb-2 shrink-0">
@@ -373,14 +373,14 @@
     <!-- Firebase Realtime Database -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <!-- Script Game Lokal -->
-    <script src="bangunan.js"></script>
-    <script src="pantai.js"></script>
-    <script src="kelas.js"></script>
-    <script src="player.js"></script>
-    <script src="kostom.js"></script>
-    <script src="toko.js"></script>
-    <script src="game.js"></script>
-    <script src="halang.js"></script>
+    <!-- Script Game Lokal (dengan ?v=6 anti-cache browser) -->
+    <script src="bangunan.js?v=6"></script>
+    <script src="pantai.js?v=6"></script>
+    <script src="kelas.js?v=6"></script>
+    <script src="player.js?v=6"></script>
+    <script src="kostom.js?v=6"></script>
+    <script src="toko.js?v=6"></script>
+    <script src="game.js?v=6"></script>
+    <script src="halang.js?v=6"></script>
 </body>
 </html>

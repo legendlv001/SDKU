@@ -1,7 +1,7 @@
 // ==========================================
 // LINK GOOGLE APPS SCRIPT
 // ==========================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQJDchWo3MdnTSCh194FdNB94IYSVHLrKiHKh9N4C8e_RzUeSQ_K2cXVnIVfYrJ8WG/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwT0GxynyRGL0WbkqErPsHgC2deBshkNM1DE3mS5XxyKxyBYtA-Wfi1SnDMFumgc-bc/exec";
 
 // ==========================================
 // CONFIGURATION, DATABASE & MAIN GAME LOOP
@@ -253,7 +253,7 @@ window.walkTimer = 0; let tempModalGender = null, nearbyBuilding = null, isGameS
 // SISTEM AFK (AUTO LOGOUT 5 MENIT DIAM)
 // ==========================================
 let idleTimer = null;
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 menit
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 let isInactivityListenerRegistered = false;
 
 function resetIdleTimer() {
@@ -284,7 +284,7 @@ function setupInactivityListeners() {
 // AUTO-CLOSE POP-UP BANGUNAN (30 DETIK), CHAT & PETA (5 DETIK)
 // ==========================================
 let dialogAutoCloseTimer = null;
-const DIALOG_AUTO_CLOSE_MS = 30 * 1000; // 30 detik untuk pop-up bangunan
+const DIALOG_AUTO_CLOSE_MS = 30 * 1000;
 
 window.resetDialogAutoCloseTimer = function() {
     if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
@@ -300,7 +300,7 @@ window.resetDialogAutoCloseTimer = function() {
 };
 
 let uiAutoCloseTimer = null;
-const UI_AUTO_CLOSE_DELAY_MS = 5 * 1000; // 5 detik untuk chat & peta
+const UI_AUTO_CLOSE_DELAY_MS = 5 * 1000;
 
 window.resetUIAutoCloseTimer = function() {
     if (uiAutoCloseTimer) clearTimeout(uiAutoCloseTimer);
@@ -352,7 +352,7 @@ function triggerPlayerChatBubble(senderName, messageText) {
     if (!senderName || !messageText) return;
     window.activeChatBubbles[senderName] = {
         text: messageText,
-        expiresAt: Date.now() + 5000 // Tampil di atas kepala karakter selama 5 detik
+        expiresAt: Date.now() + 5000
     };
 }
 
@@ -544,7 +544,7 @@ window.sendFirebaseChat = function(senderName, messageText, extraData = {}) {
 };
 
 // ==========================================
-// DAFTAR PEMAIN ONLINE (POSISI KICK & LOKASI RAPI)
+// DAFTAR PEMAIN ONLINE
 // ==========================================
 function updateOnlinePlayersList(otherPlayersData) {
     const listElem = document.getElementById('onlinePlayersList');
@@ -928,7 +928,6 @@ function gameLoop() {
         trees.forEach(tree => { if (tree.y > player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
-    // Gambar balon chat di atas kepala karakter yang baru mengirim pesan
     drawActiveChatBubblesOnCanvas(ctx, cameraX, cameraY, currentZoomScale);
 
     if (isMiniMapOpen) renderMiniMap();
@@ -1106,7 +1105,7 @@ window.openEditCharacterModal = function() {
         }
     }
 
-    // Pengaturan Panel Gift Tiket (Khusus Kolom D = Full)
+    // Panel Gift Tiket (Hanya muncul jika Kolom D = Full)
     const giftSection = document.getElementById('giftTicketSection');
     const giftSelect = document.getElementById('giftTargetPlayerSelect');
     const giftFeedback = document.getElementById('giftTicketFeedback');
