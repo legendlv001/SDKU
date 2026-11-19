@@ -31,13 +31,24 @@ async function ensureShopCatalogLoaded(forceRefresh = false) {
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                     if (cols[0]) {
+                        const rawTitle = cols[0].trim();
+                        const lowerItemName = rawTitle.toLowerCase();
                         const colB = parseShopCellValue(cols[1]); // Kolom B: Poin
                         const colC = parseShopCellValue(cols[2]); // Kolom C: Tiket
+
+                        // Pengaman otomatis jika tanda '+' terhapus oleh format angka Google Sheets
+                        if ((lowerItemName === 'beli poin' || lowerItemName.startsWith('tukar poin') || lowerItemName.includes('beli poin')) && colB.valid && !colB.isReward) {
+                            colB.isReward = true;
+                        }
+                        if ((lowerItemName === 'beli tiket' || lowerItemName.startsWith('tukar tiket') || lowerItemName.includes('beli tiket')) && colC.valid && !colC.isReward) {
+                            colC.isReward = true;
+                        }
+
                         const isCurrencyExchange = colB.isReward || colC.isReward;
-                        const cleanDisplay = isCurrencyExchange ? cols[0].trim() : formatCostumeDisplayName(cols[0]);
+                        const cleanDisplay = isCurrencyExchange ? rawTitle : formatCostumeDisplayName(rawTitle);
 
                         parsed.push({
-                            rawName: cols[0].trim(),
+                            rawName: rawTitle,
                             name: cleanDisplay,
                             displayName: cleanDisplay,
                             pointRule: colB,
@@ -129,7 +140,7 @@ function renderShopItemsList() {
             const tRule = entry.ticketRule || { isReward: false, amount: 0, valid: false };
             const safeLabel = entry.labelName.replace(/'/g, "\\'");
 
-            // KASUS 1: PENUKARAN POIN <-> TIKET (Kolom B atau C diawali '+')
+            // KASUS 1: PENUKARAN POIN <-> TIKET
             if (entry.isCurrencyExchange) {
                 let descHTML = '';
                 let canExchange = false;
