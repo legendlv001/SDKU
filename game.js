@@ -253,7 +253,7 @@ window.walkTimer = 0; let tempModalGender = null, nearbyBuilding = null, isGameS
 // SISTEM AFK (AUTO LOGOUT 5 MENIT DIAM)
 // ==========================================
 let idleTimer = null;
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 menit
 let isInactivityListenerRegistered = false;
 
 function resetIdleTimer() {
@@ -284,7 +284,7 @@ function setupInactivityListeners() {
 // AUTO-CLOSE POP-UP BANGUNAN (30 DETIK), CHAT & PETA (5 DETIK)
 // ==========================================
 let dialogAutoCloseTimer = null;
-const DIALOG_AUTO_CLOSE_MS = 30 * 1000;
+const DIALOG_AUTO_CLOSE_MS = 30 * 1000; // 30 detik untuk pop-up bangunan
 
 window.resetDialogAutoCloseTimer = function() {
     if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
@@ -300,7 +300,7 @@ window.resetDialogAutoCloseTimer = function() {
 };
 
 let uiAutoCloseTimer = null;
-const UI_AUTO_CLOSE_DELAY_MS = 5 * 1000;
+const UI_AUTO_CLOSE_DELAY_MS = 5 * 1000; // 5 detik untuk chat & peta
 
 window.resetUIAutoCloseTimer = function() {
     if (uiAutoCloseTimer) clearTimeout(uiAutoCloseTimer);
@@ -352,7 +352,7 @@ function triggerPlayerChatBubble(senderName, messageText) {
     if (!senderName || !messageText) return;
     window.activeChatBubbles[senderName] = {
         text: messageText,
-        expiresAt: Date.now() + 5000
+        expiresAt: Date.now() + 5000 // Tampil di atas kepala karakter selama 5 detik
     };
 }
 
@@ -544,7 +544,7 @@ window.sendFirebaseChat = function(senderName, messageText, extraData = {}) {
 };
 
 // ==========================================
-// DAFTAR PEMAIN ONLINE
+// DAFTAR PEMAIN ONLINE (POSISI KICK & LOKASI RAPI)
 // ==========================================
 function updateOnlinePlayersList(otherPlayersData) {
     const listElem = document.getElementById('onlinePlayersList');
@@ -928,6 +928,7 @@ function gameLoop() {
         trees.forEach(tree => { if (tree.y > player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
+    // Gambar balon chat di atas kepala karakter yang baru mengirim pesan
     drawActiveChatBubblesOnCanvas(ctx, cameraX, cameraY, currentZoomScale);
 
     if (isMiniMapOpen) renderMiniMap();
@@ -1064,26 +1065,97 @@ window.triggerInteraction = async function() {
 window.toggleMiniMap = function() { if (isMiniMapOpen) closeMiniMap(); else openMiniMap(); };
 function openMiniMap() { isMiniMapOpen = true; const p = document.getElementById('miniMapPopup'); if (p) p.classList.remove('hidden'); resetUIAutoCloseTimer(); }
 window.closeMiniMap = function() { isMiniMapOpen = false; const p = document.getElementById('miniMapPopup'); if (p) p.classList.add('hidden'); };
+
 function renderMiniMap() {
     const largeMapCanvas = document.getElementById('largeMapCanvas');
     if (!largeMapCanvas) return;
     const mCtx = largeMapCanvas.getContext('2d');
-    largeMapCanvas.width = 400; largeMapCanvas.height = 240;
-    mCtx.fillStyle = (currentWorldLocation === 3) ? '#166534' : ((currentWorldLocation === 2) ? '#0284c7' : '#15803d');
-    mCtx.fillRect(0, 0, largeMapCanvas.width, largeMapCanvas.height);
+    largeMapCanvas.width = 400; 
+    largeMapCanvas.height = 240;
 
-    const scaleX = largeMapCanvas.width / MAP_WIDTH, scaleY = largeMapCanvas.height / MAP_HEIGHT;
+    // Latar belakang peta (gunakan gambar latar masing-masing lokasi jika sudah termuat)
+    if (currentWorldLocation === 1 && typeof assetsLoaded !== 'undefined' && assetsLoaded.rumput_bg && ASSETS.rumput_bg) {
+        mCtx.drawImage(ASSETS.rumput_bg, 0, 0, largeMapCanvas.width, largeMapCanvas.height);
+    } else if (currentWorldLocation === 2 && typeof assetsLoaded !== 'undefined' && assetsLoaded.beach_bg && ASSETS.beach_bg) {
+        mCtx.drawImage(ASSETS.beach_bg, 0, 0, largeMapCanvas.width, largeMapCanvas.height);
+    } else if (currentWorldLocation === 3 && typeof assetsLoaded !== 'undefined' && assetsLoaded.kelas_inside && ASSETS.kelas_inside) {
+        mCtx.drawImage(ASSETS.kelas_inside, 0, 0, largeMapCanvas.width, largeMapCanvas.height);
+    } else {
+        mCtx.fillStyle = (currentWorldLocation === 3) ? '#166534' : ((currentWorldLocation === 2) ? '#0284c7' : '#15803d');
+        mCtx.fillRect(0, 0, largeMapCanvas.width, largeMapCanvas.height);
+    }
+
+    const scaleX = largeMapCanvas.width / MAP_WIDTH;
+    const scaleY = largeMapCanvas.height / MAP_HEIGHT;
+
     if (typeof currentBuildings !== 'undefined') {
+        // 1. Gambar kotak seluruh bangunan
         currentBuildings.forEach(b => {
             if (b.isSilentZone) return;
-            const bx = b.x * scaleX, by = b.y * scaleY, bw = b.width * scaleX, bh = b.height * scaleY;
-            mCtx.fillStyle = b.roofColor || '#fde047'; mCtx.fillRect(bx, by, bw, bh);
-            mCtx.strokeStyle = '#ffffff'; mCtx.lineWidth = 1; mCtx.strokeRect(bx, by, bw, bh);
+            const bx = b.x * scaleX;
+            const by = b.y * scaleY;
+            const bw = Math.max(14, b.width * scaleX);
+            const bh = Math.max(12, b.height * scaleY);
+
+            mCtx.fillStyle = b.roofColor || '#fde047';
+            mCtx.fillRect(bx, by, bw, bh);
+            mCtx.strokeStyle = '#ffffff';
+            mCtx.lineWidth = 1.2;
+            mCtx.strokeRect(bx, by, bw, bh);
+        });
+
+        // 2. Gambar label keterangan tempat di atas setiap bangunan
+        currentBuildings.forEach(b => {
+            if (b.isSilentZone) return;
+            const bx = b.x * scaleX;
+            const by = b.y * scaleY;
+            const bw = Math.max(14, b.width * scaleX);
+            const bh = Math.max(12, b.height * scaleY);
+
+            const shortName = (b.name || '').replace(/\s*\(.*?\)\s*/g, '').trim();
+            const label = `${b.icon || '📍'} ${shortName}`;
+
+            mCtx.font = 'bold 9px Fredoka, sans-serif';
+            const textW = mCtx.measureText(label).width;
+            const padX = 4;
+            const boxW = textW + padX * 2;
+            const boxH = 13;
+
+            let centerX = bx + bw / 2;
+            centerX = Math.max(boxW / 2 + 2, Math.min(largeMapCanvas.width - boxW / 2 - 2, centerX));
+            let labelY = by - 8;
+            if (labelY - boxH / 2 < 2) {
+                labelY = by + bh + 8;
+            }
+
+            mCtx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            mCtx.fillRect(centerX - boxW / 2, labelY - boxH / 2, boxW, boxH);
+            mCtx.strokeStyle = '#facc15';
+            mCtx.lineWidth = 0.8;
+            mCtx.strokeRect(centerX - boxW / 2, labelY - boxH / 2, boxW, boxH);
+
+            mCtx.fillStyle = '#ffffff';
+            mCtx.textAlign = 'center';
+            mCtx.textBaseline = 'middle';
+            mCtx.fillText(label, centerX, labelY);
         });
     }
-    const px = player.x * scaleX, py = player.y * scaleY;
-    mCtx.fillStyle = '#ef4444'; mCtx.beginPath(); mCtx.arc(px, py, 6, 0, Math.PI * 2); mCtx.fill();
-    mCtx.strokeStyle = '#ffffff'; mCtx.lineWidth = 2; mCtx.stroke();
+
+    // 3. Gambar titik posisi pemain + keterangan "Anda"
+    const px = player.x * scaleX;
+    const py = player.y * scaleY;
+    mCtx.fillStyle = '#ef4444';
+    mCtx.beginPath();
+    mCtx.arc(px, py, 5.5, 0, Math.PI * 2);
+    mCtx.fill();
+    mCtx.strokeStyle = '#ffffff';
+    mCtx.lineWidth = 1.8;
+    mCtx.stroke();
+
+    mCtx.font = 'bold 9px Fredoka, sans-serif';
+    mCtx.fillStyle = '#fde047';
+    mCtx.textAlign = 'center';
+    mCtx.fillText('Anda', px, py + 12);
 }
 
 window.openEditCharacterModal = function() {
@@ -1105,7 +1177,7 @@ window.openEditCharacterModal = function() {
         }
     }
 
-    // Panel Gift Tiket (Hanya muncul jika Kolom D = Full)
+    // Pengaturan Panel Gift Tiket (Khusus Kolom D = Full)
     const giftSection = document.getElementById('giftTicketSection');
     const giftSelect = document.getElementById('giftTargetPlayerSelect');
     const giftFeedback = document.getElementById('giftTicketFeedback');

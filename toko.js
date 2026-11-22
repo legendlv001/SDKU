@@ -1,19 +1,21 @@
 // ==========================================
-// SISTEM TOKO / WARUNG SEKOLAH (KATEGORI KOLOM D: P, T, K)
+// SISTEM TOKO / WARUNG SEKOLAH (KOLOM D: p = POIN, t = TIKET, k = KOSTUM)
 // ==========================================
 
 let currentShopItems = [];
 let pendingRedeemItem = null;
 
-function parseNumericCell(rawVal) {
+// Parsing nilai kolom B (Poin) atau kolom C (Tiket)
+function parseShopCellValue(rawVal) {
     const str = String(rawVal || "").trim();
-    if (!str) return 0;
+    if (!str) return { isReward: false, amount: 0, valid: false };
+    const isReward = str.startsWith('+');
     const num = parseInt(str.replace(/[^0-9]/g, ''), 10);
-    return isNaN(num) ? 0 : num;
+    if (isNaN(num) || num <= 0) return { isReward: false, amount: 0, valid: false };
+    return { isReward, amount: num, valid: true };
 }
 
-// Mengambil katalog dari tab 'Toko' di Google Sheets
-// Kolom A: Nama Barang | Kolom B: Poin | Kolom C: Tiket | Kolom D: Kategori (P / T / K)
+// Mengambil katalog barang/kostum/penukaran dari tab 'Toko' di Google Sheets
 async function ensureShopCatalogLoaded(forceRefresh = false) {
     if (!forceRefresh && Array.isArray(currentShopItems) && currentShopItems.length > 0) {
         return currentShopItems;
@@ -28,25 +30,28 @@ async function ensureShopCatalogLoaded(forceRefresh = false) {
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
                     if (cols[0]) {
-                        const rawTitle = cols[0].trim();
-                        const poinVal = parseNumericCell(cols[1]); // Kolom B
-                        const tiketVal = parseNumericCell(cols[2]); // Kolom C
-                        const rawCat = String(cols[3] || "K").trim().toUpperCase(); // Kolom D: P, T, atau K
+                        const colB = parseShopCellValue(cols[1]); // Kolom B: Poin
+                        const colC = parseShopCellValue(cols[2]); // Kolom C: Tiket
+                        const rawType = (cols[3] || "").trim().toLowerCase(); // Kolom D: p / t / k
 
-                        let category = 'K';
-                        if (rawCat === 'P') category = 'P';
-                        else if (rawCat === 'T') category = 'T';
+                        // Tentukan kategori item dari Kolom D (default 'k' jika kosong)
+                        let itemType = 'k';
+                        if (rawType === 'p' || rawType === 'poin') itemType = 'p';
+                        else if (rawType === 't' || rawType === 'tiket') itemType = 't';
+                        else if (rawType === 'k' || rawType === 'kostum' || rawType === 'kostom') itemType = 'k';
+                        else if (colB.isReward) itemType = 'p';
+                        else if (colC.isReward) itemType = 't';
 
-                        const isCurrencyExchange = (category === 'P' || category === 'T');
-                        const cleanDisplay = isCurrencyExchange ? rawTitle : formatCostumeDisplayName(rawTitle);
+                        const isCurrencyExchange = (itemType === 'p' || itemType === 't');
+                        const cleanDisplay = isCurrencyExchange ? cols[0].trim() : formatCostumeDisplayName(cols[0]);
 
                         parsed.push({
-                            rawName: rawTitle,
+                            rawName: cols[0].trim(),
                             name: cleanDisplay,
                             displayName: cleanDisplay,
-                            poinVal: poinVal,
-                            tiketVal: tiketVal,
-                            category: category, // 'P' = Poin, 'T' = Tiket, 'K' = Kostum
+                            pointRule: colB,
+                            ticketRule: colC,
+                            itemType: itemType, // 'p', 't', atau 'k'
                             isCurrencyExchange: isCurrencyExchange
                         });
                     }
@@ -61,7 +66,7 @@ async function ensureShopCatalogLoaded(forceRefresh = false) {
 }
 
 // ==========================================
-// TAMPILAN TOKO / WARUNG
+// TAMPILAN TOKO / WARUNG (BELI KOSTUM & TUKAR POIN/TIKET)
 // ==========================================
 function renderShopItemsList() {
     const modalContent = document.getElementById('modalContent');
@@ -92,7 +97,7 @@ function renderShopItemsList() {
 
     let expandedShopItems = [];
     currentShopItems.forEach((item, idx) => {
-        if (item.category === 'P' || item.category === 'T') {
+        if (item.itemType === 'p' || item.itemType === 't') {
             expandedShopItems.push({
                 ...item,
                 actualIndex: idx,
@@ -102,7 +107,7 @@ function renderShopItemsList() {
             return;
         }
 
-        // Kategori 'K' (Kostum)
+        // itemType === 'k' (Kostum)
         const lowerName = item.rawName.toLowerCase();
         const hasExplicitPrefix = lowerName.startsWith('pr_') || lowerName.startsWith('lk_');
 
@@ -131,12 +136,16 @@ function renderShopItemsList() {
         html += `<div class="flex flex-col gap-2 w-full text-left">`;
 
         expandedShopItems.forEach((entry) => {
+            const pRule = entry.pointRule || { isReward: false, amount: 0, valid: false };
+            const tRule = entry.ticketRule || { isReward: false, amount: 0, valid: false };
             const safeLabel = entry.labelName.replace(/'/g, "\\'");
 
-            // KATEGORI 'P': BELI POIN (Bayar Kolom C Tiket -> Dapat +Kolom B Poin)
-            if (entry.category === 'P') {
-                const canExchange = entry.tiketVal > 0 && entry.poinVal > 0 && playerTickets >= entry.tiketVal;
-                const btnLabel = canExchange ? `Tukar ${entry.tiketVal} 🎟️` : 'Tiket Kurang';
+            // KASUS 1: KOLOM D = 'p' (ITEM POIN — DIBELI MENGGUNAKAN TIKET DI KOLOM C)
+            if (entry.itemType === 'p') {
+                const rewardPoin = pRule.valid ? pRule.amount : (parseInt(entry.rawName.replace(/[^0-9]/g, ''), 10) || 0);
+                const costTiket = tRule.valid ? tRule.amount : 0;
+                const canExchange = (rewardPoin > 0 && costTiket > 0 && playerTickets >= costTiket);
+                const btnLabel = canExchange ? `Tukar ${costTiket} 🎟️` : 'Tiket Kurang';
                 const btnClass = canExchange
                     ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
                     : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
@@ -150,13 +159,13 @@ function renderShopItemsList() {
                             <div>
                                 <div class="text-xs md:text-sm font-bold text-white">${entry.labelName}</div>
                                 <div class="text-[11px] mt-0.5">
-                                    <span class="text-sky-300 font-bold">${entry.tiketVal} Tiket</span>
+                                    <span class="text-sky-300 font-bold">${costTiket} Tiket</span>
                                     <span class="text-slate-400">➔</span>
-                                    <span class="text-amber-400 font-extrabold">+${entry.poinVal} Poin</span>
+                                    <span class="text-amber-400 font-extrabold">+${rewardPoin} Poin</span>
                                 </div>
                             </div>
                         </div>
-                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '', '${safeLabel}', 'get_points')" ${canExchange ? '' : 'disabled'}
+                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '', '${safeLabel}', 'exchange_p')" ${canExchange ? '' : 'disabled'}
                             class="px-3 py-1.5 rounded-xl font-extrabold text-[11px] transition shrink-0 shadow ${btnClass}">
                             ${btnLabel}
                         </button>
@@ -165,10 +174,12 @@ function renderShopItemsList() {
                 return;
             }
 
-            // KATEGORI 'T': BELI TIKET (Bayar Kolom B Poin -> Dapat +Kolom C Tiket)
-            if (entry.category === 'T') {
-                const canExchange = entry.poinVal > 0 && entry.tiketVal > 0 && playerPoints >= entry.poinVal;
-                const btnLabel = canExchange ? `Tukar ${entry.poinVal} Poin` : 'Poin Kurang';
+            // KASUS 2: KOLOM D = 't' (ITEM TIKET — DIBELI MENGGUNAKAN POIN DI KOLOM B)
+            if (entry.itemType === 't') {
+                const rewardTiket = tRule.valid ? tRule.amount : (parseInt(entry.rawName.replace(/[^0-9]/g, ''), 10) || 0);
+                const costPoin = pRule.valid ? pRule.amount : 0;
+                const canExchange = (rewardTiket > 0 && costPoin > 0 && playerPoints >= costPoin);
+                const btnLabel = canExchange ? `Tukar ${costPoin} Poin` : 'Poin Kurang';
                 const btnClass = canExchange
                     ? "bg-sky-400 hover:bg-sky-500 text-slate-950 cursor-pointer active:scale-95"
                     : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
@@ -180,13 +191,13 @@ function renderShopItemsList() {
                             <div>
                                 <div class="text-xs md:text-sm font-bold text-white">${entry.labelName}</div>
                                 <div class="text-[11px] mt-0.5">
-                                    <span class="text-amber-300 font-bold">${entry.poinVal} Poin</span>
+                                    <span class="text-amber-300 font-bold">${costPoin} Poin</span>
                                     <span class="text-slate-400">➔</span>
-                                    <span class="text-sky-400 font-extrabold">+${entry.tiketVal} Tiket</span>
+                                    <span class="text-sky-400 font-extrabold">+${rewardTiket} Tiket</span>
                                 </div>
                             </div>
                         </div>
-                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '', '${safeLabel}', 'get_tickets')" ${canExchange ? '' : 'disabled'}
+                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '', '${safeLabel}', 'exchange_t')" ${canExchange ? '' : 'disabled'}
                             class="px-3 py-1.5 rounded-xl font-extrabold text-[11px] transition shrink-0 shadow ${btnClass}">
                             ${btnLabel}
                         </button>
@@ -195,7 +206,7 @@ function renderShopItemsList() {
                 return;
             }
 
-            // KATEGORI 'K': BELI KOSTUM (Bisa pakai Kolom B Poin dan/atau Kolom C Tiket)
+            // KASUS 3: KOLOM D = 'k' (KOSTUM — BISA PAKAI POIN DAN/ATAU TIKET)
             const isOwned = hasFullCostumes || ownedKeys.has(normalizeCostumeKey(entry.costumeFile));
             let actionButtonsHTML = '';
 
@@ -203,27 +214,27 @@ function renderShopItemsList() {
                 actionButtonsHTML = `<span class="px-3 py-1.5 rounded-xl font-extrabold text-[11px] bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 shrink-0">Sudah Dimiliki</span>`;
             } else {
                 const btns = [];
-                if (entry.poinVal > 0) {
-                    const canAffordPoin = playerPoints >= entry.poinVal;
+                if (pRule.valid && !pRule.isReward) {
+                    const canAffordPoin = playerPoints >= pRule.amount;
                     const cls = canAffordPoin
                         ? "bg-amber-400 hover:bg-amber-500 text-slate-950 cursor-pointer active:scale-95"
                         : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
                     btns.push(`
-                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${safeLabel}', 'buy_with_points')" ${canAffordPoin ? '' : 'disabled'}
+                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${safeLabel}', 'points')" ${canAffordPoin ? '' : 'disabled'}
                             class="px-2.5 py-1 rounded-lg font-extrabold text-[10px] transition shadow flex items-center gap-1 ${cls}">
-                            <img src="assets/poin.png" class="w-3 h-3 object-contain" /> ${entry.poinVal}
+                            <img src="assets/poin.png" class="w-3 h-3 object-contain" /> ${pRule.amount}
                         </button>
                     `);
                 }
-                if (entry.tiketVal > 0) {
-                    const canAffordTiket = playerTickets >= entry.tiketVal;
+                if (tRule.valid && !tRule.isReward) {
+                    const canAffordTiket = playerTickets >= tRule.amount;
                     const cls = canAffordTiket
                         ? "bg-sky-400 hover:bg-sky-500 text-slate-950 cursor-pointer active:scale-95"
                         : "bg-slate-700 text-slate-400 cursor-not-allowed opacity-60";
                     btns.push(`
-                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${safeLabel}', 'buy_with_tickets')" ${canAffordTiket ? '' : 'disabled'}
+                        <button type="button" onclick="promptRedeemShopItem(${entry.actualIndex}, '${entry.costumeFile}', '${safeLabel}', 'tickets')" ${canAffordTiket ? '' : 'disabled'}
                             class="px-2.5 py-1 rounded-lg font-extrabold text-[10px] transition shadow flex items-center gap-1 ${cls}">
-                            🎟️ ${entry.tiketVal}
+                            🎟️ ${tRule.amount}
                         </button>
                     `);
                 }
@@ -231,8 +242,8 @@ function renderShopItemsList() {
             }
 
             let priceSubtitle = [];
-            if (entry.poinVal > 0) priceSubtitle.push(`<span class="text-amber-400 font-bold">${entry.poinVal} Poin</span>`);
-            if (entry.tiketVal > 0) priceSubtitle.push(`<span class="text-sky-400 font-bold">${entry.tiketVal} Tiket</span>`);
+            if (pRule.valid && !pRule.isReward) priceSubtitle.push(`<span class="text-amber-400 font-bold">${pRule.amount} Poin</span>`);
+            if (tRule.valid && !tRule.isReward) priceSubtitle.push(`<span class="text-sky-400 font-bold">${tRule.amount} Tiket</span>`);
 
             html += `
                 <div class="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-xl">
@@ -256,34 +267,40 @@ function renderShopItemsList() {
     if (typeof resetDialogAutoCloseTimer === 'function') resetDialogAutoCloseTimer();
 }
 
-window.promptRedeemShopItem = function(itemIndex, specificCostumeFile, specificLabelName, mode) {
+window.promptRedeemShopItem = function(itemIndex, specificCostumeFile, specificLabelName, payMethod = 'points') {
     if (typeof resetDialogAutoCloseTimer === 'function') resetDialogAutoCloseTimer();
     const item = currentShopItems[itemIndex];
     if (!item) return;
 
+    const pRule = item.pointRule || { isReward: false, amount: 0, valid: false };
+    const tRule = item.ticketRule || { isReward: false, amount: 0, valid: false };
     const targetLabel = specificLabelName || item.displayName;
     let confirmMsg = '';
 
-    if (mode === 'get_points') {
-        if (playerTickets < item.tiketVal) return;
-        confirmMsg = `Tukarkan <strong class="text-sky-400">${item.tiketVal} Tiket</strong> menjadi <strong class="text-amber-400">+${item.poinVal} Poin</strong>?`;
-    } else if (mode === 'get_tickets') {
-        if (playerPoints < item.poinVal) return;
-        confirmMsg = `Tukarkan <strong class="text-amber-400">${item.poinVal} Poin</strong> menjadi <strong class="text-sky-400">+${item.tiketVal} Tiket</strong>?`;
-    } else if (mode === 'buy_with_tickets') {
-        if (playerTickets < item.tiketVal) return;
-        confirmMsg = `Beli kostum <strong class="text-white">${targetLabel}</strong> seharga <strong class="text-sky-400">${item.tiketVal} Tiket</strong>?`;
+    if (payMethod === 'exchange_p' || item.itemType === 'p') {
+        const rewardPoin = pRule.valid ? pRule.amount : (parseInt(item.rawName.replace(/[^0-9]/g, ''), 10) || 0);
+        const costTiket = tRule.valid ? tRule.amount : 0;
+        if (costTiket <= 0 || rewardPoin <= 0 || playerTickets < costTiket) return;
+        confirmMsg = `Tukarkan <strong class="text-sky-400">${costTiket} Tiket</strong> menjadi <strong class="text-amber-400">+${rewardPoin} Poin</strong>?`;
+    } else if (payMethod === 'exchange_t' || item.itemType === 't') {
+        const rewardTiket = tRule.valid ? tRule.amount : (parseInt(item.rawName.replace(/[^0-9]/g, ''), 10) || 0);
+        const costPoin = pRule.valid ? pRule.amount : 0;
+        if (costPoin <= 0 || rewardTiket <= 0 || playerPoints < costPoin) return;
+        confirmMsg = `Tukarkan <strong class="text-amber-400">${costPoin} Poin</strong> menjadi <strong class="text-sky-400">+${rewardTiket} Tiket</strong>?`;
+    } else if (payMethod === 'tickets') {
+        if (!tRule.valid || playerTickets < tRule.amount) return;
+        confirmMsg = `Beli kostum <strong class="text-white">${targetLabel}</strong> seharga <strong class="text-sky-400">${tRule.amount} Tiket</strong>?`;
     } else {
-        if (playerPoints < item.poinVal) return;
-        confirmMsg = `Beli kostum <strong class="text-white">${targetLabel}</strong> seharga <strong class="text-amber-400">${item.poinVal} Poin</strong>?`;
+        if (!pRule.valid || playerPoints < pRule.amount) return;
+        confirmMsg = `Beli kostum <strong class="text-white">${targetLabel}</strong> seharga <strong class="text-amber-400">${pRule.amount} Poin</strong>?`;
     }
 
     const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
-    const targetFile = (item.category === 'K')
-        ? (specificCostumeFile || resolveCostumeFileName(item.rawName, genderCode))
-        : "";
+    const targetFile = (item.itemType === 'p' || item.itemType === 't')
+        ? ""
+        : (specificCostumeFile || resolveCostumeFileName(item.rawName, genderCode));
 
-    pendingRedeemItem = { ...item, targetFile, targetLabel, mode };
+    pendingRedeemItem = { ...item, targetFile, targetLabel, payMethod };
     const textElem = document.getElementById('buyConfirmText');
     if (textElem) textElem.innerHTML = confirmMsg;
     const modal = document.getElementById('buyConfirmModal');
@@ -302,38 +319,44 @@ window.executeRedeemItem = function() {
     const item = pendingRedeemItem;
     closeBuyConfirmModal();
 
+    const pRule = item.pointRule || { isReward: false, amount: 0, valid: false };
+    const tRule = item.ticketRule || { isReward: false, amount: 0, valid: false };
     let feedbackMsg = '';
     let chatAnnouncement = '';
 
-    if (item.mode === 'get_points') {
-        if (playerTickets < item.tiketVal) return;
-        playerTickets -= item.tiketVal;
-        playerPoints += item.poinVal;
-        feedbackMsg = `✅ Berhasil menukar <strong>${item.tiketVal} Tiket</strong> menjadi <strong>+${item.poinVal} Poin</strong>!`;
-        chatAnnouncement = `🔄 ${playerCustomName} menukar ${item.tiketVal} Tiket menjadi +${item.poinVal} Poin di Warung!`;
-    } else if (item.mode === 'get_tickets') {
-        if (playerPoints < item.poinVal) return;
-        playerPoints -= item.poinVal;
-        playerTickets += item.tiketVal;
-        feedbackMsg = `✅ Berhasil menukar <strong>${item.poinVal} Poin</strong> menjadi <strong>+${item.tiketVal} Tiket</strong>!`;
-        chatAnnouncement = `🔄 ${playerCustomName} menukar ${item.poinVal} Poin menjadi +${item.tiketVal} Tiket di Warung!`;
-    } else if (item.mode === 'buy_with_tickets') {
-        if (playerTickets < item.tiketVal) return;
-        playerTickets -= item.tiketVal;
+    if (item.payMethod === 'exchange_p' || item.itemType === 'p') {
+        const rewardPoin = pRule.valid ? pRule.amount : (parseInt(item.rawName.replace(/[^0-9]/g, ''), 10) || 0);
+        const costTiket = tRule.valid ? tRule.amount : 0;
+        if (costTiket <= 0 || rewardPoin <= 0 || playerTickets < costTiket) return;
+        playerTickets -= costTiket;
+        playerPoints += rewardPoin;
+        feedbackMsg = `✅ Berhasil menukar <strong>${costTiket} Tiket</strong> menjadi <strong>+${rewardPoin} Poin</strong>!`;
+        chatAnnouncement = `🔄 ${playerCustomName} menukar ${costTiket} Tiket menjadi +${rewardPoin} Poin di Warung!`;
+    } else if (item.payMethod === 'exchange_t' || item.itemType === 't') {
+        const rewardTiket = tRule.valid ? tRule.amount : (parseInt(item.rawName.replace(/[^0-9]/g, ''), 10) || 0);
+        const costPoin = pRule.valid ? pRule.amount : 0;
+        if (costPoin <= 0 || rewardTiket <= 0 || playerPoints < costPoin) return;
+        playerPoints -= costPoin;
+        playerTickets += rewardTiket;
+        feedbackMsg = `✅ Berhasil menukar <strong>${costPoin} Poin</strong> menjadi <strong>+${rewardTiket} Tiket</strong>!`;
+        chatAnnouncement = `🔄 ${playerCustomName} menukar ${costPoin} Poin menjadi +${rewardTiket} Tiket di Warung!`;
+    } else if (item.payMethod === 'tickets') {
+        if (!tRule.valid || playerTickets < tRule.amount) return;
+        playerTickets -= tRule.amount;
         const ownedKeys = new Set((ownedCostumes || []).map(c => normalizeCostumeKey(c)));
         if (!hasFullCostumes && item.targetFile && !ownedKeys.has(normalizeCostumeKey(item.targetFile))) {
             ownedCostumes.push(item.targetFile);
         }
-        feedbackMsg = `✅ Berhasil membeli <strong>${item.targetLabel}</strong> dengan <strong>${item.tiketVal} Tiket</strong>!`;
+        feedbackMsg = `✅ Berhasil membeli <strong>${item.targetLabel}</strong> dengan <strong>${tRule.amount} Tiket</strong>!`;
         chatAnnouncement = `🛍️ ${playerCustomName} membeli kostum "${item.targetLabel}" memakai Tiket!`;
     } else {
-        if (playerPoints < item.poinVal) return;
-        playerPoints -= item.poinVal;
+        if (!pRule.valid || playerPoints < pRule.amount) return;
+        playerPoints -= pRule.amount;
         const ownedKeys = new Set((ownedCostumes || []).map(c => normalizeCostumeKey(c)));
         if (!hasFullCostumes && item.targetFile && !ownedKeys.has(normalizeCostumeKey(item.targetFile))) {
             ownedCostumes.push(item.targetFile);
         }
-        feedbackMsg = `✅ Berhasil membeli <strong>${item.targetLabel}</strong> dengan <strong>${item.poinVal} Poin</strong>!`;
+        feedbackMsg = `✅ Berhasil membeli <strong>${item.targetLabel}</strong> dengan <strong>${pRule.amount} Poin</strong>!`;
         chatAnnouncement = `🛍️ ${playerCustomName} membeli kostum "${item.targetLabel}" di Warung!`;
     }
 

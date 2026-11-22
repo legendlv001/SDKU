@@ -12,7 +12,7 @@ const ASSETS = {
     taman: new Image(), 
     bis: new Image(), 
     beach_bg: new Image(), 
-    rumput_bg: new Image(),
+    rumput_bg: new Image(), 
     male_sprite: new Image(), 
     female_sprite: new Image(),
     admin_sprite: new Image(),
@@ -30,7 +30,7 @@ let assetsLoaded = {
     taman: false, 
     bis: false, 
     beach_bg: false, 
-    rumput_bg: false,
+    rumput_bg: false, 
     male_sprite: false, 
     female_sprite: false, 
     admin_sprite: false,
@@ -47,10 +47,10 @@ ASSETS.mading.src = 'assets/mading.png';
 ASSETS.taman.src = 'assets/taman.png'; 
 ASSETS.bis.src = 'assets/bis.png'; 
 ASSETS.beach_bg.src = 'assets/beach_bg.png'; 
-ASSETS.rumput_bg.src = 'assets/rumput_bg.png';
+ASSETS.rumput_bg.src = 'assets/rumput_bg.png'; 
 ASSETS.male_sprite.src = 'assets/male_sprite.png'; 
 ASSETS.female_sprite.src = 'assets/female_sprite.png'; 
-ASSETS.admin_sprite.src = 'assets/admin.png';
+ASSETS.admin_sprite.src = 'assets/admin.png'; 
 ASSETS.kelas_inside.src = 'assets/Sprite-0001.png';
 
 Object.keys(ASSETS).forEach(key => { 
@@ -151,8 +151,7 @@ function drawMap(cameraX, cameraY, zoomScale) {
             ctx.fillRect(0, 0, canvas.width / zoomScale, canvas.height / zoomScale);
         }
     } else {
-        // Latar Lokasi 1 (Sekolah): gunakan assets/rumput_bg.png jika sudah dimuat
-        if (assetsLoaded.rumput_bg) {
+        if (assetsLoaded.rumput_bg && ASSETS.rumput_bg) {
             ctx.drawImage(ASSETS.rumput_bg, -cameraX, -cameraY, mapW, mapH);
         } else {
             const tileSize = 100;

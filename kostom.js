@@ -1,22 +1,31 @@
 // ==========================================
-// SISTEM KOSTUM & LEMARI PROFIL (KHUSUS KATEGORI 'K')
+// SISTEM KOSTUM & LEMARI PROFIL
 // ==========================================
 
+// Katalog cadangan jika tab 'Toko' di Spreadsheet gagal dimuat
 const FALLBACK_COSTUMES = [
     "lk_batik.png",
     "lk_damkar.png",
     "lk_pjok.png",
     "lk_pramuka.png",
+    "lk_pemda.png",
+    "lk_pgri1.png",
+    "lk_pgri2.png",
     "pr_batik.png",
     "pr_perawat.png",
     "pr_pjok.png",
-    "pr_pramuka.png"
+    "pr_pramuka.png",
+    "pr_pemda.png",
+    "pr_pgri1.png",
+    "pr_pgri.png"
 ];
 
+// Variabel status kostum pemain (diisi saat login di game.js)
 let hasFullCostumes = false;
 let ownedCostumes = [];
 let equippedCostume = "";
 
+// Normalisasi nama file kostum (huruf kecil, tanpa .png) untuk pencocokan akurat
 function normalizeCostumeKey(name) {
     return String(name || "")
         .trim()
@@ -24,12 +33,7 @@ function normalizeCostumeKey(name) {
         .toLowerCase();
 }
 
-function isNonCostumeItem(name) {
-    const clean = normalizeCostumeKey(name).replace(/^(pr_|lk_)/i, '').replace(/_/g, ' ');
-    return clean.includes('beli poin') || clean.includes('beli tiket') ||
-           clean.includes('tukar poin') || clean.includes('tukar tiket');
-}
-
+// Format nama file menjadi nama tampilan (contoh: "lk_batik.png" -> "Batik")
 function formatCostumeDisplayName(fileName) {
     return String(fileName || "")
         .replace(/^(pr_|lk_)/i, '')
@@ -38,6 +42,7 @@ function formatCostumeDisplayName(fileName) {
         .replace(/\b\w/g, l => l.toUpperCase());
 }
 
+// Menentukan nama file .png berdasarkan gender pemain ('L', 'P', atau 'A')
 function resolveCostumeFileName(rawItemName, genderCode) {
     const clean = rawItemName.trim().toLowerCase().replace(/\s+/g, '_');
     if (clean.startsWith('pr_') || clean.startsWith('lk_')) {
@@ -47,6 +52,7 @@ function resolveCostumeFileName(rawItemName, genderCode) {
     return `${prefix}${clean}.png`;
 }
 
+// Membuat elemen canvas mini untuk memotong 1 frame pertama (menghadap depan)
 function createSingleSpritePreviewHTML(costumeFile, boxClass = "w-11 h-11") {
     const safeFile = costumeFile.replace(/'/g, "\\'");
     return `
@@ -56,6 +62,7 @@ function createSingleSpritePreviewHTML(costumeFile, boxClass = "w-11 h-11") {
     `;
 }
 
+// Merender potongan 1 frame sprite ke seluruh canvas preview yang ada di layar
 function renderAllCostumePreviewCanvases() {
     const canvases = document.querySelectorAll('canvas[data-costume-preview]');
     canvases.forEach(cvs => {
@@ -76,6 +83,7 @@ function renderAllCostumePreviewCanvases() {
     });
 }
 
+// Simpan kostum yang sedang dipakai ke Kolom I Sheet Login melalui Apps Script
 function saveEquippedCostumeToSheet(costumeFileName) {
     if (!playerCustomName) return;
 
@@ -98,6 +106,9 @@ function saveEquippedCostumeToSheet(costumeFileName) {
     }
 }
 
+// ==========================================
+// LEMARI KOSTUM DI PROFIL (PAKAI / LEPAS)
+// ==========================================
 async function renderProfileCostumeWardrobe() {
     const wardrobeEl = document.getElementById('profileCostumeWardrobe');
     if (!wardrobeEl) return;
@@ -107,16 +118,17 @@ async function renderProfileCostumeWardrobe() {
     const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
     const isAdminOrFull = (genderCode === 'A') || hasFullCostumes;
 
+    // Pastikan katalog terbaru dari tab 'Toko' sudah dimuat
     if (typeof ensureShopCatalogLoaded === 'function') {
         await ensureShopCatalogLoaded(false);
     }
 
+    // Kumpulkan seluruh file kostum yang valid (khusus Kolom D = 'k')
     const catalogFilesMap = new Map();
 
     if (typeof currentShopItems !== 'undefined' && Array.isArray(currentShopItems) && currentShopItems.length > 0) {
         currentShopItems.forEach(item => {
-            // Hanya ambil item berkategori 'K' (Kostum)
-            if (item.category !== 'K' || isNonCostumeItem(item.rawName)) return;
+            if (item.itemType && item.itemType !== 'k') return;
 
             const lowerName = item.rawName.toLowerCase();
             const hasExplicitPrefix = lowerName.startsWith('pr_') || lowerName.startsWith('lk_');
@@ -139,8 +151,8 @@ async function renderProfileCostumeWardrobe() {
         FALLBACK_COSTUMES.forEach(f => catalogFilesMap.set(normalizeCostumeKey(f), f));
     }
 
+    // Tambahkan juga seluruh kostum yang sudah ada di daftar ownedCostumes pemain
     (ownedCostumes || []).forEach(raw => {
-        if (isNonCostumeItem(raw)) return;
         const cleanFile = raw.toLowerCase().endsWith('.png') ? raw.trim() : `${raw.trim()}.png`;
         const key = normalizeCostumeKey(cleanFile);
         if (key && !catalogFilesMap.has(key)) {
@@ -148,7 +160,8 @@ async function renderProfileCostumeWardrobe() {
         }
     });
 
-    const ownedKeys = new Set((ownedCostumes || []).filter(c => !isNonCostumeItem(c)).map(c => normalizeCostumeKey(c)));
+    // Filter kostum yang boleh ditampilkan di lemari pemain
+    const ownedKeys = new Set((ownedCostumes || []).map(c => normalizeCostumeKey(c)));
     const availableList = [];
 
     catalogFilesMap.forEach((fileName, key) => {
