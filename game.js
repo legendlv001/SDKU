@@ -1,7 +1,7 @@
 // ==========================================
 // LINK GOOGLE APPS SCRIPT
 // ==========================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwT0GxynyRGL0WbkqErPsHgC2deBshkNM1DE3mS5XxyKxyBYtA-Wfi1SnDMFumgc-bc/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoeis09l7mLW4qjoxZduX4cml_EDXiyTou73aUWECUZiFtdLiPYnz5t8d9n1cbs0Bv/exec";
 
 // ==========================================
 // CONFIGURATION, DATABASE & MAIN GAME LOOP
@@ -36,9 +36,9 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 }
 
 let USER_DATABASE = [
-    { name: "Admin", gender: "A", role: "ADMIN", status: "Full", points: 100, tickets: 10, password: "123", hasFullCostumes: true, ownedCostumes: [], equippedCostume: "" }, 
-    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, tickets: 3, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }, 
-    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50, tickets: 3, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "" }
+    { name: "Admin", gender: "A", role: "ADMIN", status: "Full", points: 100, tickets: 10, password: "123", hasFullCostumes: true, ownedCostumes: [], equippedCostume: "", equippedPet: "" }, 
+    { name: "Ali", gender: "L", role: "SISWA", status: "Full", points: 50, tickets: 3, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "", equippedPet: "" }, 
+    { name: "Aisyah", gender: "P", role: "SISWI", status: "User", points: 50, tickets: 3, password: "123", hasFullCostumes: false, ownedCostumes: [], equippedCostume: "", equippedPet: "" }
 ];
 
 let isDatabaseReady = false;
@@ -182,7 +182,8 @@ window.navigateToLocalHtml = function(targetHtmlUrl) {
             tickets: playerTickets,
             hasFullCostumes: hasFullCostumes,
             ownedCostumes: ownedCostumes,
-            equippedCostume: equippedCostume
+            equippedCostume: equippedCostume,
+            equippedPet: (typeof equippedPet !== 'undefined') ? equippedPet : ""
         };
         sessionStorage.setItem('activeUserSession', JSON.stringify(updatedSession));
         sessionStorage.setItem('savedPlayerPosition', JSON.stringify({
@@ -215,8 +216,9 @@ async function fetchSpreadsheetUsers() {
                     const gCode = (cols[1] || "L").toUpperCase();
                     const parsedPoints = parseInt((cols[4] || "0").replace(/[^0-9-]/g, ''), 10);
                     const parsedTickets = parseInt((cols[6] || "0").replace(/[^0-9-]/g, ''), 10); // Kolom G: Tiket
-                    const rawColH = (cols[7] || "").trim(); // Kolom H: Kostum dimiliki / "full"
-                    const rawColI = (cols[8] || "").trim(); // Kolom I: Kostum dipakai saat login
+                    const rawColH = (cols[7] || "").trim(); // Kolom H: Gabungan Kostum + Pet dimiliki / "full"
+                    const rawColI = (cols[8] || "").trim(); // Kolom I: Kostum dipakai
+                    const rawColJ = (cols[9] || "").trim(); // Kolom J: Pet dipakai
 
                     const isFullCostume = (gCode === 'A') || (rawColH.toLowerCase() === 'full');
 
@@ -232,7 +234,8 @@ async function fetchSpreadsheetUsers() {
                         ownedCostumes: isFullCostume 
                             ? [] 
                             : rawColH.split(',').map(s => s.trim()).filter(Boolean),
-                        equippedCostume: rawColI
+                        equippedCostume: rawColI,
+                        equippedPet: rawColJ
                     });
                 }
             }
@@ -253,7 +256,7 @@ window.walkTimer = 0; let tempModalGender = null, nearbyBuilding = null, isGameS
 // SISTEM AFK (AUTO LOGOUT 5 MENIT DIAM)
 // ==========================================
 let idleTimer = null;
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 menit
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 let isInactivityListenerRegistered = false;
 
 function resetIdleTimer() {
@@ -284,12 +287,15 @@ function setupInactivityListeners() {
 // AUTO-CLOSE POP-UP BANGUNAN (30 DETIK), CHAT & PETA (5 DETIK)
 // ==========================================
 let dialogAutoCloseTimer = null;
-const DIALOG_AUTO_CLOSE_MS = 30 * 1000; // 30 detik untuk pop-up bangunan
+const DIALOG_AUTO_CLOSE_MS = 30 * 1000;
 
 window.resetDialogAutoCloseTimer = function() {
     if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
     const dialogModal = document.getElementById('dialogModal');
+    const dialogBox = document.getElementById('dialogModalBox');
     if (!dialogModal || dialogModal.classList.contains('hidden')) return;
+    if (dialogBox && dialogBox.classList.contains('w-screen')) return;
+
     dialogAutoCloseTimer = setTimeout(() => {
         const buyModal = document.getElementById('buyConfirmModal');
         if (buyModal && !buyModal.classList.contains('hidden')) {
@@ -300,7 +306,7 @@ window.resetDialogAutoCloseTimer = function() {
 };
 
 let uiAutoCloseTimer = null;
-const UI_AUTO_CLOSE_DELAY_MS = 5 * 1000; // 5 detik untuk chat & peta
+const UI_AUTO_CLOSE_DELAY_MS = 5 * 1000;
 
 window.resetUIAutoCloseTimer = function() {
     if (uiAutoCloseTimer) clearTimeout(uiAutoCloseTimer);
@@ -352,7 +358,7 @@ function triggerPlayerChatBubble(senderName, messageText) {
     if (!senderName || !messageText) return;
     window.activeChatBubbles[senderName] = {
         text: messageText,
-        expiresAt: Date.now() + 5000 // Tampil di atas kepala karakter selama 5 detik
+        expiresAt: Date.now() + 5000
     };
 }
 
@@ -508,7 +514,6 @@ function startListeningChat() {
         addChatMessage(msgData.sender, chatBody, msgData.sender === playerCustomName);
         triggerPlayerChatBubble(msgData.sender, chatBody);
 
-        // Jika pemain menerima gift tiket secara real-time, perbarui saldonya
         if (msgData.giftReceiver && msgData.giftReceiver.toLowerCase() === playerCustomName.toLowerCase()) {
             const added = parseInt(msgData.giftAmount, 10) || 0;
             if (added > 0) {
@@ -544,7 +549,7 @@ window.sendFirebaseChat = function(senderName, messageText, extraData = {}) {
 };
 
 // ==========================================
-// DAFTAR PEMAIN ONLINE (POSISI KICK & LOKASI RAPI)
+// DAFTAR PEMAIN ONLINE
 // ==========================================
 function updateOnlinePlayersList(otherPlayersData) {
     const listElem = document.getElementById('onlinePlayersList');
@@ -682,6 +687,11 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     sessionStorage.setItem('activeUserSession', JSON.stringify(matchedUser));
     initPlayerPointsSync(matchedUser.points, matchedUser.tickets || 0);
 
+    // Muat katalog Toko di latar belakang agar filter Kostum (k) & Pet (h) akurat sejak awal
+    if (typeof ensureShopCatalogLoaded === 'function') {
+        ensureShopCatalogLoaded(false);
+    }
+
     document.body.classList.add('game-active');
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('gameContainer').classList.remove('hidden');
@@ -695,6 +705,11 @@ function startGameSession(matchedUser, savedPosition = null, isResume = false) {
     if (savedPosition && typeof savedPosition.x === 'number' && typeof savedPosition.y === 'number') {
         player.x = savedPosition.x;
         player.y = savedPosition.y;
+    }
+
+    // Inisialisasi Pet dari Kolom H & Kolom J Spreadsheet
+    if (typeof initPlayerPetFromAccount === 'function') {
+        initPlayerPetFromAccount(matchedUser);
     }
 
     if (typeof generateTrees === 'function') generateTrees();
@@ -781,6 +796,7 @@ function switchWorldLocation(targetLocId) {
     else { player.x = 390; player.y = 380; }
 
     player.targetX = null; player.targetY = null; player.isMovingToTarget = false;
+    if (typeof syncPetToPlayerPosition === 'function') syncPetToPlayerPosition();
     if (typeof generateTrees === 'function') generateTrees();
     updateMyPositionToFirebase();
 }
@@ -908,6 +924,11 @@ function gameLoop() {
         trees.forEach(tree => { if (tree.y <= player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
+    // Gambar Pet yang berjalan mengikuti di belakang pemain
+    if (typeof drawMyPlayerPet === 'function') {
+        drawMyPlayerPet(ctx, cameraX, cameraY, currentZoomScale);
+    }
+
     ctx.save(); ctx.scale(currentZoomScale, currentZoomScale);
     drawCharacterSprite(
         ctx, 
@@ -928,7 +949,6 @@ function gameLoop() {
         trees.forEach(tree => { if (tree.y > player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
-    // Gambar balon chat di atas kepala karakter yang baru mengirim pesan
     drawActiveChatBubblesOnCanvas(ctx, cameraX, cameraY, currentZoomScale);
 
     if (isMiniMapOpen) renderMiniMap();
@@ -978,6 +998,7 @@ function setupTouchAnalogStick() {
 // ==========================================
 window.triggerInteraction = async function() {
     if (!nearbyBuilding) return;
+    if (typeof setKelasModalFullscreen === 'function') setKelasModalFullscreen(false);
     if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function' && handleKelasInteraction(nearbyBuilding)) return;
     if (currentWorldLocation === 2 && typeof handlePantaiInteraction === 'function' && handlePantaiInteraction(nearbyBuilding)) return;
     if (nearbyBuilding.targetUrl) { navigateToLocalHtml(nearbyBuilding.targetUrl); return; }
@@ -1073,7 +1094,6 @@ function renderMiniMap() {
     largeMapCanvas.width = 400; 
     largeMapCanvas.height = 240;
 
-    // Latar belakang peta (gunakan gambar latar masing-masing lokasi jika sudah termuat)
     if (currentWorldLocation === 1 && typeof assetsLoaded !== 'undefined' && assetsLoaded.rumput_bg && ASSETS.rumput_bg) {
         mCtx.drawImage(ASSETS.rumput_bg, 0, 0, largeMapCanvas.width, largeMapCanvas.height);
     } else if (currentWorldLocation === 2 && typeof assetsLoaded !== 'undefined' && assetsLoaded.beach_bg && ASSETS.beach_bg) {
@@ -1089,7 +1109,6 @@ function renderMiniMap() {
     const scaleY = largeMapCanvas.height / MAP_HEIGHT;
 
     if (typeof currentBuildings !== 'undefined') {
-        // 1. Gambar kotak seluruh bangunan
         currentBuildings.forEach(b => {
             if (b.isSilentZone) return;
             const bx = b.x * scaleX;
@@ -1104,7 +1123,6 @@ function renderMiniMap() {
             mCtx.strokeRect(bx, by, bw, bh);
         });
 
-        // 2. Gambar label keterangan tempat di atas setiap bangunan
         currentBuildings.forEach(b => {
             if (b.isSilentZone) return;
             const bx = b.x * scaleX;
@@ -1141,7 +1159,6 @@ function renderMiniMap() {
         });
     }
 
-    // 3. Gambar titik posisi pemain + keterangan "Anda"
     const px = player.x * scaleX;
     const py = player.y * scaleY;
     mCtx.fillStyle = '#ef4444';
@@ -1157,6 +1174,50 @@ function renderMiniMap() {
     mCtx.textAlign = 'center';
     mCtx.fillText('Anda', px, py + 12);
 }
+
+// ==========================================
+// PERPINDAHAN 3 TAB MENU DI PROFIL (AKUN, KOSTUM, PET)
+// ==========================================
+window.switchProfileTab = function(tabName) {
+    const menuPoin = document.getElementById('profileMenuPoin');
+    const menuKostum = document.getElementById('profileMenuKostum');
+    const menuPet = document.getElementById('profileMenuPet');
+    const btnPoin = document.getElementById('profileTabBtnPoin');
+    const btnKostum = document.getElementById('profileTabBtnKostum');
+    const btnPet = document.getElementById('profileTabBtnPet');
+
+    if (!menuPoin || !menuKostum || !btnPoin || !btnKostum) return;
+
+    const activeCls = ['bg-yellow-400', 'text-slate-950', 'font-extrabold', 'shadow'];
+    const inactiveCls = ['text-slate-300', 'hover:text-white', 'hover:bg-slate-800', 'font-bold'];
+
+    [menuPoin, menuKostum, menuPet].forEach(m => { if (m) m.classList.add('hidden'); });
+    [btnPoin, btnKostum, btnPet].forEach(b => {
+        if (!b) return;
+        b.classList.remove(...activeCls);
+        b.classList.add(...inactiveCls);
+    });
+
+    if (tabName === 'kostum') {
+        menuKostum.classList.remove('hidden');
+        btnKostum.classList.remove(...inactiveCls);
+        btnKostum.classList.add(...activeCls);
+        if (typeof renderProfileCostumeWardrobe === 'function') {
+            renderProfileCostumeWardrobe();
+        }
+    } else if (tabName === 'pet' && menuPet && btnPet) {
+        menuPet.classList.remove('hidden');
+        btnPet.classList.remove(...inactiveCls);
+        btnPet.classList.add(...activeCls);
+        if (typeof renderProfilePetWardrobe === 'function') {
+            renderProfilePetWardrobe();
+        }
+    } else {
+        menuPoin.classList.remove('hidden');
+        btnPoin.classList.remove(...inactiveCls);
+        btnPoin.classList.add(...activeCls);
+    }
+};
 
 window.openEditCharacterModal = function() {
     tempModalGender = selectedGender;
@@ -1177,7 +1238,6 @@ window.openEditCharacterModal = function() {
         }
     }
 
-    // Pengaturan Panel Gift Tiket (Khusus Kolom D = Full)
     const giftSection = document.getElementById('giftTicketSection');
     const giftSelect = document.getElementById('giftTargetPlayerSelect');
     const giftFeedback = document.getElementById('giftTicketFeedback');
@@ -1196,7 +1256,7 @@ window.openEditCharacterModal = function() {
 
     updatePointsDisplay();
     selectModalGender(selectedGender);
-    renderProfileCostumeWardrobe();
+    switchProfileTab('poin');
     document.getElementById('editCharModal').classList.remove('hidden');
 };
 
@@ -1231,7 +1291,6 @@ window.handleGiftTickets = function() {
         return;
     }
 
-    // Pengirim berkurang (-amount), penerima bertambah (+amount)
     playerTickets -= amount;
     const targetUserObj = USER_DATABASE.find(u => u.name.trim().toLowerCase() === targetName.toLowerCase());
     if (targetUserObj) {
@@ -1361,6 +1420,7 @@ window.handleLogout = function() {
 
 window.closeModal = function() {
     if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
+    if (typeof setKelasModalFullscreen === 'function') setKelasModalFullscreen(false);
     const modal = document.getElementById('dialogModal');
     if (modal) modal.classList.add('hidden');
 };

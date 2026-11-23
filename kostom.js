@@ -1,217 +1,177 @@
 // ==========================================
-// SISTEM KOSTUM & LEMARI PROFIL
+// SISTEM KOSTUM (SHEET LOGIN KOLOM H = DIMILIKI, KOLOM I = DIPAKAI)
 // ==========================================
+const KOSTUM_APPS_SCRIPT_URL = (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http'))
+    ? APPS_SCRIPT_URL
+    : "https://script.google.com/macros/s/AKfycbyoeis09l7mLW4qjoxZduX4cml_EDXiyTou73aUWECUZiFtdLiPYnz5t8d9n1cbs0Bv/exec";
 
-// Katalog cadangan jika tab 'Toko' di Spreadsheet gagal dimuat
-const FALLBACK_COSTUMES = [
-    "lk_batik.png",
-    "lk_damkar.png",
-    "lk_pjok.png",
-    "lk_pramuka.png",
-    "lk_pemda.png",
-    "lk_pgri1.png",
-    "lk_pgri2.png",
-    "pr_batik.png",
-    "pr_perawat.png",
-    "pr_pjok.png",
-    "pr_pramuka.png",
-    "pr_pemda.png",
-    "pr_pgri1.png",
-    "pr_pgri.png"
-];
-
-// Variabel status kostum pemain (diisi saat login di game.js)
 let hasFullCostumes = false;
-let ownedCostumes = [];
-let equippedCostume = "";
+let ownedCostumes = [];   // Gabungan item dibeli (Kolom H Sheet Login)
+let equippedCostume = ""; // Kostum yang sedang dipakai (Kolom I Sheet Login)
 
-// Normalisasi nama file kostum (huruf kecil, tanpa .png) untuk pencocokan akurat
-function normalizeCostumeKey(name) {
-    return String(name || "")
-        .trim()
-        .replace(/\.png$/i, "")
-        .toLowerCase();
+const COSTUME_SPRITES = {};
+const costumeSpritesLoaded = {};
+
+function normalizeCostumeFileName(rawName) {
+    let clean = (rawName || "").trim();
+    if (!clean) return "";
+    if (!clean.toLowerCase().endsWith('.png')) clean += '.png';
+    return clean;
 }
 
-// Format nama file menjadi nama tampilan (contoh: "lk_batik.png" -> "Batik")
-function formatCostumeDisplayName(fileName) {
-    return String(fileName || "")
-        .replace(/^(pr_|lk_)/i, '')
-        .replace(/\.png$/i, '')
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-}
+function getCostumeSpriteImage(costumeFile) {
+    const fileName = normalizeCostumeFileName(costumeFile);
+    if (!fileName) return null;
 
-// Menentukan nama file .png berdasarkan gender pemain ('L', 'P', atau 'A')
-function resolveCostumeFileName(rawItemName, genderCode) {
-    const clean = rawItemName.trim().toLowerCase().replace(/\s+/g, '_');
-    if (clean.startsWith('pr_') || clean.startsWith('lk_')) {
-        return clean.endsWith('.png') ? clean : `${clean}.png`;
-    }
-    const prefix = (genderCode === 'P') ? 'pr_' : 'lk_';
-    return `${prefix}${clean}.png`;
-}
-
-// Membuat elemen canvas mini untuk memotong 1 frame pertama (menghadap depan)
-function createSingleSpritePreviewHTML(costumeFile, boxClass = "w-11 h-11") {
-    const safeFile = costumeFile.replace(/'/g, "\\'");
-    return `
-        <div class="${boxClass} bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-slate-700 shrink-0 relative">
-            <canvas data-costume-preview="${safeFile}" width="48" height="48" class="w-full h-full object-contain"></canvas>
-        </div>
-    `;
-}
-
-// Merender potongan 1 frame sprite ke seluruh canvas preview yang ada di layar
-function renderAllCostumePreviewCanvases() {
-    const canvases = document.querySelectorAll('canvas[data-costume-preview]');
-    canvases.forEach(cvs => {
-        const fileName = cvs.getAttribute('data-costume-preview');
-        if (!fileName) return;
+    if (!COSTUME_SPRITES[fileName]) {
         const img = new Image();
-        img.src = `assets/kostom/${fileName}`;
-        img.onload = () => {
-            const ctx = cvs.getContext('2d');
-            ctx.clearRect(0, 0, cvs.width, cvs.height);
-            const cols = (img.width % 4 === 0 && img.width >= img.height) ? 4 : 3;
-            const rows = 4;
-            const frameW = Math.floor(img.width / cols);
-            const frameH = Math.floor(img.height / rows);
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(img, 0, 0, frameW, frameH, 4, 2, cvs.width - 8, cvs.height - 4);
-        };
-    });
+        img.src = `assets/kostum/${fileName}`;
+        img.onload = () => { costumeSpritesLoaded[fileName] = true; };
+        img.onerror = () => { costumeSpritesLoaded[fileName] = false; };
+        COSTUME_SPRITES[fileName] = img;
+    }
+    return costumeSpritesLoaded[fileName] ? COSTUME_SPRITES[fileName] : null;
 }
 
-// Simpan kostum yang sedang dipakai ke Kolom I Sheet Login melalui Apps Script
-function saveEquippedCostumeToSheet(costumeFileName) {
-    if (!playerCustomName) return;
+// Cek apakah kostum sudah dimiliki pemain di Kolom H
+window.isCostumeOwnedByPlayer = function(costumeFile) {
+    if (hasFullCostumes) return true;
+    const target = normalizeCostumeFileName(costumeFile).toLowerCase();
+    return ownedCostumes.some(c => normalizeCostumeFileName(c).toLowerCase() === target);
+};
 
-    if (currentUserAccount) {
-        currentUserAccount.equippedCostume = costumeFileName;
+// Simpan Kolom H (gabungan kostum + pet) & Kolom I (kostum dipakai) ke Google Spreadsheet
+function syncCostumeDataToSpreadsheet() {
+    const joinedColH = hasFullCostumes ? 'full' : ownedCostumes.join(', ');
+
+    if (typeof currentUserAccount !== 'undefined' && currentUserAccount) {
+        currentUserAccount.ownedCostumes = [...ownedCostumes];
+        currentUserAccount.equippedCostume = equippedCostume;
         sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
     }
 
-    if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http')) {
-        fetch(APPS_SCRIPT_URL, {
+    if (KOSTUM_APPS_SCRIPT_URL && KOSTUM_APPS_SCRIPT_URL.startsWith('http') && typeof playerCustomName !== 'undefined' && playerCustomName) {
+        fetch(KOSTUM_APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
-                action: 'updateEquippedCostume',
+                action: 'updateCostume',
                 player: playerCustomName,
-                equippedCostume: costumeFileName || ""
+                ownedCostumes: joinedColH,
+                equippedCostume: equippedCostume,
+                updatedAt: Date.now()
             })
         }).catch(() => {});
     }
 }
 
-// ==========================================
-// LEMARI KOSTUM DI PROFIL (PAKAI / LEPAS)
-// ==========================================
-async function renderProfileCostumeWardrobe() {
-    const wardrobeEl = document.getElementById('profileCostumeWardrobe');
-    if (!wardrobeEl) return;
+// Dipanggil oleh toko.js saat membeli kostum (Kolom D = "k")
+window.addOwnedCostumeToPlayer = function(costumeFile) {
+    const normalized = normalizeCostumeFileName(costumeFile);
+    if (!normalized) return;
 
-    wardrobeEl.innerHTML = `<div class="col-span-2 text-center text-[11px] text-slate-400 py-3">Memuat lemari kostum...</div>`;
+    if (!window.isCostumeOwnedByPlayer(normalized)) {
+        ownedCostumes.push(normalized);
+    }
+    equippedCostume = normalized;
+    syncCostumeDataToSpreadsheet();
 
-    const genderCode = (currentUserAccount && currentUserAccount.gender) ? currentUserAccount.gender.toUpperCase() : 'L';
-    const isAdminOrFull = (genderCode === 'A') || hasFullCostumes;
+    if (typeof updateMyPositionToFirebase === 'function') {
+        updateMyPositionToFirebase();
+    }
+};
 
-    // Pastikan katalog terbaru dari tab 'Toko' sudah dimuat
-    if (typeof ensureShopCatalogLoaded === 'function') {
+// Pakai kostum dari Tab Profil -> Kostum
+window.equipCostume = function(costumeFile) {
+    const normalized = normalizeCostumeFileName(costumeFile);
+    if (!normalized || !window.isCostumeOwnedByPlayer(normalized)) return;
+
+    equippedCostume = normalized;
+    syncCostumeDataToSpreadsheet();
+
+    if (typeof updateMyPositionToFirebase === 'function') {
+        updateMyPositionToFirebase();
+    }
+    if (typeof renderProfileCostumeWardrobe === 'function') {
+        renderProfileCostumeWardrobe();
+    }
+};
+
+// Kembali ke baju default
+window.unequipCostume = function() {
+    equippedCostume = "";
+    syncCostumeDataToSpreadsheet();
+
+    if (typeof updateMyPositionToFirebase === 'function') {
+        updateMyPositionToFirebase();
+    }
+    if (typeof renderProfileCostumeWardrobe === 'function') {
+        renderProfileCostumeWardrobe();
+    }
+};
+
+// Ambil daftar file yang berkategori Pet ('h') di Toko agar tidak tampil di lemari Kostum
+function getExcludedPetFilesSet() {
+    const petSet = new Set();
+    if (Array.isArray(window.SHOP_CATALOG_ITEMS)) {
+        window.SHOP_CATALOG_ITEMS.forEach(item => {
+            if ((item.typeCode || '').toLowerCase() === 'h' && item.fileName) {
+                petSet.add(normalizeCostumeFileName(item.fileName).toLowerCase());
+            }
+        });
+    }
+    return petSet;
+}
+
+// Render daftar kostum di Tab Profil -> Kostum (mengecualikan file Pet 'h' dari Kolom H)
+window.renderProfileCostumeWardrobe = async function() {
+    const container = document.getElementById('profileCostumeWardrobe');
+    if (!container) return;
+
+    if (typeof ensureShopCatalogLoaded === 'function' && (!window.SHOP_CATALOG_ITEMS || window.SHOP_CATALOG_ITEMS.length === 0)) {
         await ensureShopCatalogLoaded(false);
     }
 
-    // Kumpulkan seluruh file kostum yang valid (khusus Kolom D = 'k')
-    const catalogFilesMap = new Map();
+    const excludedPets = getExcludedPetFilesSet();
+    let availableCostumes = [];
 
-    if (typeof currentShopItems !== 'undefined' && Array.isArray(currentShopItems) && currentShopItems.length > 0) {
-        currentShopItems.forEach(item => {
-            if (item.itemType && item.itemType !== 'k') return;
-
-            const lowerName = item.rawName.toLowerCase();
-            const hasExplicitPrefix = lowerName.startsWith('pr_') || lowerName.startsWith('lk_');
-
-            if (isAdminOrFull) {
-                if (hasExplicitPrefix) {
-                    const f = lowerName.endsWith('.png') ? lowerName : `${lowerName}.png`;
-                    catalogFilesMap.set(normalizeCostumeKey(f), f);
-                } else {
-                    const baseClean = lowerName.replace(/\.png$/i, '').replace(/\s+/g, '_');
-                    catalogFilesMap.set(`lk_${baseClean}`, `lk_${baseClean}.png`);
-                    catalogFilesMap.set(`pr_${baseClean}`, `pr_${baseClean}.png`);
+    if (hasFullCostumes && Array.isArray(window.SHOP_CATALOG_ITEMS)) {
+        window.SHOP_CATALOG_ITEMS.forEach(item => {
+            if ((item.typeCode || '').toLowerCase() === 'k' && item.fileName) {
+                const norm = normalizeCostumeFileName(item.fileName);
+                if (!availableCostumes.some(c => c.toLowerCase() === norm.toLowerCase())) {
+                    availableCostumes.push(norm);
                 }
-            } else {
-                const f = resolveCostumeFileName(item.rawName, genderCode);
-                catalogFilesMap.set(normalizeCostumeKey(f), f);
             }
         });
-    } else if (isAdminOrFull) {
-        FALLBACK_COSTUMES.forEach(f => catalogFilesMap.set(normalizeCostumeKey(f), f));
+    } else {
+        ownedCostumes.forEach(rawItem => {
+            const norm = normalizeCostumeFileName(rawItem);
+            if (!excludedPets.has(norm.toLowerCase())) {
+                if (!availableCostumes.some(c => c.toLowerCase() === norm.toLowerCase())) {
+                    availableCostumes.push(norm);
+                }
+            }
+        });
     }
 
-    // Tambahkan juga seluruh kostum yang sudah ada di daftar ownedCostumes pemain
-    (ownedCostumes || []).forEach(raw => {
-        const cleanFile = raw.toLowerCase().endsWith('.png') ? raw.trim() : `${raw.trim()}.png`;
-        const key = normalizeCostumeKey(cleanFile);
-        if (key && !catalogFilesMap.has(key)) {
-            catalogFilesMap.set(key, cleanFile);
-        }
-    });
-
-    // Filter kostum yang boleh ditampilkan di lemari pemain
-    const ownedKeys = new Set((ownedCostumes || []).map(c => normalizeCostumeKey(c)));
-    const availableList = [];
-
-    catalogFilesMap.forEach((fileName, key) => {
-        if (isAdminOrFull || ownedKeys.has(key)) {
-            availableList.push(fileName);
-        }
-    });
-
-    if (availableList.length === 0) {
-        wardrobeEl.innerHTML = `<div class="col-span-2 text-center text-[11px] text-slate-400 py-3">Belum ada kostum dimiliki. Beli kostum di 🏪 Warung Sekolah!</div>`;
+    if (availableCostumes.length === 0) {
+        container.innerHTML = `<div class="col-span-2 text-center text-[11px] text-slate-400 py-4">Belum punya kostum. Beli di Warung / Toko!</div>`;
         return;
     }
 
-    const equippedKey = normalizeCostumeKey(equippedCostume);
-    let html = '';
-
-    availableList.forEach(file => {
-        const isEquipped = equippedKey && (normalizeCostumeKey(file) === equippedKey);
-        const tagGender = file.toLowerCase().startsWith('pr_') ? ' (PR)' : (file.toLowerCase().startsWith('lk_') ? ' (LK)' : '');
-        const label = formatCostumeDisplayName(file) + (isAdminOrFull ? tagGender : '');
-        const safeFile = file.replace(/'/g, "\\'");
-
-        html += `
-            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-800 border ${isEquipped ? 'border-emerald-400 bg-emerald-950/30' : 'border-slate-700'}">
-                <div class="flex items-center gap-1.5 min-w-0">
-                    ${createSingleSpritePreviewHTML(file, "w-8 h-8")}
-                    <span class="text-[10px] font-bold text-white truncate">${label}</span>
-                </div>
-                ${isEquipped
-                    ? `<button type="button" onclick="unequipCostume()" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-extrabold shrink-0 ml-1">Lepas</button>`
-                    : `<button type="button" onclick="equipCostume('${safeFile}')" class="px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-[9px] font-extrabold shrink-0 ml-1">Pakai</button>`
-                }
+    container.innerHTML = availableCostumes.map(fileName => {
+        const isEquipped = (normalizeCostumeFileName(equippedCostume).toLowerCase() === fileName.toLowerCase());
+        const displayLabel = fileName.replace(/\.png$/i, '');
+        return `
+            <div onclick="equipCostume('${fileName.replace(/'/g, "\\'")}')" class="cursor-pointer p-2 rounded-xl border-2 transition flex flex-col items-center gap-1 ${isEquipped ? 'border-yellow-400 bg-yellow-400/15' : 'border-slate-700 bg-slate-900 hover:border-slate-500'}">
+                <img src="assets/kostum/${fileName}" onerror="this.src='assets/poin.png'" alt="${displayLabel}" class="w-10 h-10 object-contain">
+                <span class="text-[10px] font-bold text-white truncate max-w-full">${displayLabel}</span>
+                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-md ${isEquipped ? 'bg-yellow-400 text-slate-950' : 'bg-slate-800 text-slate-300'}">
+                    ${isEquipped ? 'Dipakai' : 'Pakai'}
+                </span>
             </div>
         `;
-    });
-
-    wardrobeEl.innerHTML = html;
-    renderAllCostumePreviewCanvases();
-}
-
-window.equipCostume = function(costumeFile) {
-    equippedCostume = costumeFile;
-    saveEquippedCostumeToSheet(equippedCostume);
-    if (typeof updateMyPositionToFirebase === 'function') updateMyPositionToFirebase();
-    renderProfileCostumeWardrobe();
-};
-
-window.unequipCostume = function() {
-    equippedCostume = "";
-    saveEquippedCostumeToSheet("");
-    if (typeof updateMyPositionToFirebase === 'function') updateMyPositionToFirebase();
-    renderProfileCostumeWardrobe();
+    }).join('');
 };

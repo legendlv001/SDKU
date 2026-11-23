@@ -3,7 +3,33 @@
 // ==========================================
 const KELAS_APPS_SCRIPT_URL = (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http'))
     ? APPS_SCRIPT_URL
-    : "https://script.google.com/macros/s/AKfycbwT0GxynyRGL0WbkqErPsHgC2deBshkNM1DE3mS5XxyKxyBYtA-Wfi1SnDMFumgc-bc/exec";
+    : "https://script.google.com/macros/s/AKfycbyoeis09l7mLW4qjoxZduX4cml_EDXiyTou73aUWECUZiFtdLiPYnz5t8d9n1cbs0Bv/exec";
+
+// ==========================================
+// PENGATURAN LAYAR PENUH KHUSUS BUAT & JAWAB SOAL
+// ==========================================
+function setKelasModalFullscreen(isFull) {
+    const dialogModal = document.getElementById('dialogModal');
+    const dialogBox = document.getElementById('dialogModalBox');
+    if (!dialogModal || !dialogBox) return;
+
+    if (isFull) {
+        if (typeof dialogAutoCloseTimer !== 'undefined' && dialogAutoCloseTimer) {
+            clearTimeout(dialogAutoCloseTimer);
+        }
+        dialogModal.classList.remove('p-2', 'md:p-4');
+        dialogModal.classList.add('p-0');
+
+        dialogBox.classList.remove('max-w-md', 'max-h-[90dvh]', 'rounded-3xl', 'border-2');
+        dialogBox.classList.add('max-w-none', 'w-screen', 'h-[100dvh]', 'max-h-[100dvh]', 'rounded-none', 'border-0');
+    } else {
+        dialogModal.classList.remove('p-0');
+        dialogModal.classList.add('p-2', 'md:p-4');
+
+        dialogBox.classList.remove('max-w-none', 'w-screen', 'h-[100dvh]', 'max-h-[100dvh]', 'rounded-none', 'border-0');
+        dialogBox.classList.add('max-w-md', 'max-h-[90dvh]', 'rounded-3xl', 'border-2');
+    }
+}
 
 // ==========================================
 // KONFIGURASI, VISUAL & INTERAKSI KHUSUS LOKASI 3 (RUANG KELAS)
@@ -222,79 +248,86 @@ function handleKelasInteraction(building) {
 }
 
 // ==========================================
-// 4. PANEL GURU / ADMIN / OPS (BUAT & KELOLA TUGAS)
+// 4. PANEL GURU / ADMIN / OPS (BUAT & KELOLA TUGAS — FULLSCREEN)
 // ==========================================
 function openTeacherTaskMenu() {
     draftKelasQuestions = [];
+    setKelasModalFullscreen(true);
+
     const modalTitle = document.getElementById('modalTitle');
     const modalContent = document.getElementById('modalContent');
     const modalActions = document.getElementById('modalActions');
 
     modalTitle.innerHTML = `👩‍🏫 Meja Guru (${playerRole})`;
     modalContent.innerHTML = `
-        <div class="text-left space-y-2.5 max-h-[65vh] overflow-y-auto pr-1">
+        <div class="max-w-3xl mx-auto w-full text-left space-y-3 pb-4">
             <div class="flex gap-2 mb-2">
-                <button onclick="renderCreateTaskForm()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow">
+                <button type="button" onclick="renderCreateTaskForm()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow">
                     ➕ Buat Tugas Baru
                 </button>
-                <button onclick="openStudentTaskListModal('Daftar Tugas Aktif')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-yellow-300 font-bold rounded-xl text-xs shadow">
+                <button type="button" onclick="openStudentTaskListModal('Daftar Tugas Aktif')" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-yellow-300 font-bold rounded-xl text-xs shadow">
                     📂 Lihat Tugas Aktif
                 </button>
             </div>
             <div id="teacherPanelBody"></div>
         </div>
     `;
-    modalActions.innerHTML = `<button onclick="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
+    modalActions.innerHTML = `
+        <div class="max-w-3xl mx-auto w-full flex justify-end">
+            <button type="button" onclick="closeModal()" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>
+        </div>
+    `;
     document.getElementById('dialogModal').classList.remove('hidden');
 
     renderCreateTaskForm();
 }
 
 function renderCreateTaskForm() {
+    setKelasModalFullscreen(true);
     const body = document.getElementById('teacherPanelBody');
     if (!body) return;
 
     body.innerHTML = `
-        <div class="bg-slate-800/90 border border-slate-700 p-3 rounded-2xl space-y-2.5">
+        <div class="bg-slate-800/90 border border-slate-700 p-3.5 md:p-4 rounded-2xl space-y-3">
             <p class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">1. Identitas Tugas (Tersimpan ke Sheet kelasTasks)</p>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                    <label class="block text-[10px] text-slate-300 font-bold mb-1">Kode Tugas *</label>
-                    <input type="text" id="taskKodeInput" placeholder="Misal: PR-MTK-01" class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
+                    <label class="block text-[10px] text-slate-300 font-bold mb-1">Kode Tugas (Internal Sheet) *</label>
+                    <input type="text" id="taskKodeInput" placeholder="Misal: PR-MTK-01" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-300 font-bold mb-1">Kelas *</label>
-                    <input type="text" id="taskKelasInput" placeholder="Misal: Kelas 4A" class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
+                    <input type="text" id="taskKelasInput" placeholder="Misal: Kelas 4A" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
                 </div>
             </div>
             <div>
                 <label class="block text-[10px] text-slate-300 font-bold mb-1">Keterangan / Petunjuk PR *</label>
-                <textarea id="taskKetInput" rows="2" placeholder="Tuliskan keterangan tugas untuk murid..." class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs focus:border-yellow-400 focus:outline-none"></textarea>
+                <textarea id="taskKetInput" rows="2" placeholder="Tuliskan keterangan tugas untuk murid..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs focus:border-yellow-400 focus:outline-none"></textarea>
             </div>
 
             <hr class="border-slate-700 my-1">
             <p class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">2. Buat Soal atau Upload Word / PDF</p>
 
-            <div class="bg-slate-900/90 border border-dashed border-sky-500/60 p-2.5 rounded-xl">
+            <div class="bg-slate-900/90 border border-dashed border-sky-500/60 p-3 rounded-xl">
                 <label class="block text-[10px] font-bold text-sky-300 mb-1">📄 Upload File Word (.docx) atau PDF (.pdf):</label>
                 <input type="file" id="taskFileUpload" accept=".docx,.pdf,.txt" onchange="handleTaskDocUpload(event)" class="w-full text-[11px] text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-sky-500 file:text-slate-950 hover:file:bg-sky-400 cursor-pointer">
                 <p id="uploadDocStatus" class="text-[10px] text-slate-400 mt-1">Otomatis diubah menjadi simulasi soal pilihan ganda untuk dijawab murid.</p>
             </div>
 
-            <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-700 space-y-1.5">
+            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700 space-y-2">
                 <label class="block text-[10px] font-bold text-emerald-300">✍️ Atau Tambah Soal Manual:</label>
-                <input type="text" id="manualQText" placeholder="Tulis pertanyaan soal..." class="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
-                <div class="grid grid-cols-3 gap-1.5">
-                    <input type="text" id="manualOptA" placeholder="Pilihan A (Benar)" class="px-2 py-1 rounded-lg bg-slate-800 border border-emerald-600/60 text-white text-[11px]">
-                    <input type="text" id="manualOptB" placeholder="Pilihan B" class="px-2 py-1 rounded-lg bg-slate-800 border border-slate-600 text-white text-[11px]">
-                    <input type="text" id="manualOptC" placeholder="Pilihan C" class="px-2 py-1 rounded-lg bg-slate-800 border border-slate-600 text-white text-[11px]">
+                <input type="text" id="manualQText" placeholder="Tulis pertanyaan soal..." class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input type="text" id="manualOptA" placeholder="Pilihan A (Benar)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-emerald-600/60 text-white text-xs">
+                    <input type="text" id="manualOptB" placeholder="Pilihan B" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+                    <input type="text" id="manualOptC" placeholder="Pilihan C" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
                 </div>
-                <button type="button" onclick="addManualQuestionToDraft()" class="w-full py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg text-[11px]">
+                <button type="button" onclick="addManualQuestionToDraft()" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg text-xs">
                     + Tambahkan ke Daftar Soal
                 </button>
             </div>
 
-            <div id="draftQuestionsPreview" class="text-[11px] text-slate-300 bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+            <div id="draftQuestionsPreview" class="text-[11px] text-slate-300 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
                 Belum ada soal ditambahkan (0 soal).
             </div>
 
@@ -422,15 +455,16 @@ window.publishKelasTask = async function() {
     }
 
     if (typeof window.sendFirebaseChat === 'function') {
-        window.sendFirebaseChat("Ruang Kelas", `📚 ${playerCustomName} baru saja membagikan Tugas PR [${kode}] untuk ${kelas}! Silakan kerjakan di meja murid.`);
+        window.sendFirebaseChat("Ruang Kelas", `📚 ${playerCustomName} baru saja membagikan Tugas PR untuk ${kelas}! Silakan kerjakan di meja murid.`);
     }
 
+    setKelasModalFullscreen(false);
     if (modalContent) {
         modalContent.innerHTML = `
             <div class="p-4 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-center space-y-2">
                 <div class="text-3xl">✅</div>
                 <h4 class="font-extrabold text-emerald-300 text-sm">Tugas PR Berhasil Disimpan!</h4>
-                <p class="text-xs text-slate-200">Kode: <strong>${kode}</strong> • Kelas: <strong>${kelas}</strong></p>
+                <p class="text-xs text-slate-200">Kelas: <strong>${kelas}</strong></p>
                 <p class="text-[11px] text-slate-300">Murid sekarang sudah bisa menekan <strong>AKSI</strong> di area meja murid untuk menjawab soal.</p>
             </div>
         `;
@@ -441,6 +475,7 @@ window.publishKelasTask = async function() {
 // 5. PANEL MURID (AMBIL & JAWAB TUGAS PR DARI APPS SCRIPT)
 // ==========================================
 async function openStudentTaskListModal(headerTitle) {
+    setKelasModalFullscreen(false);
     const modalTitle = document.getElementById('modalTitle');
     const modalContent = document.getElementById('modalContent');
     const modalActions = document.getElementById('modalActions');
@@ -452,7 +487,7 @@ async function openStudentTaskListModal(headerTitle) {
             <span class="text-xs text-slate-300">Mengambil daftar tugas PR dari guru...</span>
         </div>
     `;
-    modalActions.innerHTML = `<button onclick="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
+    modalActions.innerHTML = `<button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Tutup</button>`;
     document.getElementById('dialogModal').classList.remove('hidden');
 
     if (!KELAS_APPS_SCRIPT_URL || !KELAS_APPS_SCRIPT_URL.startsWith('http')) {
@@ -475,13 +510,14 @@ async function openStudentTaskListModal(headerTitle) {
         taskList.forEach((t, idx) => {
             const qCount = (t.questions && t.questions.length) ? t.questions.length : 0;
             const deleteBtn = canCreateKelasTask()
-                ? `<button onclick="deleteKelasTask('${t.id}')" class="px-2 py-1 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-[10px] font-bold">Hapus</button>`
+                ? `<button type="button" onclick="deleteKelasTask('${t.id}')" class="px-2 py-1 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-[10px] font-bold">Hapus</button>`
                 : '';
 
+            // Kode tugas tidak ditampilkan di kartu daftar tugas
             html += `
                 <div class="p-3 bg-slate-800 border border-slate-700 rounded-2xl space-y-1.5">
                     <div class="flex items-center justify-between">
-                        <span class="px-2 py-0.5 bg-yellow-400/20 border border-yellow-400/50 text-yellow-300 rounded-md text-[10px] font-extrabold">Kode: ${t.kode} • ${t.kelas}</span>
+                        <span class="px-2 py-0.5 bg-yellow-400/20 border border-yellow-400/50 text-yellow-300 rounded-md text-[10px] font-extrabold">${t.kelas}</span>
                         <span class="text-[10px] text-slate-400">${qCount} Soal</span>
                     </div>
                     <p class="text-xs text-slate-200 font-semibold">${t.keterangan}</p>
@@ -489,7 +525,7 @@ async function openStudentTaskListModal(headerTitle) {
                         <span class="text-[10px] text-slate-400">Guru: ${t.pembuat || 'Guru'}</span>
                         <div class="flex gap-1.5">
                             ${deleteBtn}
-                            <button onclick="startStudentQuiz(${idx})" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow active:scale-95">
+                            <button type="button" onclick="startStudentQuiz(${idx})" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow active:scale-95">
                                 Jawab Tugas ➡️
                             </button>
                         </div>
@@ -528,6 +564,9 @@ window.deleteKelasTask = async function(taskId) {
     }, 800);
 };
 
+// ==========================================
+// MODE FULLSCREEN SAAT MURID MENJAWAB SOAL
+// ==========================================
 window.startStudentQuiz = function(taskIndex) {
     const task = window._cachedKelasTasks && window._cachedKelasTasks[taskIndex];
     if (!task || !task.questions || task.questions.length === 0) return;
@@ -535,33 +574,46 @@ window.startStudentQuiz = function(taskIndex) {
     activeStudentQuiz = task;
     studentQuizStep = 0;
     studentQuizScore = 0;
+    setKelasModalFullscreen(true);
     renderStudentQuizQuestion();
 };
 
 function renderStudentQuizQuestion() {
     const modalTitle = document.getElementById('modalTitle');
     const modalContent = document.getElementById('modalContent');
+    const modalActions = document.getElementById('modalActions');
     const q = activeStudentQuiz.questions[studentQuizStep];
     const total = activeStudentQuiz.questions.length;
 
-    modalTitle.innerHTML = `📝 ${activeStudentQuiz.kode} (${studentQuizStep + 1}/${total})`;
+    // Kode tugas tidak ditampilkan di judul kuis
+    modalTitle.innerHTML = `📝 ${activeStudentQuiz.kelas || 'Tugas Kelas'} — Soal ${studentQuizStep + 1} dari ${total}`;
 
     let optionsHtml = q.options.map((opt, idx) => `
-        <button onclick="submitStudentQuizAnswer(${idx})" class="w-full text-left p-2.5 bg-slate-800 hover:bg-sky-900/70 border border-slate-600 hover:border-sky-400 rounded-xl text-xs text-white font-semibold transition active:scale-95">
-            ${String.fromCharCode(65 + idx)}. ${opt}
+        <button type="button" onclick="submitStudentQuizAnswer(${idx})" class="w-full text-left p-3.5 bg-slate-800 hover:bg-sky-900/70 border border-slate-600 hover:border-sky-400 rounded-2xl text-xs md:text-sm text-white font-semibold transition active:scale-95 flex items-center gap-3">
+            <span class="w-7 h-7 rounded-xl bg-slate-700 text-yellow-300 font-extrabold text-xs flex items-center justify-center shrink-0">${String.fromCharCode(65 + idx)}</span>
+            <span>${opt}</span>
         </button>
     `).join("");
 
     modalContent.innerHTML = `
-        <div class="text-left space-y-3">
-            <div class="p-3 bg-slate-800/90 border border-slate-700 rounded-xl text-xs font-bold text-yellow-300 leading-relaxed">
+        <div class="max-w-3xl mx-auto w-full text-left space-y-4 py-2">
+            <div class="p-4 md:p-5 bg-slate-800/95 border border-slate-700 rounded-2xl text-sm md:text-base font-bold text-yellow-300 leading-relaxed">
                 ${q.question}
             </div>
-            <div class="space-y-2">
+            <div class="space-y-2.5">
                 ${optionsHtml}
             </div>
         </div>
     `;
+
+    if (modalActions) {
+        modalActions.innerHTML = `
+            <div class="max-w-3xl mx-auto w-full flex justify-between items-center">
+                <span class="text-[11px] text-slate-400 font-semibold">${activeStudentQuiz.keterangan || ''}</span>
+                <button type="button" onclick="openStudentTaskListModal('Tugas PR Kelas')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Batal</button>
+            </div>
+        `;
+    }
 }
 
 window.submitStudentQuizAnswer = function(selectedIdx) {
@@ -611,12 +663,16 @@ function finishStudentQuiz() {
         }).catch(err => console.warn("Gagal kirim nilai ke Apps Script:", err));
     }
 
+    setKelasModalFullscreen(false);
     const modalContent = document.getElementById('modalContent');
+    const modalActions = document.getElementById('modalActions');
+
+    // Kode tugas tidak ditampilkan di ringkasan selesai
     modalContent.innerHTML = `
         <div class="p-4 bg-slate-800 border-2 border-emerald-400 rounded-2xl text-center space-y-2">
             <div class="text-4xl">🎉</div>
             <h4 class="font-extrabold text-yellow-400 text-base">Tugas PR Selesai!</h4>
-            <p class="text-xs text-slate-300">Kode Tugas: <strong>${activeStudentQuiz.kode}</strong> (${activeStudentQuiz.kelas})</p>
+            <p class="text-xs text-slate-300">${activeStudentQuiz.kelas}</p>
             <div class="bg-slate-900 p-3 rounded-xl border border-slate-700 my-2">
                 <div class="text-xs text-slate-400">Nilai Kamu</div>
                 <div class="text-2xl font-black text-emerald-400">${nilaiAkhir}</div>
@@ -624,4 +680,8 @@ function finishStudentQuiz() {
             </div>
         </div>
     `;
+
+    if (modalActions) {
+        modalActions.innerHTML = `<button type="button" onclick="closeModal()" class="px-5 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-bold rounded-xl text-xs transition">Selesai</button>`;
+    }
 }
