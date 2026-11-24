@@ -46,7 +46,7 @@ function drawCharacterSprite(c, x, y, width, height, gender, dir, walkStep, char
         }
     }
 
-    // 2. Jika tidak memakai kostum, gunakan sprite default dengan pengecekan aman (Solusi 1)
+    // 2. Jika tidak memakai kostum, gunakan sprite default dari ASSETS (bangunan.js)
     if (!isLoaded && typeof ASSETS !== 'undefined' && typeof assetsLoaded !== 'undefined') {
         const spriteKey = (gender === 'admin') ? 'admin_sprite' : `${gender}_sprite`;
         imgAsset = ASSETS[spriteKey];

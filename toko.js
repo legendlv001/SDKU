@@ -269,9 +269,10 @@ function renderShopItemsList() {
             if (pRule.valid && !pRule.isReward) priceSubtitle.push(`<span class="text-amber-400 font-bold">${pRule.amount} Poin</span>`);
             if (tRule.valid && !tRule.isReward) priceSubtitle.push(`<span class="text-sky-400 font-bold">${tRule.amount} Tiket</span>`);
 
+            // Kotak preview 1 frame tunggal (5x4) untuk Pet maupun Kostum
             const previewBoxHTML = isPetItem
-                ? `<div class="w-11 h-11 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-orange-500/40 shrink-0 p-1">
-                       <img src="assets/pet/${entry.petFile}" onerror="this.src='assets/poin.png'" alt="${entry.labelName}" class="w-full h-full object-contain" />
+                ? `<div class="w-11 h-11 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center border border-orange-500/40 shrink-0">
+                       <canvas data-pet-preview="${entry.petFile.replace(/'/g, "\\'")}" width="48" height="48" class="w-full h-full object-contain"></canvas>
                    </div>`
                 : createSingleSpritePreviewHTML(entry.costumeFile, "w-11 h-11");
 
@@ -298,6 +299,7 @@ function renderShopItemsList() {
 
     modalContent.innerHTML = html;
     renderAllCostumePreviewCanvases();
+    if (typeof renderAllPetPreviewCanvases === 'function') renderAllPetPreviewCanvases();
     if (typeof resetDialogAutoCloseTimer === 'function') resetDialogAutoCloseTimer();
 }
 
