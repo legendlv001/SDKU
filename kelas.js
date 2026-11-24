@@ -3,7 +3,7 @@
 // ==========================================
 const KELAS_APPS_SCRIPT_URL = (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http'))
     ? APPS_SCRIPT_URL
-    : "https://script.google.com/macros/s/AKfycbzGA-KuWUjbOtO9amuLf-xU6oHBfgeFHC2aftyB5pOtrFdEUHQtgVkrmhDD-HCw48vx/exec";
+    : "https://script.google.com/macros/s/AKfycbyWKNtCg5J4RkdQ7_ExW28ThDTAmNngTTgRpjmSP_Mo2_UKGDp87Oo3337iimzvlXzo/exec";
 
 // ==========================================
 // PENGATURAN LAYAR PENUH KHUSUS BUAT & JAWAB SOAL
@@ -44,12 +44,11 @@ const KELAS_CONFIG = {
             id: 'pintu_keluar', 
             name: 'Pintu Keluar', 
             icon: '🚪', 
-            // Tepat di posisi tulisan EXIT merah di dinding kiri gambar
             x: 10, 
             y: 710, 
             width: 80, 
             height: 140, 
-            noBoxFill: true, // Transparan agar tulisan EXIT di gambar terlihat
+            noBoxFill: true,
             isPortal: true, 
             targetLocation: 1, 
             dialogTitle: 'Keluar Gedung Kelas', 
@@ -60,12 +59,11 @@ const KELAS_CONFIG = {
             id: 'meja_guru', 
             name: 'Meja Guru', 
             icon: '👩‍🏫', 
-            // Tepat di atas meja kuning pojok kanan atas gambar (pusat di X: 1765, Y: 165)
             x: 1650, 
             y: 80, 
             width: 230, 
             height: 170, 
-            noBoxFill: true, // Tanpa kotak blok warna agar meja kuning di gambar terlihat
+            noBoxFill: true,
             customKelasAction: 'papan_tugas', 
             dialogTitle: 'Meja Guru — Tugas & PR', 
             actionLabel: 'Buka Meja Guru' 
@@ -74,12 +72,11 @@ const KELAS_CONFIG = {
             id: 'meja_belajar', 
             name: 'Area Meja Murid (Jawab PR)', 
             icon: '✍️', 
-            // Mencakup seluruh 4 kolom deretan meja biru murid di gambar
             x: 20, 
             y: 80, 
             width: 1300, 
             height: 560, 
-            isSilentZone: true, // Area luas transparan tanpa kotak/label
+            isSilentZone: true,
             customKelasAction: 'meja_belajar', 
             dialogTitle: 'Meja Belajar Murid', 
             actionLabel: 'Kerjakan Tugas' 
@@ -109,7 +106,10 @@ function drawKelasInterior(ctx, canvas, cameraX, cameraY, zoomScale) {
     }
 }
 
-// Cek apakah role pengguna boleh membuat tugas (ADMIN, OPS, GURU)
+// Daftar role staf (bukan kelas siswa)
+const STAFF_ROLES_EXCLUDED = ['admin', 'guru', 'tendik', 'ops', 'l', 'p', 'a'];
+
+// Cek apakah role pengguna boleh membuat tugas (ADMIN, OPS, GURU, TENDIK)
 function canCreateKelasTask() {
     const roleUpper = (typeof playerRole !== 'undefined' ? playerRole : "").toUpperCase().trim();
     const statusLower = (typeof currentUserAccount !== 'undefined' && currentUserAccount && currentUserAccount.status)
@@ -118,10 +118,63 @@ function canCreateKelasTask() {
         roleUpper === 'ADMIN' ||
         roleUpper === 'OPS' ||
         roleUpper === 'GURU' ||
+        roleUpper === 'TENDIK' ||
         statusLower === 'admin' ||
         statusLower === 'full' ||
         (typeof isAdminUser !== 'undefined' && isAdminUser)
     );
+}
+
+// Ambil kelas siswa saat ini
+function getStudentCurrentClass() {
+    const roleStr = (typeof playerRole !== 'undefined' ? playerRole : "").trim();
+    if (roleStr) return roleStr;
+    if (typeof currentUserAccount !== 'undefined' && currentUserAccount && currentUserAccount.role) {
+        return String(currentUserAccount.role).trim();
+    }
+    return "";
+}
+
+// Ambil daftar kelas unik dari sheet 'Login' (mengecualikan Guru, Tendik, Admin, OPS)
+let cachedLoginClassList = [];
+async function fetchUniqueClassesFromLogin() {
+    if (cachedLoginClassList.length > 0) return cachedLoginClassList;
+    const classSet = new Set();
+
+    try {
+        if (typeof getSheetCsvUrl === 'function') {
+            const res = await fetch(getSheetCsvUrl('Login'));
+            if (res.ok) {
+                const csv = await res.text();
+                const lines = csv.split('\n').map(l => l.trim()).filter(Boolean);
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                    const roleVal = (cols[2] || "").trim();
+                    if (roleVal && !STAFF_ROLES_EXCLUDED.includes(roleVal.toLowerCase())) {
+                        classSet.add(roleVal);
+                    }
+                }
+            }
+        }
+    } catch (e) {}
+
+    if (classSet.size === 0 && KELAS_APPS_SCRIPT_URL && KELAS_APPS_SCRIPT_URL.startsWith('http')) {
+        try {
+            const res = await fetch(`${KELAS_APPS_SCRIPT_URL}?action=getClassList`);
+            const json = await res.json();
+            if (json && json.status === 'success' && Array.isArray(json.classes)) {
+                json.classes.forEach(c => {
+                    const clean = String(c || '').trim();
+                    if (clean && !STAFF_ROLES_EXCLUDED.includes(clean.toLowerCase())) {
+                        classSet.add(clean);
+                    }
+                });
+            }
+        } catch (e) {}
+    }
+
+    cachedLoginClassList = Array.from(classSet).sort();
+    return cachedLoginClassList;
 }
 
 // ==========================================
@@ -248,7 +301,7 @@ function handleKelasInteraction(building) {
 }
 
 // ==========================================
-// 4. PANEL GURU / ADMIN / OPS (BUAT & KELOLA TUGAS — FULLSCREEN)
+// 4. PANEL GURU / TENDIK / ADMIN / OPS (BUAT & KELOLA TUGAS — FULLSCREEN)
 // ==========================================
 function openTeacherTaskMenu() {
     draftKelasQuestions = [];
@@ -265,8 +318,8 @@ function openTeacherTaskMenu() {
                 <button type="button" onclick="renderCreateTaskForm()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow">
                     ➕ Buat Tugas Baru
                 </button>
-                <button type="button" onclick="openStudentTaskListModal('Daftar Tugas Aktif')" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-yellow-300 font-bold rounded-xl text-xs shadow">
-                    📂 Lihat Tugas Aktif
+                <button type="button" onclick="openStudentTaskListModal('Daftar Semua Tugas PR')" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-yellow-300 font-bold rounded-xl text-xs shadow">
+                    📂 Lihat Semua Tugas PR
                 </button>
             </div>
             <div id="teacherPanelBody"></div>
@@ -282,27 +335,70 @@ function openTeacherTaskMenu() {
     renderCreateTaskForm();
 }
 
-function renderCreateTaskForm() {
+window.toggleUseClassCodeInput = function() {
+    const chk = document.getElementById('useClassCodeCheckbox');
+    const wrap = document.getElementById('classCodeInputWrapper');
+    if (!chk || !wrap) return;
+    if (chk.checked) {
+        wrap.classList.remove('hidden');
+    } else {
+        wrap.classList.add('hidden');
+    }
+};
+
+async function renderCreateTaskForm() {
     setKelasModalFullscreen(true);
     const body = document.getElementById('teacherPanelBody');
     if (!body) return;
 
+    body.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Memuat daftar kelas dari sheet Login...</div>`;
+    const classList = await fetchUniqueClassesFromLogin();
+
+    const classOptionsHTML = [
+        `<option value="Semua Kelas">Semua Kelas</option>`,
+        ...classList.map(cls => `<option value="${cls}">${cls}</option>`)
+    ].join('');
+
     body.innerHTML = `
         <div class="bg-slate-800/90 border border-slate-700 p-3.5 md:p-4 rounded-2xl space-y-3">
-            <p class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">1. Identitas Tugas (Tersimpan ke Sheet kelasTasks)</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <p class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">1. Identitas Tugas & Hadiah Tiket</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div>
-                    <label class="block text-[10px] text-slate-300 font-bold mb-1">Kode Tugas (Internal Sheet) *</label>
-                    <input type="text" id="taskKodeInput" placeholder="Misal: PR-MTK-01" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
+                    <label class="block text-[10px] text-slate-300 font-bold mb-1">Judul PR *</label>
+                    <input type="text" id="taskJudulInput" placeholder="Contoh: PJOK" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-[10px] text-slate-300 font-bold mb-1">Kelas *</label>
-                    <input type="text" id="taskKelasInput" placeholder="Misal: Kelas 4A" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
+                    <label class="block text-[10px] text-slate-300 font-bold mb-1">Pilih Kelas (Dari Sheet Login) *</label>
+                    <select id="taskKelasInput" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold focus:border-yellow-400 focus:outline-none">
+                        ${classOptionsHTML}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-300 font-bold mb-1">🎟️ Hadiah Tiket (Nilai 100, Max 5) *</label>
+                    <select id="taskRewardTicketsInput" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-sky-300 text-xs font-extrabold focus:border-sky-400 focus:outline-none">
+                        <option value="1">1 Tiket</option>
+                        <option value="2">2 Tiket</option>
+                        <option value="3" selected>3 Tiket</option>
+                        <option value="4">4 Tiket</option>
+                        <option value="5">5 Tiket (Maksimal)</option>
+                    </select>
                 </div>
             </div>
+
             <div>
-                <label class="block text-[10px] text-slate-300 font-bold mb-1">Keterangan / Petunjuk PR *</label>
-                <textarea id="taskKetInput" rows="2" placeholder="Tuliskan keterangan tugas untuk murid..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs focus:border-yellow-400 focus:outline-none"></textarea>
+                <label class="block text-[10px] text-slate-300 font-bold mb-1">Keterangan (Opsional)</label>
+                <textarea id="taskKetInput" rows="2" placeholder="Tuliskan petunjuk atau keterangan tambahan jika perlu (boleh dikosongkan)..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs focus:border-yellow-400 focus:outline-none"></textarea>
+            </div>
+
+            <div class="bg-slate-900/80 border border-slate-700 p-3 rounded-xl space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="useClassCodeCheckbox" onchange="toggleUseClassCodeInput()" class="w-4 h-4 accent-amber-400 rounded cursor-pointer">
+                    <span class="text-xs font-bold text-amber-300">🔒 Pakai Kode Kelas (Siswa wajib memasukkan kode sebelum menjawab)</span>
+                </label>
+                <div id="classCodeInputWrapper" class="hidden pt-1">
+                    <label class="block text-[10px] text-slate-300 font-bold mb-1">Masukkan Kode Kelas *</label>
+                    <input type="text" id="taskKodeInput" placeholder="Contoh: PJOK3A atau 12345" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-amber-500/60 text-amber-200 text-xs font-extrabold uppercase tracking-wider focus:border-amber-400 focus:outline-none">
+                </div>
             </div>
 
             <hr class="border-slate-700 my-1">
@@ -318,7 +414,7 @@ function renderCreateTaskForm() {
                 <label class="block text-[10px] font-bold text-emerald-300">✍️ Atau Tambah Soal Manual:</label>
                 <input type="text" id="manualQText" placeholder="Tulis pertanyaan soal..." class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input type="text" id="manualOptA" placeholder="Pilihan A (Benar)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-emerald-600/60 text-white text-xs">
+                    <input type="text" id="manualOptA" placeholder="Pilihan A (Jawaban Benar)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-emerald-600/60 text-white text-xs">
                     <input type="text" id="manualOptB" placeholder="Pilihan B" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
                     <input type="text" id="manualOptC" placeholder="Pilihan C" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
                 </div>
@@ -332,7 +428,7 @@ function renderCreateTaskForm() {
             </div>
 
             <button type="button" onclick="publishKelasTask()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition active:scale-95">
-                💾 Simpan ke Apps Script & Kirim ke Murid
+                💾 Simpan ke Spreadsheet & Kirim ke Murid
             </button>
         </div>
     `;
@@ -409,12 +505,20 @@ function updateDraftQuestionsPreview() {
 // SIMPAN TUGAS KE APPS SCRIPT (kelasTasks)
 // ==========================================
 window.publishKelasTask = async function() {
-    const kode = document.getElementById('taskKodeInput').value.trim();
+    const judul = document.getElementById('taskJudulInput').value.trim();
     const kelas = document.getElementById('taskKelasInput').value.trim();
-    const keterangan = document.getElementById('taskKetInput').value.trim();
+    const keterangan = document.getElementById('taskKetInput').value.trim(); // Opsional
+    const useCode = document.getElementById('useClassCodeCheckbox')?.checked || false;
+    const kodeKelas = useCode ? (document.getElementById('taskKodeInput')?.value.trim() || "") : "";
+    const rawTickets = parseInt(document.getElementById('taskRewardTicketsInput').value, 10) || 1;
+    const rewardTickets = Math.min(5, Math.max(1, rawTickets));
 
-    if (!kode || !kelas || !keterangan) {
-        alert("Harap isi Kode Tugas, Kelas, dan Keterangan terlebih dahulu!");
+    if (!judul) {
+        alert("Harap isi Judul PR terlebih dahulu (misal: PJOK)!");
+        return;
+    }
+    if (useCode && !kodeKelas) {
+        alert("Anda mencentang 'Pakai Kode Kelas'. Silakan masukkan kode kelasnya terlebih dahulu!");
         return;
     }
     if (draftKelasQuestions.length === 0) {
@@ -432,11 +536,15 @@ window.publishKelasTask = async function() {
         `;
     }
 
+    const taskId = 'TGS_' + Date.now();
     const taskPayload = {
         action: 'addTask',
-        kode: kode,
+        id: taskId,
+        judul: judul,
+        kode: kodeKelas, // Kosong jika tidak pakai kode kelas
         kelas: kelas,
         keterangan: keterangan,
+        rewardTickets: rewardTickets,
         questions: draftKelasQuestions,
         soalText: draftKelasQuestions.map((q, i) => `${i + 1}. ${q.question} [Kunci: ${q.options[q.answerIndex]}]`).join(" | "),
         pembuat: playerCustomName || playerRole,
@@ -455,7 +563,8 @@ window.publishKelasTask = async function() {
     }
 
     if (typeof window.sendFirebaseChat === 'function') {
-        window.sendFirebaseChat("Ruang Kelas", `📚 ${playerCustomName} baru saja membagikan Tugas PR untuk ${kelas}! Silakan kerjakan di meja murid.`);
+        const codeInfo = kodeKelas ? " (Memakai Kode Kelas)" : "";
+        window.sendFirebaseChat("Ruang Kelas", `📚 ${playerCustomName} baru saja membagikan PR "${judul}" untuk ${kelas}${codeInfo} (Hadiah ${rewardTickets} 🎟️ untuk nilai 100)!`);
     }
 
     setKelasModalFullscreen(false);
@@ -463,16 +572,17 @@ window.publishKelasTask = async function() {
         modalContent.innerHTML = `
             <div class="p-4 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-center space-y-2">
                 <div class="text-3xl">✅</div>
-                <h4 class="font-extrabold text-emerald-300 text-sm">Tugas PR Berhasil Disimpan!</h4>
-                <p class="text-xs text-slate-200">Kelas: <strong>${kelas}</strong></p>
-                <p class="text-[11px] text-slate-300">Murid sekarang sudah bisa menekan <strong>AKSI</strong> di area meja murid untuk menjawab soal.</p>
+                <h4 class="font-extrabold text-emerald-300 text-sm">PR "${judul}" Berhasil Disimpan!</h4>
+                <p class="text-xs text-slate-200">Kelas: <strong>${kelas}</strong> • Hadiah: <strong class="text-sky-300">${rewardTickets} 🎟️</strong> (Nilai 100)</p>
+                ${kodeKelas ? `<p class="text-xs text-amber-300 font-bold">🔒 Kode Kelas: <span class="px-2 py-0.5 bg-slate-900 rounded border border-amber-500/50">${kodeKelas}</span></p>` : ''}
+                <p class="text-[11px] text-slate-300">Murid kelas ${kelas} sekarang bisa menekan <strong>AKSI</strong> di area meja murid untuk menjawab soal (1x kesempatan).</p>
             </div>
         `;
     }
 };
 
 // ==========================================
-// 5. PANEL MURID (AMBIL & JAWAB TUGAS PR DARI APPS SCRIPT)
+// 5. PANEL MURID (FILTER KELAS, VALIDASI KODE KELAS, 1x JAWAB, NILAI 100 = TIKET)
 // ==========================================
 async function openStudentTaskListModal(headerTitle) {
     setKelasModalFullscreen(false);
@@ -480,7 +590,10 @@ async function openStudentTaskListModal(headerTitle) {
     const modalContent = document.getElementById('modalContent');
     const modalActions = document.getElementById('modalActions');
 
-    modalTitle.innerHTML = `✍️ ${headerTitle || 'Tugas PR Kelas'}`;
+    const isStaff = canCreateKelasTask();
+    const myClass = getStudentCurrentClass();
+
+    modalTitle.innerHTML = `✍️ ${headerTitle || (isStaff ? 'Semua Tugas PR' : `Tugas PR Kelas ${myClass}`)}`;
     modalContent.innerHTML = `
         <div class="flex flex-col items-center justify-center p-4">
             <img src="assets/loading.gif" alt="Loading..." class="w-8 h-8 mb-2" />
@@ -496,38 +609,71 @@ async function openStudentTaskListModal(headerTitle) {
     }
 
     try {
-        const res = await fetch(`${KELAS_APPS_SCRIPT_URL}?action=getTasks`);
+        const res = await fetch(`${KELAS_APPS_SCRIPT_URL}?action=getTasks&player=${encodeURIComponent(playerCustomName || '')}&t=${Date.now()}`);
         const data = await res.json();
-        const taskList = (data.tasks || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const allTasks = (data.tasks || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        // Guru / Tendik / Admin melihat SEMUA PR; Siswa hanya melihat PR kelasnya (atau "Semua Kelas")
+        const taskList = allTasks.filter(t => {
+            if (isStaff) return true;
+            const targetKls = String(t.kelas || '').trim().toLowerCase();
+            if (!targetKls || targetKls === 'semua' || targetKls === 'semua kelas') return true;
+            return targetKls === myClass.toLowerCase();
+        });
 
         if (taskList.length === 0) {
-            modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/70 rounded-xl">Belum ada tugas PR yang diberikan oleh guru saat ini.</div>`;
+            modalContent.innerHTML = `<div class="text-center text-xs text-slate-400 p-4 bg-slate-800/70 rounded-xl">Belum ada tugas PR untuk kelas ${myClass || 'kamu'} saat ini.</div>`;
             return;
         }
 
+        const localDoneMap = JSON.parse(sessionStorage.getItem('kelasDoneMap_' + (playerCustomName || '')) || '{}');
         window._cachedKelasTasks = taskList;
-        let html = `<div class="flex flex-col gap-2.5 max-h-64 overflow-y-auto text-left pr-1">`;
+
+        let html = `
+            <div class="mb-2 px-3 py-2 rounded-xl bg-sky-950/80 border border-sky-500/40 text-[11px] text-sky-200 text-left">
+                ℹ️ Setiap siswa hanya bisa menjawab <strong>1x</strong> per PR. Hanya <strong>Nilai 100</strong> yang mendapat <strong>🎟️ Tiket</strong>!
+            </div>
+            <div class="flex flex-col gap-2.5 max-h-64 overflow-y-auto text-left pr-1">
+        `;
+
         taskList.forEach((t, idx) => {
             const qCount = (t.questions && t.questions.length) ? t.questions.length : 0;
-            const deleteBtn = canCreateKelasTask()
+            const taskKey = String(t.id || idx);
+            const doneRecord = t.alreadySubmitted ? t.submissionResult : localDoneMap[taskKey];
+            const isAlreadyDone = Boolean(doneRecord);
+            const rewardTix = Math.min(5, Math.max(1, parseInt(t.rewardTickets || 1, 10) || 1));
+            const hasLockCode = Boolean(String(t.kode || '').trim());
+            const displayJudul = t.judul || t.keterangan || 'Tugas PR';
+            const displayKet = (t.judul && t.keterangan) ? t.keterangan : '';
+
+            const deleteBtn = isStaff
                 ? `<button type="button" onclick="deleteKelasTask('${t.id}')" class="px-2 py-1 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-[10px] font-bold">Hapus</button>`
                 : '';
 
-            // Kode tugas tidak ditampilkan di kartu daftar tugas
+            const actionBtn = isAlreadyDone
+                ? `<span class="px-2.5 py-1 bg-emerald-950 border border-emerald-500/50 text-emerald-300 font-extrabold rounded-xl text-[10px]">
+                       ✅ Selesai (Nilai: ${doneRecord.nilai ?? 0} | +${doneRecord.tiket ?? 0} 🎟️)
+                   </span>`
+                : `<button type="button" onclick="startStudentQuiz(${idx})" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow active:scale-95">
+                       ${hasLockCode ? '🔒 ' : ''}Jawab Tugas ➡️
+                   </button>`;
+
             html += `
-                <div class="p-3 bg-slate-800 border border-slate-700 rounded-2xl space-y-1.5">
-                    <div class="flex items-center justify-between">
-                        <span class="px-2 py-0.5 bg-yellow-400/20 border border-yellow-400/50 text-yellow-300 rounded-md text-[10px] font-extrabold">${t.kelas}</span>
-                        <span class="text-[10px] text-slate-400">${qCount} Soal</span>
+                <div class="p-3 bg-slate-800 border ${isAlreadyDone ? 'border-emerald-500/40' : 'border-slate-700'} rounded-2xl space-y-1.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="px-2 py-0.5 bg-yellow-400/20 border border-yellow-400/50 text-yellow-300 rounded-md text-[10px] font-extrabold">${t.kelas || 'Semua Kelas'}</span>
+                            ${hasLockCode ? `<span class="px-2 py-0.5 bg-amber-500/20 border border-amber-400/40 text-amber-300 rounded-md text-[10px] font-bold">🔒 Pakai Kode${isStaff ? `: ${t.kode}` : ''}</span>` : ''}
+                        </div>
+                        <span class="text-[10px] font-bold text-sky-300">🎟️ +${rewardTix} Tiket (Nilai 100) • ${qCount} Soal</span>
                     </div>
-                    <p class="text-xs text-slate-200 font-semibold">${t.keterangan}</p>
-                    <div class="flex items-center justify-between pt-1">
+                    <div class="text-xs md:text-sm text-white font-extrabold">${displayJudul}</div>
+                    ${displayKet ? `<p class="text-[11px] text-slate-300">${displayKet}</p>` : ''}
+                    <div class="flex items-center justify-between pt-1 gap-2">
                         <span class="text-[10px] text-slate-400">Guru: ${t.pembuat || 'Guru'}</span>
-                        <div class="flex gap-1.5">
+                        <div class="flex items-center gap-1.5">
                             ${deleteBtn}
-                            <button type="button" onclick="startStudentQuiz(${idx})" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow active:scale-95">
-                                Jawab Tugas ➡️
-                            </button>
+                            ${actionBtn}
                         </div>
                     </div>
                 </div>
@@ -560,23 +706,107 @@ window.deleteKelasTask = async function(taskId) {
     }
 
     setTimeout(() => {
-        openStudentTaskListModal("Daftar Tugas Aktif");
+        openStudentTaskListModal("Daftar Semua Tugas PR");
     }, 800);
 };
 
 // ==========================================
-// MODE FULLSCREEN SAAT MURID MENJAWAB SOAL
+// VERIFIKASI KODE KELAS (JIKA PR MEMAKAI KODE) & MULAI KUIS
 // ==========================================
+let studentAnswerHistory = [];
+
 window.startStudentQuiz = function(taskIndex) {
     const task = window._cachedKelasTasks && window._cachedKelasTasks[taskIndex];
     if (!task || !task.questions || task.questions.length === 0) return;
 
+    const taskKey = String(task.id || taskIndex);
+    const localDoneMap = JSON.parse(sessionStorage.getItem('kelasDoneMap_' + (playerCustomName || '')) || '{}');
+    if (task.alreadySubmitted || localDoneMap[taskKey]) {
+        alert("Kamu sudah pernah mengerjakan PR ini (maksimal 1x per siswa).");
+        return;
+    }
+
+    const requiredCode = String(task.kode || '').trim();
+    if (requiredCode) {
+        renderClassCodePrompt(taskIndex, task);
+        return;
+    }
+
+    launchStudentQuizQuestions(taskIndex, task);
+};
+
+function renderClassCodePrompt(taskIndex, task) {
+    setKelasModalFullscreen(false);
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    const modalActions = document.getElementById('modalActions');
+
+    const displayJudul = task.judul || task.keterangan || 'Tugas PR';
+
+    modalTitle.innerHTML = `🔒 Masukkan Kode Kelas`;
+    modalContent.innerHTML = `
+        <div class="p-4 bg-slate-800/95 border border-amber-500/50 rounded-2xl text-center space-y-3">
+            <div class="text-3xl">🔐</div>
+            <div class="text-sm font-extrabold text-white">${displayJudul} (${task.kelas || ''})</div>
+            <p class="text-xs text-slate-300">PR ini dilindungi kode kelas. Masukkan kode yang diberikan oleh Guru untuk mulai menjawab soal:</p>
+            <input type="text" id="studentEnterClassCodeInput" placeholder="Ketik kode kelas di sini..."
+                onkeydown="if(event.key==='Enter') verifyStudentClassCode(${taskIndex})"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-600 focus:border-amber-400 text-center text-amber-300 font-extrabold text-sm uppercase tracking-widest focus:outline-none">
+            <div id="classCodeErrorMsg" class="hidden text-[11px] font-bold text-rose-400"></div>
+            <button type="button" onclick="verifyStudentClassCode(${taskIndex})"
+                class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs shadow">
+                Buka Soal PR ➡️
+            </button>
+        </div>
+    `;
+    modalActions.innerHTML = `
+        <button type="button" onclick="openStudentTaskListModal('Tugas PR Kelas')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-xs transition">Kembali</button>
+    `;
+
+    setTimeout(() => {
+        const inp = document.getElementById('studentEnterClassCodeInput');
+        if (inp) inp.focus();
+    }, 80);
+}
+
+window.verifyStudentClassCode = function(taskIndex) {
+    const task = window._cachedKelasTasks && window._cachedKelasTasks[taskIndex];
+    if (!task) return;
+
+    const inp = document.getElementById('studentEnterClassCodeInput');
+    const errEl = document.getElementById('classCodeErrorMsg');
+    const entered = (inp ? inp.value : '').trim().toLowerCase();
+    const expected = String(task.kode || '').trim().toLowerCase();
+
+    if (!entered) {
+        if (errEl) {
+            errEl.innerText = "Harap masukkan kode kelas terlebih dahulu!";
+            errEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (entered !== expected) {
+        if (errEl) {
+            errEl.innerText = "❌ Kode kelas salah! Periksa kembali kode dari gurumu.";
+            errEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    launchStudentQuizQuestions(taskIndex, task);
+};
+
+function launchStudentQuizQuestions(taskIndex, task) {
+    const taskKey = String(task.id || taskIndex);
     activeStudentQuiz = task;
+    activeStudentQuiz._taskKey = taskKey;
     studentQuizStep = 0;
     studentQuizScore = 0;
+    studentAnswerHistory = [];
     setKelasModalFullscreen(true);
     renderStudentQuizQuestion();
-};
+}
 
 function renderStudentQuizQuestion() {
     const modalTitle = document.getElementById('modalTitle');
@@ -584,9 +814,9 @@ function renderStudentQuizQuestion() {
     const modalActions = document.getElementById('modalActions');
     const q = activeStudentQuiz.questions[studentQuizStep];
     const total = activeStudentQuiz.questions.length;
+    const displayJudul = activeStudentQuiz.judul || activeStudentQuiz.keterangan || 'Tugas Kelas';
 
-    // Kode tugas tidak ditampilkan di judul kuis
-    modalTitle.innerHTML = `📝 ${activeStudentQuiz.kelas || 'Tugas Kelas'} — Soal ${studentQuizStep + 1} dari ${total}`;
+    modalTitle.innerHTML = `📝 ${displayJudul} (${activeStudentQuiz.kelas || ''}) — Soal ${studentQuizStep + 1} dari ${total}`;
 
     let optionsHtml = q.options.map((opt, idx) => `
         <button type="button" onclick="submitStudentQuizAnswer(${idx})" class="w-full text-left p-3.5 bg-slate-800 hover:bg-sky-900/70 border border-slate-600 hover:border-sky-400 rounded-2xl text-xs md:text-sm text-white font-semibold transition active:scale-95 flex items-center gap-3">
@@ -618,9 +848,11 @@ function renderStudentQuizQuestion() {
 
 window.submitStudentQuizAnswer = function(selectedIdx) {
     const q = activeStudentQuiz.questions[studentQuizStep];
-    if (selectedIdx === q.answerIndex) {
+    const isCorrect = (selectedIdx === q.answerIndex);
+    if (isCorrect) {
         studentQuizScore++;
     }
+    studentAnswerHistory.push(`${studentQuizStep + 1}:${String.fromCharCode(65 + selectedIdx)}(${isCorrect ? 'Benar' : 'Salah'})`);
 
     if (studentQuizStep < activeStudentQuiz.questions.length - 1) {
         studentQuizStep++;
@@ -631,19 +863,31 @@ window.submitStudentQuizAnswer = function(selectedIdx) {
 };
 
 // ==========================================
-// SIMPAN NILAI SISWA KE APPS SCRIPT (kelasSubmissions)
+// SIMPAN NILAI & TIKET SISWA KE APPS SCRIPT (kelasSubmissions)
 // ==========================================
 function finishStudentQuiz() {
     const total = activeStudentQuiz.questions.length;
     const nilaiAkhir = Math.round((studentQuizScore / total) * 100);
-    const rewardPoin = studentQuizScore * 5;
+    const maxTiket = Math.min(5, Math.max(1, parseInt(activeStudentQuiz.rewardTickets || 1, 10) || 1));
+    const rewardTiket = (nilaiAkhir === 100) ? maxTiket : 0;
 
-    if (typeof playerPoints !== 'undefined' && rewardPoin > 0) {
-        playerPoints += rewardPoin;
-        if (typeof savePlayerPointsToFirebase === 'function') {
-            savePlayerPointsToFirebase();
+    if (typeof playerTickets !== 'undefined' && rewardTiket > 0) {
+        playerTickets += rewardTiket;
+        if (typeof currentUserAccount !== 'undefined' && currentUserAccount) {
+            currentUserAccount.tickets = playerTickets;
+            sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+        }
+        if (typeof updatePointsDisplay === 'function') {
+            updatePointsDisplay();
         }
     }
+
+    const storageKey = 'kelasDoneMap_' + (playerCustomName || '');
+    const localDoneMap = JSON.parse(sessionStorage.getItem(storageKey) || '{}');
+    localDoneMap[activeStudentQuiz._taskKey] = { nilai: nilaiAkhir, tiket: rewardTiket };
+    sessionStorage.setItem(storageKey, JSON.stringify(localDoneMap));
+    activeStudentQuiz.alreadySubmitted = true;
+    activeStudentQuiz.submissionResult = { nilai: nilaiAkhir, tiket: rewardTiket };
 
     if (KELAS_APPS_SCRIPT_URL && KELAS_APPS_SCRIPT_URL.startsWith('http')) {
         fetch(KELAS_APPS_SCRIPT_URL, {
@@ -652,12 +896,17 @@ function finishStudentQuiz() {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
                 action: 'addSubmission',
-                kode: activeStudentQuiz.kode,
-                kelas: activeStudentQuiz.kelas,
-                siswa: playerCustomName,
+                taskId: activeStudentQuiz.id || activeStudentQuiz._taskKey,
+                judul: activeStudentQuiz.judul || activeStudentQuiz.keterangan || 'Tugas PR',
+                kode: activeStudentQuiz.kode || '',
+                kelas: activeStudentQuiz.kelas || getStudentCurrentClass(),
+                keterangan: activeStudentQuiz.keterangan || '',
+                siswa: playerCustomName || 'Siswa',
                 benar: studentQuizScore,
                 totalSoal: total,
                 nilai: nilaiAkhir,
+                rewardTickets: maxTiket,
+                rincianJawaban: studentAnswerHistory.join(', '),
                 timestamp: Date.now()
             })
         }).catch(err => console.warn("Gagal kirim nilai ke Apps Script:", err));
@@ -666,17 +915,22 @@ function finishStudentQuiz() {
     setKelasModalFullscreen(false);
     const modalContent = document.getElementById('modalContent');
     const modalActions = document.getElementById('modalActions');
+    const displayJudul = activeStudentQuiz.judul || activeStudentQuiz.keterangan || 'Tugas PR';
 
-    // Kode tugas tidak ditampilkan di ringkasan selesai
     modalContent.innerHTML = `
-        <div class="p-4 bg-slate-800 border-2 border-emerald-400 rounded-2xl text-center space-y-2">
-            <div class="text-4xl">🎉</div>
-            <h4 class="font-extrabold text-yellow-400 text-base">Tugas PR Selesai!</h4>
-            <p class="text-xs text-slate-300">${activeStudentQuiz.kelas}</p>
+        <div class="p-4 bg-slate-800 border-2 ${nilaiAkhir === 100 ? 'border-emerald-400' : 'border-amber-400'} rounded-2xl text-center space-y-2">
+            <div class="text-4xl">${nilaiAkhir === 100 ? '🏆' : '📝'}</div>
+            <h4 class="font-extrabold text-yellow-400 text-base">PR "${displayJudul}" Selesai!</h4>
+            <p class="text-xs text-slate-300">${activeStudentQuiz.kelas || ''}</p>
             <div class="bg-slate-900 p-3 rounded-xl border border-slate-700 my-2">
                 <div class="text-xs text-slate-400">Nilai Kamu</div>
-                <div class="text-2xl font-black text-emerald-400">${nilaiAkhir}</div>
-                <div class="text-[11px] text-amber-300 mt-1">Benar ${studentQuizScore} dari ${total} soal (+${rewardPoin} Poin)</div>
+                <div class="text-2xl font-black ${nilaiAkhir === 100 ? 'text-emerald-400' : 'text-amber-300'}">${nilaiAkhir}</div>
+                <div class="text-[11px] text-slate-300 mt-1">Benar ${studentQuizScore} dari ${total} soal</div>
+                <div class="text-[11px] font-extrabold mt-1.5 ${rewardTiket > 0 ? 'text-sky-400' : 'text-slate-400'}">
+                    ${rewardTiket > 0
+                        ? `🎉 Nilai 100! Kamu mendapat +${rewardTiket} 🎟️ Tiket!`
+                        : `Belum mendapat tiket (Wajib Nilai 100 untuk mendapat ${maxTiket} 🎟️ Tiket).`}
+                </div>
             </div>
         </div>
     `;
