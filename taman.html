@@ -34,7 +34,6 @@
             font-family: 'Fredoka', sans-serif;
         }
 
-        /* Animasi Awan Mengambang */
         @keyframes floatCloud {
             0%, 100% { transform: translateX(0px); }
             50% { transform: translateX(25px); }
@@ -42,7 +41,6 @@
         .cloud-anim-1 { animation: floatCloud 8s ease-in-out infinite; }
         .cloud-anim-2 { animation: floatCloud 11s ease-in-out infinite reverse; }
 
-        /* Animasi Biang Lala */
         @keyframes spinFerris {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -52,7 +50,6 @@
             animation: spinFerris 20s linear infinite;
         }
 
-        /* Animasi Jungkat-Jungkit */
         @keyframes seesawMotion {
             0%, 100% { transform: rotate(-13deg); }
             50% { transform: rotate(13deg); }
@@ -71,15 +68,6 @@
             animation: swingMotion 3s ease-in-out infinite;
         }
 
-        @keyframes bounceSoft {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
-        }
-        .bounce-hover:hover {
-            animation: bounceSoft 0.8s ease-in-out infinite;
-        }
-
-        /* Gaya Tombol 3D Playful */
         .btn-3d {
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
@@ -89,7 +77,6 @@
             box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
         }
 
-        /* Kartu Wahana */
         .ride-card {
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(8px);
@@ -106,7 +93,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.1), 0 4px 0 #94a3b8;
         }
 
-        /* Animasi Getar untuk Jawaban Salah */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20%, 60% { transform: translateX(-8px); }
@@ -116,7 +102,6 @@
             animation: shake 0.4s ease-in-out;
         }
 
-        /* Animasi Pop-in Modal */
         @keyframes popIn {
             0% { opacity: 0; transform: scale(0.85) translateY(15px); }
             100% { opacity: 1; transform: scale(1) translateY(0); }
@@ -128,9 +113,59 @@
 </head>
 <body class="flex flex-col justify-between relative text-slate-800">
 
+    <!-- MODAL LOGIN PEMAIN (NAMA KOLOM A + PASSWORD KOLOM F + INGAT SAYA) -->
+    <div id="taman-login-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border-4 border-sky-200 shadow-2xl text-center animate-pop-in">
+            <div class="text-5xl mb-2">🎟️</div>
+            <h2 class="text-2xl font-bold text-sky-700 mb-1">Masuk Akun Siswa</h2>
+            <p class="text-xs sm:text-sm text-slate-600 mb-5">
+                Masuk menggunakan <strong>Nama</strong> dan <strong>Password</strong> akun sekolahmu agar tiket otomatis tersimpan!
+            </p>
+
+            <form onsubmit="prosesLoginTaman(event)" class="space-y-3.5 text-left">
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Nama Pemain</label>
+                    <input id="taman-login-name" type="text" required autocomplete="username" placeholder="Masukkan nama akun..." class="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-sky-400 focus:outline-none font-bold text-slate-800" style="user-select: text;">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Password</label>
+                    <div class="relative">
+                        <input id="taman-login-password" type="password" required autocomplete="current-password" placeholder="Masukkan password..." class="w-full px-4 py-3 pr-12 rounded-2xl border-2 border-slate-200 focus:border-sky-400 focus:outline-none font-bold text-slate-800" style="user-select: text;">
+                        <button type="button" onclick="togglePasswordVisibility()" aria-label="Lihat Password" class="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-slate-500 hover:text-slate-700 cursor-pointer p-1">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Checkbox Ingat Saya -->
+                <div class="flex items-center justify-between pt-0.5">
+                    <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input id="taman-remember-me" type="checkbox" checked class="w-4 h-4 rounded text-sky-500 border-slate-300 focus:ring-sky-400 cursor-pointer">
+                        <span class="text-xs sm:text-sm font-bold text-slate-700">Ingat saya di perangkat ini</span>
+                    </label>
+                </div>
+
+                <p id="taman-login-error" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-2.5"></p>
+
+                <button id="taman-login-submit" type="submit" class="btn-3d w-full bg-sky-500 hover:bg-sky-600 text-white font-extrabold py-3 rounded-2xl text-base cursor-pointer">
+                    Masuk & Mulai Bermain 🚀
+                </button>
+            </form>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-center">
+                <button type="button" onclick="lanjutModeTamu()" class="text-xs font-bold text-slate-500 hover:text-slate-700 py-2 px-3 rounded-xl hover:bg-slate-100 cursor-pointer">
+                    Main Sebagai Tamu (Tanpa Tiket)
+                </button>
+                <button type="button" onclick="kembaliKeSekolah()" class="text-xs font-bold text-amber-700 hover:text-amber-800 py-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 cursor-pointer">
+                    ⬅️ Ke Halaman Sekolah
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Dekorasi Latar Belakang: Awan & Matahari -->
     <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <!-- Matahari Tersenyum -->
         <svg class="w-24 h-24 sm:w-32 sm:h-32 absolute top-4 right-4 sm:right-12 text-amber-300 drop-shadow-md" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="28" fill="#FBBF24"/>
             <g stroke="#F59E0B" stroke-width="5" stroke-linecap="round">
@@ -143,18 +178,15 @@
                 <line x1="80" y1="20" x2="74" y2="26"/>
                 <line x1="26" y1="74" x2="20" y2="80"/>
             </g>
-            <!-- Mata & Senyum -->
             <circle cx="42" cy="46" r="3" fill="#78350F"/>
             <circle cx="58" cy="46" r="3" fill="#78350F"/>
             <path d="M 42 56 Q 50 63 58 56" stroke="#78350F" stroke-width="3" fill="none" stroke-linecap="round"/>
         </svg>
 
-        <!-- Awan Kiri -->
         <svg class="w-36 h-20 absolute top-10 left-6 text-white/90 cloud-anim-1" viewBox="0 0 120 60">
             <path d="M25,50 L95,50 C108,50 115,40 115,30 C115,20 105,12 94,14 C90,5 78,0 66,4 C56,-2 40,2 35,14 C20,12 10,22 10,34 C10,43 17,50 25,50 Z" fill="currentColor"/>
         </svg>
 
-        <!-- Awan Tengah -->
         <svg class="w-28 h-16 absolute top-24 left-1/3 text-white/80 cloud-anim-2 hidden sm:block" viewBox="0 0 120 60">
             <path d="M25,50 L95,50 C108,50 115,40 115,30 C115,20 105,12 94,14 C90,5 78,0 66,4 C56,-2 40,2 35,14 C20,12 10,22 10,34 C10,43 17,50 25,50 Z" fill="currentColor"/>
         </svg>
@@ -164,13 +196,11 @@
     <header class="relative z-10 w-full max-w-6xl mx-auto px-4 pt-4 pb-2 flex flex-wrap items-center justify-between gap-3">
         <!-- Tombol Kembali ke Sekolah & Logo -->
         <div class="flex items-center gap-2 sm:gap-3">
-            <!-- Tombol Kembali ke index.html -->
             <button onclick="kembaliKeSekolah()" class="btn-3d bg-yellow-400 hover:bg-yellow-300 text-slate-900 border-2 border-white px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-extrabold text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer">
                 <span>⬅️</span>
                 <span>Ke Sekolah</span>
             </button>
 
-            <!-- Logo & Judul -->
             <div class="flex items-center gap-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-md border-2 border-white">
                 <span class="text-3xl sm:text-4xl">🎪</span>
                 <div>
@@ -180,8 +210,22 @@
             </div>
         </div>
 
-        <!-- Panel Skor, Bintang & Kontrol Suara -->
-        <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Panel Nama Pemain, Skor, Bintang & Kontrol Suara -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <!-- Badge Akun Pemain Aktif + Tombol Keluar -->
+            <div class="flex items-center bg-sky-100 border-2 border-sky-300 rounded-2xl shadow-sm overflow-hidden">
+                <button onclick="bukaModalLoginTaman()" title="Klik untuk ganti akun siswa" class="flex items-center gap-2 hover:bg-sky-200 px-3 sm:px-3.5 py-2 cursor-pointer transition-colors">
+                    <span class="text-lg sm:text-xl">👤</span>
+                    <div class="text-left">
+                        <span class="text-[10px] font-bold text-sky-700 block uppercase tracking-wider">Pemain</span>
+                        <span id="player-name-display" class="text-xs sm:text-sm font-extrabold text-sky-900 leading-none">Tamu</span>
+                    </div>
+                </button>
+                <button id="logout-taman-btn" onclick="keluarAkunTaman()" title="Keluar / Hapus Ingat Saya" class="hidden px-2.5 py-2.5 bg-sky-200/70 hover:bg-rose-200 text-sky-800 hover:text-rose-700 font-bold text-xs border-l border-sky-300 cursor-pointer transition-colors">
+                    🚪
+                </button>
+            </div>
+
             <!-- Penghitung Bintang -->
             <div class="flex items-center gap-2 bg-amber-100 border-2 border-amber-300 px-3 sm:px-4 py-2 rounded-2xl shadow-sm">
                 <span class="text-xl sm:text-2xl">⭐</span>
@@ -222,35 +266,24 @@
             <!-- Grid 4 Wahana Utama -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
                 
-                <!-- WAHANA 1: JUNGKAT-JUNGKIT ANGKA (MATEMATIKA) -->
+                <!-- WAHANA 1: JUNGKAT-JUNGKIT ANGKA -->
                 <div onclick="startRide('seesaw')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
                     <span id="claimed-badge-seesaw" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-sky-50 rounded-2xl p-2 border-2 border-sky-100">
-                        <!-- Ilustrasi SVG Jungkat-Jungkit -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
-                            <!-- Tanah -->
                             <line x1="20" y1="168" x2="180" y2="168" stroke="#16A34A" stroke-width="6" stroke-linecap="round"/>
-                            
-                            <!-- Papan Jungkat-Jungkit Berayun -->
                             <g class="seesaw-anim">
-                                <!-- Papan Utama -->
                                 <rect x="24" y="119" width="152" height="12" rx="6" fill="#F43F5E" stroke="#BE123C" stroke-width="2.5"/>
-                                <!-- Pegangan Kiri & Kanan -->
                                 <path d="M 48 119 L 48 103 L 58 103" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
                                 <path d="M 152 119 L 152 103 L 142 103" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                                <!-- Kursi & Beban Angka Kiri -->
                                 <rect x="28" y="113" width="22" height="7" rx="3" fill="#FBBF24"/>
                                 <circle cx="39" cy="96" r="13" fill="#38BDF8" stroke="#0284C7" stroke-width="2.5"/>
                                 <text x="39" y="101" text-anchor="middle" fill="#FFFFFF" font-weight="bold" font-size="14" font-family="Fredoka, sans-serif">2</text>
-                                <!-- Kursi & Beban Angka Kanan -->
                                 <rect x="150" y="113" width="22" height="7" rx="3" fill="#FBBF24"/>
                                 <circle cx="161" cy="96" r="13" fill="#34D399" stroke="#047857" stroke-width="2.5"/>
                                 <text x="161" y="101" text-anchor="middle" fill="#FFFFFF" font-weight="bold" font-size="14" font-family="Fredoka, sans-serif">3</text>
                             </g>
-
-                            <!-- Penyangga Segitiga Tengah -->
                             <polygon points="100,125 76,168 124,168" fill="#F59E0B" stroke="#B45309" stroke-width="3" stroke-linejoin="round"/>
-                            <!-- Poros Tengah -->
                             <circle cx="100" cy="125" r="7" fill="#FFFFFF" stroke="#475569" stroke-width="3"/>
                         </svg>
                     </div>
@@ -266,22 +299,16 @@
                 <div onclick="startRide('swing')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
                     <span id="claimed-badge-swing" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-amber-50 rounded-2xl p-2 border-2 border-amber-100">
-                        <!-- Ilustrasi SVG Ayunan -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
-                            <!-- Rangka Ayunan -->
                             <line x1="35" y1="168" x2="60" y2="42" stroke="#D97706" stroke-width="7" stroke-linecap="round"/>
                             <line x1="165" y1="168" x2="140" y2="42" stroke="#D97706" stroke-width="7" stroke-linecap="round"/>
                             <line x1="48" y1="42" x2="152" y2="42" stroke="#B45309" stroke-width="9" stroke-linecap="round"/>
-                            <!-- Tali & Kursi Berayun -->
                             <g class="swing-anim">
                                 <line x1="82" y1="42" x2="82" y2="128" stroke="#64748B" stroke-width="3"/>
                                 <line x1="118" y1="42" x2="118" y2="128" stroke="#64748B" stroke-width="3"/>
-                                <!-- Kursi -->
                                 <rect x="72" y="126" width="56" height="10" rx="5" fill="#EC4899" stroke="#9D174D" stroke-width="2"/>
-                                <!-- Balok Bentuk di Atas Kursi -->
                                 <polygon points="100,92 84,124 116,124" fill="#38BDF8" stroke="#0284C7" stroke-width="2"/>
                             </g>
-                            <!-- Tanah -->
                             <line x1="20" y1="168" x2="180" y2="168" stroke="#16A34A" stroke-width="6" stroke-linecap="round"/>
                         </svg>
                     </div>
@@ -297,23 +324,17 @@
                 <div onclick="startRide('slide')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
                     <span id="claimed-badge-slide" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-emerald-50 rounded-2xl p-2 border-2 border-emerald-100">
-                        <!-- Ilustrasi SVG Perosotan -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
-                            <!-- Tangga -->
                             <line x1="45" y1="168" x2="45" y2="55" stroke="#0284C7" stroke-width="6" stroke-linecap="round"/>
                             <line x1="68" y1="168" x2="68" y2="55" stroke="#0284C7" stroke-width="6" stroke-linecap="round"/>
                             <line x1="45" y1="80" x2="68" y2="80" stroke="#38BDF8" stroke-width="4"/>
                             <line x1="45" y1="105" x2="68" y2="105" stroke="#38BDF8" stroke-width="4"/>
                             <line x1="45" y1="130" x2="68" y2="130" stroke="#38BDF8" stroke-width="4"/>
                             <line x1="45" y1="152" x2="68" y2="152" stroke="#38BDF8" stroke-width="4"/>
-                            <!-- Platform Atas -->
                             <rect x="38" y="48" width="42" height="10" rx="4" fill="#F59E0B"/>
-                            <!-- Papan Luncur Melengkung -->
                             <path d="M 76 54 C 110 54, 115 155, 168 158" fill="none" stroke="#10B981" stroke-width="14" stroke-linecap="round"/>
                             <path d="M 76 50 C 110 50, 115 151, 168 154" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linecap="round"/>
-                            <!-- Bintang Meluncur -->
                             <circle cx="112" cy="108" r="11" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
-                            <!-- Tanah -->
                             <line x1="25" y1="168" x2="180" y2="168" stroke="#15803D" stroke-width="6" stroke-linecap="round"/>
                         </svg>
                     </div>
@@ -329,28 +350,22 @@
                 <div onclick="startRide('ferris')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
                     <span id="claimed-badge-ferris" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-indigo-50 rounded-2xl p-2 border-2 border-indigo-100">
-                        <!-- Ilustrasi SVG Biang Lala -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
-                            <!-- Tiang Penyangga -->
                             <line x1="100" y1="95" x2="55" y2="170" stroke="#475569" stroke-width="7" stroke-linecap="round"/>
                             <line x1="100" y1="95" x2="145" y2="170" stroke="#475569" stroke-width="7" stroke-linecap="round"/>
                             <line x1="40" y1="170" x2="160" y2="170" stroke="#334155" stroke-width="8" stroke-linecap="round"/>
-                            <!-- Roda Berputar -->
                             <g class="ferris-wheel-spin">
                                 <circle cx="100" cy="95" r="62" fill="none" stroke="#6366F1" stroke-width="6"/>
                                 <circle cx="100" cy="95" r="45" fill="none" stroke="#818CF8" stroke-width="3" stroke-dasharray="6 6"/>
-                                <!-- Jari-jari -->
                                 <line x1="100" y1="33" x2="100" y2="157" stroke="#A5B4FC" stroke-width="3"/>
                                 <line x1="38" y1="95" x2="162" y2="95" stroke="#A5B4FC" stroke-width="3"/>
                                 <line x1="56" y1="51" x2="144" y2="139" stroke="#A5B4FC" stroke-width="3"/>
                                 <line x1="144" y1="51" x2="56" y2="139" stroke="#A5B4FC" stroke-width="3"/>
-                                <!-- Kabin Penumpang -->
                                 <rect x="90" y="23" width="20" height="16" rx="5" fill="#FBBF24" stroke="#B45309" stroke-width="2"/>
                                 <rect x="90" y="149" width="20" height="16" rx="5" fill="#38BDF8" stroke="#0369A1" stroke-width="2"/>
                                 <rect x="28" y="87" width="20" height="16" rx="5" fill="#34D399" stroke="#047857" stroke-width="2"/>
                                 <rect x="152" y="87" width="20" height="16" rx="5" fill="#F43F5E" stroke="#BE123C" stroke-width="2"/>
                             </g>
-                            <!-- Poros Tengah -->
                             <circle cx="100" cy="95" r="10" fill="#F59E0B" stroke="#FFFFFF" stroke-width="3"/>
                         </svg>
                     </div>
@@ -383,13 +398,11 @@
 
         <!-- LAYAR 2: ARENA PERMAINAN EDUKASI -->
         <section id="game-arena-view" class="hidden w-full max-w-3xl mx-auto animate-pop-in">
-            <!-- Navigasi Kembali & Progress Soal -->
             <div class="flex items-center justify-between mb-4 gap-3">
                 <button onclick="returnToPark()" class="btn-3d bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-2xl border-2 border-slate-200 flex items-center gap-2 text-sm sm:text-base">
                     ⬅️ Peta Taman
                 </button>
                 
-                <!-- Progress Bar -->
                 <div class="flex-grow max-w-xs bg-white/80 p-1.5 rounded-full border-2 border-white shadow-inner">
                     <div id="progress-bar" class="h-3.5 bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full transition-all duration-500" style="width: 20%;"></div>
                 </div>
@@ -399,32 +412,21 @@
                 </span>
             </div>
 
-            <!-- Kartu Pertanyaan Utama -->
             <div id="question-card" class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-8 border-4 border-white shadow-xl">
-                
-                <!-- Header Wahana Aktif -->
                 <div class="flex items-center justify-center gap-2 mb-4">
                     <span id="active-ride-badge" class="bg-rose-100 text-rose-700 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm uppercase tracking-wide">
                         ⚖️ Jungkat-Jungkit Angka
                     </span>
                 </div>
 
-                <!-- Area Visual Interaktif Soal -->
-                <div id="visual-prompt-box" class="bg-sky-50/90 border-2 border-sky-100 rounded-2xl p-4 sm:p-6 mb-5 flex flex-col items-center justify-center min-h-[140px] sm:min-h-[165px]">
-                    <!-- Konten visual (emoji, bentuk SVG, atau susunan huruf) dirender via JS -->
-                </div>
+                <div id="visual-prompt-box" class="bg-sky-50/90 border-2 border-sky-100 rounded-2xl p-4 sm:p-6 mb-5 flex flex-col items-center justify-center min-h-[140px] sm:min-h-[165px]"></div>
 
-                <!-- Teks Pertanyaan -->
                 <h3 id="question-text" class="text-xl sm:text-2xl font-bold text-center text-slate-800 mb-6 leading-snug">
                     Pertanyaan akan muncul di sini...
                 </h3>
 
-                <!-- Pilihan Jawaban (Grid 2x2 Responsif) -->
-                <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <!-- Tombol opsi dirender via JS -->
-                </div>
+                <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
 
-                <!-- Kotak Umpan Balik Edukatif (Muncul setelah menjawab) -->
                 <div id="feedback-box" class="hidden mt-6 p-4 rounded-2xl border-2 text-center animate-pop-in">
                     <p id="feedback-title" class="font-extrabold text-lg mb-1"></p>
                     <p id="feedback-explanation" class="text-sm sm:text-base font-semibold mb-4"></p>
@@ -432,7 +434,6 @@
                         Lanjut Bermain ➡️
                     </button>
                 </div>
-
             </div>
         </section>
 
@@ -476,15 +477,16 @@
         Taman Bermain Edukasi • Melatih Berhitung, Logika Bentuk & Kosakata Anak
     </footer>
 
-    <!-- LOGIKA GAME & AUDIO INTERAKTIF -->
+    <!-- LOGIKA GAME, SESI LOGIN, INGAT SAYA & AUDIO INTERAKTIF -->
     <script>
         // ==========================================
         // LINK GOOGLE APPS SCRIPT (PALING ATAS)
         // ==========================================
         const TAMAN_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeb8P7lsmjdHT26Kbb0YQn9HA1I1PPwqDeCeBev2Txe3QAk_fgB7PORZ1Or-V3U5U4/exec";
+        const REMEMBER_STORAGE_KEY = "tamanRememberedAccount_v1";
 
         // ==========================================
-        // 0. SINKRONISASI SESI, PENGATURAN SHEET 'taman', & TIKET
+        // 0. SINKRONISASI SESI LOGIN (KOLOM A & F), INGAT SAYA, & TIKET
         // ==========================================
         let activeTamanUser = null;
         const tamanConfig = {
@@ -492,61 +494,236 @@
             claimedRides: []
         };
 
-        function muatSesiDanTiketPemain() {
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('taman-login-password');
+            passInput.type = (passInput.type === 'password') ? 'text' : 'password';
+        }
+
+        function bukaModalLoginTaman() {
+            const modal = document.getElementById('taman-login-modal');
+            const errEl = document.getElementById('taman-login-error');
+            const nameEl = document.getElementById('taman-login-name');
+            const passEl = document.getElementById('taman-login-password');
+            const rememberEl = document.getElementById('taman-remember-me');
+
+            errEl.classList.add('hidden');
+
             try {
-                const raw = sessionStorage.getItem('activeUserSession');
-                if (raw) {
-                    activeTamanUser = JSON.parse(raw);
-                    if (activeTamanUser && typeof activeTamanUser.tickets === 'number') {
-                        gameState.tickets = activeTamanUser.tickets;
-                        updateHeaderStats();
+                const savedRemember = JSON.parse(localStorage.getItem(REMEMBER_STORAGE_KEY) || 'null');
+                if (savedRemember && savedRemember.name) {
+                    nameEl.value = savedRemember.name;
+                    passEl.value = savedRemember.password || '';
+                    rememberEl.checked = true;
+                } else if (activeTamanUser && activeTamanUser.name) {
+                    nameEl.value = activeTamanUser.name;
+                    passEl.value = '';
+                }
+            } catch (e) {}
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function tutupModalLoginTaman() {
+            const modal = document.getElementById('taman-login-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function lanjutModeTamu() {
+            playSound('click');
+            activeTamanUser = null;
+            tamanConfig.claimedRides = [];
+            document.getElementById('player-name-display').textContent = 'Tamu';
+            document.getElementById('logout-taman-btn').classList.add('hidden');
+            tutupModalLoginTaman();
+            perbaruiInfoStatusTiketUI();
+        }
+
+        function keluarAkunTaman() {
+            playSound('click');
+            activeTamanUser = null;
+            tamanConfig.claimedRides = [];
+            gameState.tickets = 0;
+            sessionStorage.removeItem('activeUserSession');
+            localStorage.removeItem(REMEMBER_STORAGE_KEY);
+            document.getElementById('player-name-display').textContent = 'Tamu';
+            document.getElementById('logout-taman-btn').classList.add('hidden');
+            updateHeaderStats();
+            perbaruiInfoStatusTiketUI();
+            bukaModalLoginTaman();
+        }
+
+        function setUserAktifUI(userObj) {
+            activeTamanUser = userObj;
+            document.getElementById('player-name-display').textContent = userObj.name;
+            document.getElementById('logout-taman-btn').classList.remove('hidden');
+            if (typeof userObj.tickets === 'number') {
+                gameState.tickets = userObj.tickets;
+                updateHeaderStats();
+            }
+        }
+
+        function prosesLoginTaman(event) {
+            event.preventDefault();
+            const nameInput = document.getElementById('taman-login-name').value.trim();
+            const passInput = document.getElementById('taman-login-password').value.trim();
+            const rememberChecked = document.getElementById('taman-remember-me').checked;
+            const errEl = document.getElementById('taman-login-error');
+            const submitBtn = document.getElementById('taman-login-submit');
+
+            if (!nameInput || !passInput) return;
+
+            errEl.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Memeriksa akun... ⏳';
+
+            const url = `${TAMAN_APPS_SCRIPT_URL}?action=loginTaman&player=${encodeURIComponent(nameInput)}&password=${encodeURIComponent(passInput)}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Masuk & Mulai Bermain 🚀';
+
+                    if (data && data.status === 'success') {
+                        const verifiedUser = {
+                            name: data.player || nameInput,
+                            tickets: typeof data.tickets === 'number' ? data.tickets : 0
+                        };
+
+                        // Simpan sesi aktif tab
+                        sessionStorage.setItem('activeUserSession', JSON.stringify(verifiedUser));
+
+                        // Simpan atau hapus data "Ingat Saya"
+                        if (rememberChecked) {
+                            localStorage.setItem(REMEMBER_STORAGE_KEY, JSON.stringify({
+                                name: verifiedUser.name,
+                                password: passInput
+                            }));
+                        } else {
+                            localStorage.removeItem(REMEMBER_STORAGE_KEY);
+                        }
+
+                        setUserAktifUI(verifiedUser);
+                        tutupModalLoginTaman();
+                        muatStatusTamanDariSpreadsheet(verifiedUser.name);
+                        playSound('correct');
+                    } else {
+                        errEl.textContent = (data && data.message) ? data.message : 'Nama atau Password salah!';
+                        errEl.classList.remove('hidden');
+                        playSound('wrong');
+                    }
+                })
+                .catch(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Masuk & Mulai Bermain 🚀';
+                    errEl.textContent = 'Gagal terhubung ke server. Periksa koneksi internetmu.';
+                    errEl.classList.remove('hidden');
+                });
+        }
+
+        function muatStatusTamanDariSpreadsheet(playerName) {
+            if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) return;
+
+            fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getTamanStatus&player=${encodeURIComponent(playerName || '')}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.status === 'success') {
+                        tamanConfig.ticketSystemActive = Boolean(data.ticketSystemActive);
+                        tamanConfig.claimedRides = Array.isArray(data.claimedRides) ? data.claimedRides : [];
+                        perbaruiInfoStatusTiketUI();
+                    }
+                })
+                .catch(err => console.warn("Gagal mengambil status sheet taman:", err));
+        }
+
+        function muatSesiDanTiketPemain() {
+            // 1. Cek sesi aktif dari halaman sekolah (index.html) terlebih dahulu
+            try {
+                const rawSession = sessionStorage.getItem('activeUserSession');
+                if (rawSession) {
+                    const parsed = JSON.parse(rawSession);
+                    if (parsed && parsed.name) {
+                        setUserAktifUI(parsed);
+                        sinkronkanTiketDanStatus(parsed.name);
+                        return;
                     }
                 }
-            } catch (e) {
-                console.warn("Gagal membaca sesi pemain:", e);
-            }
+            } catch (e) {}
 
-            if (TAMAN_APPS_SCRIPT_URL && TAMAN_APPS_SCRIPT_URL.startsWith('http')) {
-                const playerName = (activeTamanUser && activeTamanUser.name) ? activeTamanUser.name : '';
-
-                // 1. Ambil jumlah tiket pemain dari sheet Login
-                if (playerName) {
-                    fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(playerName)}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data && data.status === 'success' && typeof data.tickets === 'number') {
-                                gameState.tickets = data.tickets;
-                                activeTamanUser.tickets = data.tickets;
-                                sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
-                                updateHeaderStats();
-                            }
-                        })
-                        .catch(err => console.warn("Gagal mengambil tiket dari Spreadsheet:", err));
+            // 2. Jika sesi tab kosong, cek fitur "Ingat Saya" di localStorage
+            try {
+                const rawRemember = localStorage.getItem(REMEMBER_STORAGE_KEY);
+                if (rawRemember) {
+                    const saved = JSON.parse(rawRemember);
+                    if (saved && saved.name && saved.password) {
+                        document.getElementById('player-name-display').textContent = 'Memuat...';
+                        const url = `${TAMAN_APPS_SCRIPT_URL}?action=loginTaman&player=${encodeURIComponent(saved.name)}&password=${encodeURIComponent(saved.password)}`;
+                        fetch(url)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data && data.status === 'success') {
+                                    const verifiedUser = {
+                                        name: data.player || saved.name,
+                                        tickets: typeof data.tickets === 'number' ? data.tickets : 0
+                                    };
+                                    sessionStorage.setItem('activeUserSession', JSON.stringify(verifiedUser));
+                                    setUserAktifUI(verifiedUser);
+                                    muatStatusTamanDariSpreadsheet(verifiedUser.name);
+                                } else {
+                                    // Password di sheet berubah -> hapus ingat saya & tampilkan modal login
+                                    localStorage.removeItem(REMEMBER_STORAGE_KEY);
+                                    document.getElementById('player-name-display').textContent = 'Tamu';
+                                    muatStatusTamanDariSpreadsheet('');
+                                    bukaModalLoginTaman();
+                                }
+                            })
+                            .catch(() => {
+                                document.getElementById('player-name-display').textContent = 'Tamu';
+                                bukaModalLoginTaman();
+                            });
+                        return;
+                    }
                 }
+            } catch (e) {}
 
-                // 2. Ambil status aktif sistem tiket (Sheet 'taman' sel A1) & riwayat klaim 1x per wahana
-                fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getTamanStatus&player=${encodeURIComponent(playerName)}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data && data.status === 'success') {
-                            tamanConfig.ticketSystemActive = Boolean(data.ticketSystemActive);
-                            tamanConfig.claimedRides = Array.isArray(data.claimedRides) ? data.claimedRides : [];
-                            perbaruiInfoStatusTiketUI();
+            // 3. Jika belum ada sesi & tidak ada "Ingat Saya", tampilkan modal login
+            document.getElementById('player-name-display').textContent = 'Tamu';
+            muatStatusTamanDariSpreadsheet('');
+            bukaModalLoginTaman();
+        }
+
+        function sinkronkanTiketDanStatus(playerName) {
+            if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) return;
+
+            fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(playerName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.status === 'success' && typeof data.tickets === 'number') {
+                        gameState.tickets = data.tickets;
+                        if (activeTamanUser) {
+                            activeTamanUser.name = data.player || activeTamanUser.name;
+                            activeTamanUser.tickets = data.tickets;
+                            sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
+                            document.getElementById('player-name-display').textContent = activeTamanUser.name;
                         }
-                    })
-                    .catch(err => console.warn("Gagal mengambil status sheet taman:", err));
-            }
+                        updateHeaderStats();
+                    }
+                })
+                .catch(err => console.warn("Gagal mengambil tiket dari Spreadsheet:", err));
+
+            muatStatusTamanDariSpreadsheet(playerName);
         }
 
         function perbaruiInfoStatusTiketUI() {
             const bannerSpan = document.getElementById('ticket-status-banner');
             const allRides = ['seesaw', 'swing', 'slide', 'ferris'];
 
-            // Tampilkan badge "Tiket Diklaim" pada kartu wahana yang sudah diklaim pemain
             allRides.forEach(ride => {
                 const badge = document.getElementById(`claimed-badge-${ride}`);
                 if (badge) {
-                    if (tamanConfig.ticketSystemActive && tamanConfig.claimedRides.includes(ride)) {
+                    if (activeTamanUser && activeTamanUser.name && tamanConfig.ticketSystemActive && tamanConfig.claimedRides.includes(ride)) {
                         badge.classList.remove('hidden');
                     } else {
                         badge.classList.add('hidden');
@@ -555,6 +732,12 @@
             });
 
             if (!bannerSpan) return;
+
+            if (!activeTamanUser || !activeTamanUser.name) {
+                bannerSpan.innerHTML = `👤 Mode Tamu — <button onclick="bukaModalLoginTaman()" class="underline font-extrabold text-sky-900 cursor-pointer">Klik di sini untuk Masuk Akun Siswa</button> agar bisa mendapat Tiket!`;
+                bannerSpan.className = "inline-block bg-amber-100 text-amber-800 font-bold px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-sm mb-2 border border-amber-300";
+                return;
+            }
 
             if (!tamanConfig.ticketSystemActive) {
                 bannerSpan.innerHTML = `ℹ️ <strong>Sistem Tiket Sedang Tidak Aktif</strong> — Kamu tetap bisa bermain dan mengumpulkan Bintang!`;
@@ -616,7 +799,6 @@
             answered: false
         };
 
-        // Inisialisasi Audio Sintesis dengan Tone.js
         let synth = null;
         function initAudio() {
             if (!synth && typeof Tone !== 'undefined') {
@@ -956,7 +1138,6 @@
                 badgeEl.className = 'bg-indigo-100 text-indigo-800 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm uppercase tracking-wide';
             }
 
-            // Alihkan tampilan ke Arena Game
             document.getElementById('park-map-view').classList.add('hidden');
             document.getElementById('summary-view').classList.add('hidden');
             document.getElementById('game-arena-view').classList.remove('hidden');
@@ -969,19 +1150,15 @@
             const q = gameState.questions[gameState.currentIndex];
             const total = gameState.questions.length;
 
-            // Update Progress & Counter
             document.getElementById('question-counter').textContent = `Soal ${gameState.currentIndex + 1}/${total}`;
             document.getElementById('progress-bar').style.width = `${((gameState.currentIndex + 1) / total) * 100}%`;
 
-            // Render Visual & Teks
             document.getElementById('visual-prompt-box').innerHTML = q.visualHTML;
             document.getElementById('question-text').textContent = q.question;
 
-            // Sembunyikan Kotak Feedback
             const feedbackBox = document.getElementById('feedback-box');
             feedbackBox.classList.add('hidden');
 
-            // Render Tombol Pilihan
             const optionsGrid = document.getElementById('options-grid');
             optionsGrid.innerHTML = '';
 
@@ -1009,7 +1186,6 @@
             const isCorrect = selectedIndex === q.correctIndex;
             const allButtons = document.getElementById('options-grid').querySelectorAll('button');
 
-            // Nonaktifkan semua tombol opsi dan tandai jawaban benar/salah
             allButtons.forEach((btn, idx) => {
                 btn.disabled = true;
                 if (idx === q.correctIndex) {
@@ -1021,7 +1197,6 @@
                 }
             });
 
-            // Tampilkan Umpan Balik Edukatif
             const feedbackBox = document.getElementById('feedback-box');
             const feedbackTitle = document.getElementById('feedback-title');
             const feedbackExp = document.getElementById('feedback-explanation');
@@ -1038,7 +1213,6 @@
                 feedbackBox.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-900');
                 feedbackTitle.textContent = '🌟 Hebat! Jawabanmu Benar (+1 Bintang)';
                 
-                // Efek Konfeti Mini
                 if (typeof confetti === 'function') {
                     confetti({ particleCount: 45, spread: 60, origin: { y: 0.7 } });
                 }
@@ -1065,10 +1239,10 @@
         function finishRide() {
             const totalQuestions = gameState.questions.length;
             const isPerfectScore = gameState.roundStars === totalQuestions;
+            const hasLoggedInPlayer = Boolean(activeTamanUser && activeTamanUser.name);
             const alreadyClaimedThisRide = tamanConfig.claimedRides.includes(gameState.currentRide);
-            const canEarnTicket = isPerfectScore && tamanConfig.ticketSystemActive && !alreadyClaimedThisRide;
+            const canEarnTicket = isPerfectScore && hasLoggedInPlayer && tamanConfig.ticketSystemActive && !alreadyClaimedThisRide;
 
-            // Berikan 1 tiket HANYA JIKA semua jawaban benar (5/5), sistem aktif (A1 = Ya), dan belum pernah klaim di wahana ini
             if (canEarnTicket) {
                 playSound('win');
                 gameState.tickets += 1;
@@ -1093,7 +1267,7 @@
 
             if (canEarnTicket) {
                 summaryEmoji.textContent = '🏆';
-                subtitle.textContent = 'Sempurna! Semua 5 jawaban benar! Kamu mendapatkan 1 Tiket Hadiah!';
+                subtitle.textContent = `Sempurna! Semua 5 jawaban benar! +1 Tiket Hadiah telah dikirim ke akun ${activeTamanUser.name}!`;
                 ticketCard.className = 'bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 transition-all';
                 ticketLabel.className = 'text-xs font-bold text-emerald-700 uppercase';
                 roundTicketsEl.className = 'text-2xl sm:text-3xl font-extrabold text-emerald-600';
@@ -1102,6 +1276,13 @@
                 if (typeof confetti === 'function') {
                     confetti({ particleCount: 100, spread: 85, origin: { y: 0.6 } });
                 }
+            } else if (isPerfectScore && !hasLoggedInPlayer) {
+                summaryEmoji.textContent = '🌟';
+                subtitle.textContent = 'Sempurna! Semua 5 jawaban benar! Masuk ke akun siswamu terlebih dahulu untuk menyimpan tiket.';
+                ticketCard.className = 'bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 opacity-90 transition-all';
+                ticketLabel.className = 'text-xs font-bold text-amber-700 uppercase';
+                roundTicketsEl.className = 'text-lg sm:text-xl font-extrabold text-amber-600';
+                roundTicketsEl.textContent = 'Belum Login';
             } else if (isPerfectScore && !tamanConfig.ticketSystemActive) {
                 summaryEmoji.textContent = '🌟';
                 subtitle.textContent = 'Sempurna! Semua 5 jawaban benar! (Sistem pembagian tiket sedang tidak aktif).';
@@ -1143,7 +1324,6 @@
             document.getElementById('star-count').textContent = gameState.stars;
             document.getElementById('ticket-count').textContent = gameState.tickets;
 
-            // Cek pembukaan lencana pencapaian
             const b1 = document.getElementById('badge-1');
             const b2 = document.getElementById('badge-2');
             const b3 = document.getElementById('badge-3');
