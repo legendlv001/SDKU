@@ -1,7 +1,7 @@
 // ==========================================
 // LINK GOOGLE APPS SCRIPT
 // ==========================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWKNtCg5J4RkdQ7_ExW28ThDTAmNngTTgRpjmSP_Mo2_UKGDp87Oo3337iimzvlXzo/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYeOYmGQbE_pjmAqfO-YwXKgOiOAUF02ER9exlljDvizefZNO8DkeVEeQ0poAwsxF5/exec";
 
 // ==========================================
 // CONFIGURATION, DATABASE & MAIN GAME LOOP

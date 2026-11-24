@@ -192,7 +192,7 @@
             </div>
 
             <!-- Penghitung Tiket / Level -->
-            <div class="flex items-center gap-2 bg-rose-100 border-2 border-rose-300 px-3 sm:px-4 py-2 rounded-2xl shadow-sm" title="Dapatkan 1 Tiket jika semua 5 soal benar!">
+            <div class="flex items-center gap-2 bg-rose-100 border-2 border-rose-300 px-3 sm:px-4 py-2 rounded-2xl shadow-sm" title="Dapatkan 1 Tiket jika semua 5 soal benar (1x per wahana)!">
                 <span class="text-xl sm:text-2xl">🎟️</span>
                 <div>
                     <span class="text-xs font-bold text-rose-700 block uppercase tracking-wider">Tiket</span>
@@ -213,8 +213,8 @@
         <!-- LAYAR 1: PETA TAMAN BERMAIN (PILIH WAHANA) -->
         <section id="park-map-view" class="w-full transition-all duration-300">
             <div class="text-center mb-6 sm:mb-8">
-                <span class="inline-block bg-white/90 text-sky-700 font-bold px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-sm mb-2 border border-sky-100">
-                    🎟️ Jawab <strong>semua 5 soal dengan benar</strong> di setiap wahana untuk mendapatkan <strong>1 Tiket Hadiah</strong>!
+                <span id="ticket-status-banner" class="inline-block bg-white/90 text-sky-700 font-bold px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-sm mb-2 border border-sky-100">
+                    🎟️ Jawab <strong>semua 5 soal dengan benar</strong> di setiap wahana untuk mendapatkan <strong>1 Tiket Hadiah</strong> (1x per wahana)!
                 </span>
                 <h2 class="text-2xl sm:text-4xl font-bold text-slate-800 drop-shadow-sm">Peta Petualangan Taman Bermain</h2>
             </div>
@@ -223,7 +223,8 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
                 
                 <!-- WAHANA 1: JUNGKAT-JUNGKIT ANGKA (MATEMATIKA) -->
-                <div onclick="startRide('seesaw')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                <div onclick="startRide('seesaw')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
+                    <span id="claimed-badge-seesaw" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-sky-50 rounded-2xl p-2 border-2 border-sky-100">
                         <!-- Ilustrasi SVG Jungkat-Jungkit -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
@@ -262,7 +263,8 @@
                 </div>
 
                 <!-- WAHANA 2: AYUNAN WARNA & BENTUK -->
-                <div onclick="startRide('swing')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                <div onclick="startRide('swing')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
+                    <span id="claimed-badge-swing" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-amber-50 rounded-2xl p-2 border-2 border-amber-100">
                         <!-- Ilustrasi SVG Ayunan -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
@@ -292,7 +294,8 @@
                 </div>
 
                 <!-- WAHANA 3: PEROSOTAN KATA & SAINS -->
-                <div onclick="startRide('slide')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                <div onclick="startRide('slide')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
+                    <span id="claimed-badge-slide" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-emerald-50 rounded-2xl p-2 border-2 border-emerald-100">
                         <!-- Ilustrasi SVG Perosotan -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
@@ -323,7 +326,8 @@
                 </div>
 
                 <!-- WAHANA 4: BIANG LALA PJOK -->
-                <div onclick="startRide('ferris')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group">
+                <div onclick="startRide('ferris')" class="ride-card rounded-3xl p-5 sm:p-6 cursor-pointer flex flex-col items-center text-center group relative">
+                    <span id="claimed-badge-ferris" class="hidden absolute top-3 right-3 bg-emerald-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">✅ Tiket Diklaim</span>
                     <div class="w-40 h-36 sm:w-44 sm:h-40 mb-3 relative flex items-center justify-center bg-indigo-50 rounded-2xl p-2 border-2 border-indigo-100">
                         <!-- Ilustrasi SVG Biang Lala -->
                         <svg viewBox="0 0 200 180" class="w-full h-full overflow-visible">
@@ -480,9 +484,13 @@
         const TAMAN_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeb8P7lsmjdHT26Kbb0YQn9HA1I1PPwqDeCeBev2Txe3QAk_fgB7PORZ1Or-V3U5U4/exec";
 
         // ==========================================
-        // 0. SINKRONISASI SESI & TIKET KOLOM G SPREADSHEET
+        // 0. SINKRONISASI SESI, PENGATURAN SHEET 'taman', & TIKET
         // ==========================================
         let activeTamanUser = null;
+        const tamanConfig = {
+            ticketSystemActive: true,
+            claimedRides: []
+        };
 
         function muatSesiDanTiketPemain() {
             try {
@@ -498,43 +506,86 @@
                 console.warn("Gagal membaca sesi pemain:", e);
             }
 
-            if (activeTamanUser && activeTamanUser.name && TAMAN_APPS_SCRIPT_URL && TAMAN_APPS_SCRIPT_URL.startsWith('http')) {
-                fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(activeTamanUser.name)}`)
+            if (TAMAN_APPS_SCRIPT_URL && TAMAN_APPS_SCRIPT_URL.startsWith('http')) {
+                const playerName = (activeTamanUser && activeTamanUser.name) ? activeTamanUser.name : '';
+
+                // 1. Ambil jumlah tiket pemain dari sheet Login
+                if (playerName) {
+                    fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(playerName)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.status === 'success' && typeof data.tickets === 'number') {
+                                gameState.tickets = data.tickets;
+                                activeTamanUser.tickets = data.tickets;
+                                sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
+                                updateHeaderStats();
+                            }
+                        })
+                        .catch(err => console.warn("Gagal mengambil tiket dari Spreadsheet:", err));
+                }
+
+                // 2. Ambil status aktif sistem tiket (Sheet 'taman' sel A1) & riwayat klaim 1x per wahana
+                fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getTamanStatus&player=${encodeURIComponent(playerName)}`)
                     .then(res => res.json())
                     .then(data => {
-                        if (data && data.status === 'success' && typeof data.tickets === 'number') {
-                            gameState.tickets = data.tickets;
-                            activeTamanUser.tickets = data.tickets;
-                            sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
-                            updateHeaderStats();
+                        if (data && data.status === 'success') {
+                            tamanConfig.ticketSystemActive = Boolean(data.ticketSystemActive);
+                            tamanConfig.claimedRides = Array.isArray(data.claimedRides) ? data.claimedRides : [];
+                            perbaruiInfoStatusTiketUI();
                         }
                     })
-                    .catch(err => console.warn("Gagal mengambil tiket dari Spreadsheet:", err));
+                    .catch(err => console.warn("Gagal mengambil status sheet taman:", err));
             }
         }
 
-        function simpanTiketKeSpreadsheet(totalTiketBaru) {
+        function perbaruiInfoStatusTiketUI() {
+            const bannerSpan = document.getElementById('ticket-status-banner');
+            const allRides = ['seesaw', 'swing', 'slide', 'ferris'];
+
+            // Tampilkan badge "Tiket Diklaim" pada kartu wahana yang sudah diklaim pemain
+            allRides.forEach(ride => {
+                const badge = document.getElementById(`claimed-badge-${ride}`);
+                if (badge) {
+                    if (tamanConfig.ticketSystemActive && tamanConfig.claimedRides.includes(ride)) {
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            });
+
+            if (!bannerSpan) return;
+
+            if (!tamanConfig.ticketSystemActive) {
+                bannerSpan.innerHTML = `ℹ️ <strong>Sistem Tiket Sedang Tidak Aktif</strong> — Kamu tetap bisa bermain dan mengumpulkan Bintang!`;
+                bannerSpan.className = "inline-block bg-amber-100 text-amber-800 font-bold px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-sm mb-2 border border-amber-300";
+            } else {
+                const sisaWahana = Math.max(0, 4 - tamanConfig.claimedRides.length);
+                bannerSpan.innerHTML = `🎟️ Jawab <strong>semua 5 soal benar</strong> untuk meraih <strong>1 Tiket</strong> (Maks. 1x per wahana • Sisa kesempatan: <strong>${sisaWahana}/4 wahana</strong>)`;
+                bannerSpan.className = "inline-block bg-white/90 text-sky-700 font-bold px-4 py-1.5 rounded-full text-xs sm:text-sm shadow-sm mb-2 border border-sky-100";
+            }
+        }
+
+        function klaimTiketWahanaKeSpreadsheet(rideName, totalTiketBaru) {
             if (!activeTamanUser || !activeTamanUser.name) return;
 
             activeTamanUser.tickets = totalTiketBaru;
             sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
 
-            if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) {
-                console.warn("URL Apps Script di taman.html belum diisi.");
-                return;
-            }
+            if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) return;
 
             fetch(TAMAN_APPS_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
-                    action: 'updateTickets',
+                    action: 'claimTamanTicket',
                     player: activeTamanUser.name,
+                    ride: rideName,
                     tickets: totalTiketBaru,
                     updatedAt: Date.now()
                 })
-            }).catch(err => console.warn("Gagal menyimpan tiket ke Kolom G Spreadsheet:", err));
+            }).catch(err => console.warn("Gagal menyimpan klaim tiket ke Spreadsheet:", err));
         }
 
         // ==========================================
@@ -595,9 +646,7 @@
                     synth.triggerAttackRelease('G5', '16n', now + 0.2);
                     synth.triggerAttackRelease('C6', '4n', now + 0.3);
                 }
-            } catch (e) {
-                // Abaikan error audio jika browser membatasi autoplay
-            }
+            } catch (e) {}
         }
 
         function toggleSound() {
@@ -610,8 +659,6 @@
         // ==========================================
         // 2. BANK SOAL EDUKATIF BERBASIS WAHANA
         // ==========================================
-        
-        // Generator Soal Dinamis untuk Jungkat-Jungkit Angka (Matematika Dasar)
         function generateSeesawQuestions() {
             const list = [];
             const items = [
@@ -627,8 +674,8 @@
                 const isAddition = i % 2 === 0;
                 
                 if (isAddition) {
-                    const a = Math.floor(Math.random() * 5) + 2; // 2..6
-                    const b = Math.floor(Math.random() * 5) + 1; // 1..5
+                    const a = Math.floor(Math.random() * 5) + 2;
+                    const b = Math.floor(Math.random() * 5) + 1;
                     const ans = a + b;
                     const options = generateNumberOptions(ans);
                     
@@ -647,8 +694,8 @@
                         explanation: `Benar! ${a} ditambah ${b} sama dengan ${ans} ${item.name}.`
                     });
                 } else {
-                    const total = Math.floor(Math.random() * 5) + 5; // 5..9
-                    const taken = Math.floor(Math.random() * 3) + 1; // 1..3
+                    const total = Math.floor(Math.random() * 5) + 5;
+                    const taken = Math.floor(Math.random() * 3) + 1;
                     const ans = total - taken;
                     const options = generateNumberOptions(ans);
 
@@ -682,7 +729,6 @@
             return Array.from(set).sort(() => Math.random() - 0.5);
         }
 
-        // Bank Soal Ayunan Bentuk & Warna (Geometri & Pencampuran Warna)
         function generateSwingQuestions() {
             const pool = [
                 {
@@ -755,7 +801,6 @@
             return pool.sort(() => Math.random() - 0.5);
         }
 
-        // Bank Soal Perosotan Pengetahuan (Kosakata & Sains Alam)
         function generateSlideQuestions() {
             const pool = [
                 {
@@ -824,7 +869,6 @@
             return pool.sort(() => Math.random() - 0.5);
         }
 
-        // Bank Soal Biang Lala PJOK (Olahraga, Kebugaran & Hidup Sehat)
         function generateFerrisPJOKQuestions() {
             const pool = [
                 {
@@ -886,7 +930,6 @@
         // ==========================================
         // 3. KONTROL ALUR PERMAINAN & RENDER UI
         // ==========================================
-        
         function startRide(rideType) {
             playSound('click');
             gameState.currentRide = rideType;
@@ -1022,14 +1065,18 @@
         function finishRide() {
             const totalQuestions = gameState.questions.length;
             const isPerfectScore = gameState.roundStars === totalQuestions;
+            const alreadyClaimedThisRide = tamanConfig.claimedRides.includes(gameState.currentRide);
+            const canEarnTicket = isPerfectScore && tamanConfig.ticketSystemActive && !alreadyClaimedThisRide;
 
-            // Berikan 1 tiket HANYA JIKA semua jawaban benar (5/5)
-            if (isPerfectScore) {
+            // Berikan 1 tiket HANYA JIKA semua jawaban benar (5/5), sistem aktif (A1 = Ya), dan belum pernah klaim di wahana ini
+            if (canEarnTicket) {
                 playSound('win');
                 gameState.tickets += 1;
-                simpanTiketKeSpreadsheet(gameState.tickets);
+                tamanConfig.claimedRides.push(gameState.currentRide);
+                klaimTiketWahanaKeSpreadsheet(gameState.currentRide, gameState.tickets);
+                perbaruiInfoStatusTiketUI();
             } else {
-                playSound('click');
+                playSound(isPerfectScore ? 'win' : 'click');
             }
             updateHeaderStats();
 
@@ -1044,7 +1091,7 @@
             const summaryEmoji = document.getElementById('summary-emoji');
             const subtitle = document.getElementById('summary-subtitle');
 
-            if (isPerfectScore) {
+            if (canEarnTicket) {
                 summaryEmoji.textContent = '🏆';
                 subtitle.textContent = 'Sempurna! Semua 5 jawaban benar! Kamu mendapatkan 1 Tiket Hadiah!';
                 ticketCard.className = 'bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 transition-all';
@@ -1055,6 +1102,20 @@
                 if (typeof confetti === 'function') {
                     confetti({ particleCount: 100, spread: 85, origin: { y: 0.6 } });
                 }
+            } else if (isPerfectScore && !tamanConfig.ticketSystemActive) {
+                summaryEmoji.textContent = '🌟';
+                subtitle.textContent = 'Sempurna! Semua 5 jawaban benar! (Sistem pembagian tiket sedang tidak aktif).';
+                ticketCard.className = 'bg-slate-100 border-2 border-slate-200 rounded-2xl p-4 opacity-80 transition-all';
+                ticketLabel.className = 'text-xs font-bold text-slate-500 uppercase';
+                roundTicketsEl.className = 'text-xl sm:text-2xl font-extrabold text-slate-400';
+                roundTicketsEl.textContent = 'Nonaktif';
+            } else if (isPerfectScore && alreadyClaimedThisRide) {
+                summaryEmoji.textContent = '🌟';
+                subtitle.textContent = 'Sempurna! Kamu sudah pernah mengambil 1 Tiket dari wahana ini sebelumnya. Coba wahana lain!';
+                ticketCard.className = 'bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 opacity-90 transition-all';
+                ticketLabel.className = 'text-xs font-bold text-amber-700 uppercase';
+                roundTicketsEl.className = 'text-xl sm:text-2xl font-extrabold text-amber-600';
+                roundTicketsEl.textContent = 'Sudah Klaim';
             } else {
                 summaryEmoji.textContent = '🌟';
                 subtitle.textContent = `Kamu menjawab ${gameState.roundStars} dari ${totalQuestions} soal dengan benar. Jawab semua 5 soal dengan benar untuk meraih 1 Tiket!`;
