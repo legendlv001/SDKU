@@ -3,7 +3,7 @@
 // ==========================================
 const KELAS_APPS_SCRIPT_URL = (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http'))
     ? APPS_SCRIPT_URL
-    : "https://script.google.com/macros/s/AKfycbwYeOYmGQbE_pjmAqfO-YwXKgOiOAUF02ER9exlljDvizefZNO8DkeVEeQ0poAwsxF5/exec";
+    : "https://script.google.com/macros/s/AKfycbwL6KBrMXbdv-PuuhNld0qyBIc6PPGgwRkfCvQOUY70EAQQv8DrhC2rcqTjw3WcGMkj/exec";
 
 // ==========================================
 // PENGATURAN LAYAR PENUH KHUSUS BUAT & JAWAB SOAL

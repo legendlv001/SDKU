@@ -9,14 +9,14 @@ const FALLBACK_COSTUMES = [
     "lk_pramuka.png",
     "lk_pemda.png",
     "lk_pgri1.png",
-    "lk_pgri2.png",
+    "lk_korpri.png",
     "pr_batik.png",
     "pr_perawat.png",
     "pr_pjok.png",
     "pr_pramuka.png",
     "pr_pemda.png",
     "pr_pgri1.png",
-    "pr_pgri.png"
+    "pr_korpri.png"
 ];
 
 let hasFullCostumes = false;
