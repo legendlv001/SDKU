@@ -113,6 +113,14 @@
 </head>
 <body class="flex flex-col justify-between relative text-slate-800">
 
+    <!-- ==========================================
+         KONFIGURASI LINK GOOGLE APPS SCRIPT (PALING ATAS)
+         ========================================== -->
+    <script>
+        const TAMAN_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYeOYmGQbE_pjmAqfO-YwXKgOiOAUF02ER9exlljDvizefZNO8DkeVEeQ0poAwsxF5/exec";
+        const REMEMBER_STORAGE_KEY = "tamanRememberedAccount_v1";
+    </script>
+
     <!-- MODAL LOGIN PEMAIN (NAMA KOLOM A + PASSWORD KOLOM F + INGAT SAYA) -->
     <div id="taman-login-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border-4 border-sky-200 shadow-2xl text-center animate-pop-in">
@@ -480,12 +488,6 @@
     <!-- LOGIKA GAME, SESI LOGIN, INGAT SAYA & AUDIO INTERAKTIF -->
     <script>
         // ==========================================
-        // LINK GOOGLE APPS SCRIPT (PALING ATAS)
-        // ==========================================
-        const TAMAN_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeb8P7lsmjdHT26Kbb0YQn9HA1I1PPwqDeCeBev2Txe3QAk_fgB7PORZ1Or-V3U5U4/exec";
-        const REMEMBER_STORAGE_KEY = "tamanRememberedAccount_v1";
-
-        // ==========================================
         // 0. SINKRONISASI SESI LOGIN (KOLOM A & F), INGAT SAYA, & TIKET
         // ==========================================
         let activeTamanUser = null;
@@ -592,10 +594,8 @@
                             tickets: typeof data.tickets === 'number' ? data.tickets : 0
                         };
 
-                        // Simpan sesi aktif tab
                         sessionStorage.setItem('activeUserSession', JSON.stringify(verifiedUser));
 
-                        // Simpan atau hapus data "Ingat Saya"
                         if (rememberChecked) {
                             localStorage.setItem(REMEMBER_STORAGE_KEY, JSON.stringify({
                                 name: verifiedUser.name,
@@ -639,7 +639,6 @@
         }
 
         function muatSesiDanTiketPemain() {
-            // 1. Cek sesi aktif dari halaman sekolah (index.html) terlebih dahulu
             try {
                 const rawSession = sessionStorage.getItem('activeUserSession');
                 if (rawSession) {
@@ -652,7 +651,6 @@
                 }
             } catch (e) {}
 
-            // 2. Jika sesi tab kosong, cek fitur "Ingat Saya" di localStorage
             try {
                 const rawRemember = localStorage.getItem(REMEMBER_STORAGE_KEY);
                 if (rawRemember) {
@@ -672,7 +670,6 @@
                                     setUserAktifUI(verifiedUser);
                                     muatStatusTamanDariSpreadsheet(verifiedUser.name);
                                 } else {
-                                    // Password di sheet berubah -> hapus ingat saya & tampilkan modal login
                                     localStorage.removeItem(REMEMBER_STORAGE_KEY);
                                     document.getElementById('player-name-display').textContent = 'Tamu';
                                     muatStatusTamanDariSpreadsheet('');
@@ -688,7 +685,6 @@
                 }
             } catch (e) {}
 
-            // 3. Jika belum ada sesi & tidak ada "Ingat Saya", tampilkan modal login
             document.getElementById('player-name-display').textContent = 'Tamu';
             muatStatusTamanDariSpreadsheet('');
             bukaModalLoginTaman();
