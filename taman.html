@@ -113,14 +113,6 @@
 </head>
 <body class="flex flex-col justify-between relative text-slate-800">
 
-    <!-- ==========================================
-         KONFIGURASI LINK GOOGLE APPS SCRIPT (PALING ATAS)
-         ========================================== -->
-    <script>
-        const TAMAN_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYeOYmGQbE_pjmAqfO-YwXKgOiOAUF02ER9exlljDvizefZNO8DkeVEeQ0poAwsxF5/exec";
-        const REMEMBER_STORAGE_KEY = "tamanRememberedAccount_v1";
-    </script>
-
     <!-- MODAL LOGIN PEMAIN (NAMA KOLOM A + PASSWORD KOLOM F + INGAT SAYA) -->
     <div id="taman-login-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border-4 border-sky-200 shadow-2xl text-center animate-pop-in">
@@ -488,9 +480,16 @@
     <!-- LOGIKA GAME, SESI LOGIN, INGAT SAYA & AUDIO INTERAKTIF -->
     <script>
         // ==========================================
+        // LINK GOOGLE APPS SCRIPT (PALING ATAS)
+        // ==========================================
+        const TAMAN_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbztvCaoz9VoBwjNPUjzf_k_CMbqy9ICOhjT45WLKzmmUIw4aTIEiOaIm00mT-ylgn9o/exec";
+        const REMEMBER_STORAGE_KEY = "tamanRememberedAccount_v1";
+
+        // ==========================================
         // 0. SINKRONISASI SESI LOGIN (KOLOM A & F), INGAT SAYA, & TIKET
         // ==========================================
         let activeTamanUser = null;
+        let isClaimingTicket = false;
         const tamanConfig = {
             ticketSystemActive: true,
             claimedRides: []
@@ -580,7 +579,7 @@
             submitBtn.disabled = true;
             submitBtn.textContent = 'Memeriksa akun... ⏳';
 
-            const url = `${TAMAN_APPS_SCRIPT_URL}?action=loginTaman&player=${encodeURIComponent(nameInput)}&password=${encodeURIComponent(passInput)}`;
+            const url = `${TAMAN_APPS_SCRIPT_URL}?action=loginTaman&player=${encodeURIComponent(nameInput)}&password=${encodeURIComponent(passInput)}&_t=${Date.now()}`;
 
             fetch(url)
                 .then(res => res.json())
@@ -626,7 +625,7 @@
         function muatStatusTamanDariSpreadsheet(playerName) {
             if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) return;
 
-            fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getTamanStatus&player=${encodeURIComponent(playerName || '')}`)
+            fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getTamanStatus&player=${encodeURIComponent(playerName || '')}&_t=${Date.now()}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.status === 'success') {
@@ -639,6 +638,7 @@
         }
 
         function muatSesiDanTiketPemain() {
+            // 1. Cek sesi aktif dari halaman sekolah (index.html) terlebih dahulu
             try {
                 const rawSession = sessionStorage.getItem('activeUserSession');
                 if (rawSession) {
@@ -651,13 +651,14 @@
                 }
             } catch (e) {}
 
+            // 2. Jika sesi tab kosong, cek fitur "Ingat Saya" di localStorage
             try {
                 const rawRemember = localStorage.getItem(REMEMBER_STORAGE_KEY);
                 if (rawRemember) {
                     const saved = JSON.parse(rawRemember);
                     if (saved && saved.name && saved.password) {
                         document.getElementById('player-name-display').textContent = 'Memuat...';
-                        const url = `${TAMAN_APPS_SCRIPT_URL}?action=loginTaman&player=${encodeURIComponent(saved.name)}&password=${encodeURIComponent(saved.password)}`;
+                        const url = `${TAMAN_APPS_SCRIPT_URL}?action=loginTaman&player=${encodeURIComponent(saved.name)}&password=${encodeURIComponent(saved.password)}&_t=${Date.now()}`;
                         fetch(url)
                             .then(res => res.json())
                             .then(data => {
@@ -685,17 +686,20 @@
                 }
             } catch (e) {}
 
+            // 3. Jika belum ada sesi & tidak ada "Ingat Saya", tampilkan modal login
             document.getElementById('player-name-display').textContent = 'Tamu';
             muatStatusTamanDariSpreadsheet('');
             bukaModalLoginTaman();
         }
 
         function sinkronkanTiketDanStatus(playerName) {
+            if (isClaimingTicket) return;
             if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) return;
 
-            fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(playerName)}`)
+            fetch(`${TAMAN_APPS_SCRIPT_URL}?action=getPlayerTickets&player=${encodeURIComponent(playerName)}&_t=${Date.now()}`)
                 .then(res => res.json())
                 .then(data => {
+                    if (isClaimingTicket) return;
                     if (data && data.status === 'success' && typeof data.tickets === 'number') {
                         gameState.tickets = data.tickets;
                         if (activeTamanUser) {
@@ -748,23 +752,38 @@
         function klaimTiketWahanaKeSpreadsheet(rideName, totalTiketBaru) {
             if (!activeTamanUser || !activeTamanUser.name) return;
 
+            isClaimingTicket = true;
             activeTamanUser.tickets = totalTiketBaru;
             sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
 
-            if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) return;
+            if (!TAMAN_APPS_SCRIPT_URL || !TAMAN_APPS_SCRIPT_URL.startsWith('http')) {
+                isClaimingTicket = false;
+                return;
+            }
 
-            fetch(TAMAN_APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'claimTamanTicket',
-                    player: activeTamanUser.name,
-                    ride: rideName,
-                    tickets: totalTiketBaru,
-                    updatedAt: Date.now()
+            const url = `${TAMAN_APPS_SCRIPT_URL}?action=claimTamanTicket&player=${encodeURIComponent(activeTamanUser.name)}&ride=${encodeURIComponent(rideName)}&_t=${Date.now()}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    isClaimingTicket = false;
+                    if (data && data.status === 'success') {
+                        gameState.tickets = Number(data.tickets) || totalTiketBaru;
+                        activeTamanUser.tickets = gameState.tickets;
+                        sessionStorage.setItem('activeUserSession', JSON.stringify(activeTamanUser));
+                        updateHeaderStats();
+                    } else if (data && data.status === 'already_claimed') {
+                        sinkronkanTiketDanStatus(activeTamanUser.name);
+                    } else {
+                        sinkronkanTiketDanStatus(activeTamanUser.name);
+                        alert("Info Server: " + (data.message || "Tiket belum tersimpan ke Spreadsheet."));
+                    }
                 })
-            }).catch(err => console.warn("Gagal menyimpan klaim tiket ke Spreadsheet:", err));
+                .catch(err => {
+                    isClaimingTicket = false;
+                    console.error("Gagal menghubungi Code.gs:", err);
+                    alert("Koneksi ke server gagal saat menyimpan tiket.");
+                });
         }
 
         // ==========================================
