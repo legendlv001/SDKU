@@ -1,7 +1,7 @@
 // ==========================================
-// SISTEM PET (GRID 5x4 & POSISI SAMPING ALA TIBIAME)
+// SISTEM PET (GRID 5x4 & POSISI SAMPING ALA TIBIAME + SINKRONISASI PEMAIN LAIN)
 // ==========================================
-let equippedPet = ""; // Disimpan di Sheet Login Kolom J
+let equippedPet = ""; // Disimpan di Sheet Login Kolom J & dikirim ke Firebase
 
 const PET_SPRITES = {};
 const petSpritesLoaded = {};
@@ -45,6 +45,9 @@ const playerPetState = {
     bobTimer: 0
 };
 
+// Penyimpanan posisi & animasi pet milik masing-masing pemain lain
+const otherPlayersPetState = {};
+
 const PET_SIDE_OFFSET_X = 24; // Jarak tepat di samping pemain ala TibiaME
 const PET_SIDE_OFFSET_Y = 8;  // Sejajar bagian bawah kaki pemain
 
@@ -84,6 +87,11 @@ function syncPetAndInventoryToSpreadsheet() {
         currentUserAccount.ownedCostumes = [...listH];
         currentUserAccount.equippedPet = equippedPet;
         sessionStorage.setItem('activeUserSession', JSON.stringify(currentUserAccount));
+    }
+
+    // Langsung kirim perubahan pet ke Firebase agar pemain lain melihatnya seketika
+    if (typeof updateMyPositionToFirebase === 'function') {
+        updateMyPositionToFirebase();
     }
 
     if (typeof APPS_SCRIPT_URL !== 'undefined' && APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith('http') && typeof playerCustomName !== 'undefined' && playerCustomName) {
@@ -240,7 +248,67 @@ window.renderProfilePetWardrobe = async function() {
 };
 
 // ==========================================
-// UPDATE & GAMBAR PET DI SAMPING PEMAIN (ALA TIBIAME)
+// HELPER RENDER SPRITE PET (UNTUK PLAYER SENDIRI & PLAYER LAIN)
+// ==========================================
+function renderPetSpriteAt(ctx, petFile, petX, petY, direction, isMoving, bobTimer, zoomScale) {
+    ctx.save();
+    ctx.scale(zoomScale, zoomScale);
+
+    // Bayangan di bawah pet
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.26)';
+    ctx.beginPath();
+    ctx.ellipse(petX, petY + 11, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const spriteImg = getPetSpriteImage(petFile);
+    if (spriteImg) {
+        ctx.save();
+        ctx.translate(petX, petY);
+        ctx.imageSmoothingEnabled = false;
+
+        // Grid 5 kolom x 4 baris
+        const cols = 5;
+        const rows = 4;
+        const frameW = Math.floor(spriteImg.width / cols);
+        const frameH = Math.floor(spriteImg.height / rows);
+
+        // Baris 1 (0): Bawah | Baris 2 (1): Atas | Baris 3 (2): Kiri | Baris 4 (3): Kanan
+        const dirRowMap = {
+            down: 0,
+            up: 1,
+            left: 2,
+            right: 3
+        };
+        const rowIdx = (dirRowMap[direction] !== undefined)
+            ? dirRowMap[direction]
+            : 0;
+
+        const colIdx = isMoving
+            ? Math.floor(bobTimer) % cols
+            : 0;
+
+        ctx.drawImage(
+            spriteImg,
+            colIdx * frameW, rowIdx * frameH, frameW, frameH,
+            -16, -18, 32, 32
+        );
+        ctx.restore();
+    } else {
+        ctx.save();
+        ctx.translate(petX, petY);
+        if (direction === 'right') ctx.scale(-1, 1);
+        ctx.font = '22px Fredoka, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🐾', 0, 0);
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+// ==========================================
+// UPDATE & GAMBAR PET PEMAIN SENDIRI
 // ==========================================
 function updatePlayerPet() {
     if (!equippedPet || typeof player === 'undefined') return;
@@ -294,58 +362,71 @@ function drawMyPlayerPet(ctx, cameraX, cameraY, zoomScale) {
     const petX = playerPetState.x - cameraX;
     const petY = playerPetState.y - cameraY;
 
-    ctx.save();
-    ctx.scale(zoomScale, zoomScale);
+    renderPetSpriteAt(
+        ctx,
+        equippedPet,
+        petX,
+        petY,
+        playerPetState.direction,
+        playerPetState.isMoving,
+        playerPetState.bobTimer,
+        zoomScale
+    );
+}
 
-    // Bayangan di bawah pet
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.26)';
-    ctx.beginPath();
-    ctx.ellipse(petX, petY + 11, 10, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
+// ==========================================
+// UPDATE & GAMBAR PET MILIK PEMAIN LAIN (DARI FIREBASE)
+// ==========================================
+function drawOtherPlayerPet(ctx, playerId, pData, cameraX, cameraY, zoomScale) {
+    if (!pData || !pData.pet) return;
+    const petFile = normalizePetFileName(pData.pet);
+    if (!petFile) return;
 
-    const spriteImg = getPetSpriteImage(equippedPet);
-    if (spriteImg) {
-        ctx.save();
-        ctx.translate(petX, petY);
-        ctx.imageSmoothingEnabled = false;
+    const ownerDir = pData.direction || 'down';
+    const sideSign = (ownerDir === 'left') ? 1 : -1;
+    const targetX = pData.x + (sideSign * PET_SIDE_OFFSET_X);
+    const targetY = pData.y + PET_SIDE_OFFSET_Y;
 
-        // Grid 5 kolom x 4 baris
-        const cols = 5;
-        const rows = 4;
-        const frameW = Math.floor(spriteImg.width / cols);
-        const frameH = Math.floor(spriteImg.height / rows);
-
-        // Baris 1 (0): Bawah | Baris 2 (1): Atas | Baris 3 (2): Kiri | Baris 4 (3): Kanan
-        const dirRowMap = {
-            down: 0,
-            up: 1,
-            left: 2,
-            right: 3
+    if (!otherPlayersPetState[playerId]) {
+        otherPlayersPetState[playerId] = {
+            x: targetX,
+            y: targetY,
+            prevOwnerX: pData.x,
+            prevOwnerY: pData.y,
+            bobTimer: 0
         };
-        const rowIdx = (dirRowMap[playerPetState.direction] !== undefined)
-            ? dirRowMap[playerPetState.direction]
-            : 0;
-
-        const colIdx = playerPetState.isMoving
-            ? Math.floor(playerPetState.bobTimer) % cols
-            : 0;
-
-        ctx.drawImage(
-            spriteImg,
-            colIdx * frameW, rowIdx * frameH, frameW, frameH,
-            -16, -18, 32, 32
-        );
-        ctx.restore();
-    } else {
-        ctx.save();
-        ctx.translate(petX, petY);
-        if (playerPetState.direction === 'right') ctx.scale(-1, 1);
-        ctx.font = '22px Fredoka, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🐾', 0, 0);
-        ctx.restore();
     }
 
-    ctx.restore();
+    const st = otherPlayersPetState[playerId];
+    const distToTarget = Math.hypot(targetX - st.x, targetY - st.y);
+
+    // Jika pemain lain pindah lokasi/teleport jauh, langsung sinkronkan posisi pet
+    if (distToTarget > 160) {
+        st.x = targetX;
+        st.y = targetY;
+    } else if (distToTarget > 0.8) {
+        st.x += (targetX - st.x) * 0.28;
+        st.y += (targetY - st.y) * 0.28;
+    } else {
+        st.x = targetX;
+        st.y = targetY;
+    }
+
+    const ownerMovedDist = Math.hypot(pData.x - st.prevOwnerX, pData.y - st.prevOwnerY);
+    st.prevOwnerX = pData.x;
+    st.prevOwnerY = pData.y;
+
+    const isMoving = (ownerMovedDist > 0.3 || distToTarget > 2);
+    st.bobTimer += isMoving ? 0.22 : 0.04;
+
+    renderPetSpriteAt(
+        ctx,
+        petFile,
+        st.x - cameraX,
+        st.y - cameraY,
+        ownerDir,
+        isMoving,
+        st.bobTimer,
+        zoomScale
+    );
 }

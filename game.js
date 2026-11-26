@@ -649,6 +649,7 @@ function updateMyPositionToFirebase() {
         y: player.y,
         gender: selectedGender,
         costume: equippedCostume || "",
+        pet: (typeof equippedPet !== 'undefined' && equippedPet) ? equippedPet : "",
         direction: player.direction,
         location: currentWorldLocation,
         role: playerRole,
@@ -902,6 +903,12 @@ function gameLoop() {
         Object.keys(window.otherPlayers).forEach(id => {
             const pData = window.otherPlayers[id];
             if (!pData || (pData.location || 1) !== currentWorldLocation) return;
+
+            // Gambar Pet milik pemain lain jika sedang dipakai
+            if (pData.pet && typeof drawOtherPlayerPet === 'function') {
+                drawOtherPlayerPet(ctx, id, pData, cameraX, cameraY, currentZoomScale);
+            }
+
             ctx.save(); ctx.scale(currentZoomScale, currentZoomScale);
             drawCharacterSprite(
                 ctx, 
@@ -924,7 +931,7 @@ function gameLoop() {
         trees.forEach(tree => { if (tree.y <= player.y) drawTree(tree, cameraX, cameraY, currentZoomScale); });
     }
 
-    // Gambar Pet yang berjalan mengikuti di belakang pemain
+    // Gambar Pet yang berjalan mengikuti di samping pemain sendiri
     if (typeof drawMyPlayerPet === 'function') {
         drawMyPlayerPet(ctx, cameraX, cameraY, currentZoomScale);
     }
@@ -1413,6 +1420,9 @@ window.handleLogout = function() {
     if (dialogAutoCloseTimer) clearTimeout(dialogAutoCloseTimer);
     if (uiAutoCloseTimer) clearTimeout(uiAutoCloseTimer);
     window.activeChatBubbles = {};
+    if (typeof otherPlayersPetState !== 'undefined') {
+        Object.keys(otherPlayersPetState).forEach(k => delete otherPlayersPetState[k]);
+    }
     loadSavedCredentials();
     document.getElementById('gameContainer').classList.add('hidden'); 
     document.getElementById('loginScreen').classList.remove('hidden'); 
