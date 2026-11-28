@@ -86,7 +86,7 @@ const MAP_CONFIGS = {
             { id: 'gor', name: 'Gedung Olahraga', icon: '🏀', x: 1100, y: 100, width: 420, height: 250, sheetName: 'PJOK', color: '#fed7aa', wallColor: '#f97316', roofColor: '#9a3412', dialogTitle: 'Gedung Olahraga (GOR)', actionLabel: 'Masuk GOR' },
             { id: 'mading', name: 'Mading Sekolah', icon: '📌', x: 1600, y: 150, width: 260, height: 180, sheetName: 'Info', color: '#fef3c7', wallColor: '#d97706', roofColor: '#78350f', dialogTitle: 'Mading Informasi', actionLabel: 'Baca Mading' },
             { id: 'warung', name: 'Warung Sekolah', icon: '🏪', x: 160, y: 800, width: 340, height: 250, sheetName: 'Toko', color: '#fbcfe8', wallColor: '#ec4899', roofColor: '#9d174d', dialogTitle: 'Kantin / Warung Kostum', actionLabel: 'Buka Warung' },
-            { id: 'taman', name: 'Taman Sekolah', icon: '🌻', x: 1400, y: 750, width: 380, height: 280, targetUrl: 'taman.html', color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga', actionLabel: 'Lihat Taman' },
+            { id: 'taman', name: 'Taman Sekolah', icon: '🌷', x: 1400, y: 750, width: 380, height: 280, customTamanAction: true, color: '#86efac', wallColor: '#22c55e', roofColor: '#15803d', isZone: true, dialogTitle: 'Taman Bunga', actionLabel: 'Lihat Taman' },
             { id: 'bis', name: 'Bis Sekolah (Ke Pantai)', icon: '🚌', x: 800, y: 820, width: 220, height: 120, isPortal: true, targetLocation: 2, dialogTitle: 'Bis Sekolah Ke Pantai', dialogText: 'Bis kuning sekolah siap mengantar ke Pantai!', actionLabel: 'Naik Bis ke Pantai' }
         ]
     }

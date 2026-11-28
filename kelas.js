@@ -32,6 +32,53 @@ function setKelasModalFullscreen(isFull) {
 }
 
 // ==========================================
+// HELPER GAMBAR / FOTO (KONVERSI GOOGLE DRIVE & KOMPRESI UPLOAD)
+// ==========================================
+function formatKelasImageUrl(rawUrl) {
+    if (!rawUrl) return "";
+    const url = String(rawUrl).trim();
+    if (url.startsWith('data:image')) return url;
+    const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+        return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w800`;
+    }
+    return url;
+}
+
+function compressKelasImageToBase64(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxW = 480;
+                const scale = Math.min(1, maxW / img.width);
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.65));
+            };
+            img.onerror = () => resolve("");
+            img.src = e.target.result;
+        };
+        reader.onerror = () => resolve("");
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderKelasOptionInner(optText) {
+    const val = String(optText || "").trim();
+    const isImg = val.startsWith('data:image') || /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(val) || val.includes('drive.google.com');
+    if (isImg) {
+        const src = formatKelasImageUrl(val);
+        return `<img src="${src}" alt="Pilihan" onerror="this.style.display='none'" class="max-h-24 w-auto rounded-lg object-contain bg-slate-900 p-1" />`;
+    }
+    return `<span>${val}</span>`;
+}
+
+// ==========================================
 // KONFIGURASI, VISUAL & INTERAKSI KHUSUS LOKASI 3 (RUANG KELAS)
 // ==========================================
 const KELAS_CONFIG = {
@@ -106,10 +153,8 @@ function drawKelasInterior(ctx, canvas, cameraX, cameraY, zoomScale) {
     }
 }
 
-// Daftar role staf (bukan kelas siswa)
 const STAFF_ROLES_EXCLUDED = ['admin', 'guru', 'tendik', 'ops', 'l', 'p', 'a'];
 
-// Cek apakah role pengguna boleh membuat tugas (ADMIN, OPS, GURU, TENDIK)
 function canCreateKelasTask() {
     const roleUpper = (typeof playerRole !== 'undefined' ? playerRole : "").toUpperCase().trim();
     const statusLower = (typeof currentUserAccount !== 'undefined' && currentUserAccount && currentUserAccount.status)
@@ -125,7 +170,6 @@ function canCreateKelasTask() {
     );
 }
 
-// Ambil kelas siswa saat ini
 function getStudentCurrentClass() {
     const roleStr = (typeof playerRole !== 'undefined' ? playerRole : "").trim();
     if (roleStr) return roleStr;
@@ -135,7 +179,6 @@ function getStudentCurrentClass() {
     return "";
 }
 
-// Ambil daftar kelas unik dari sheet 'Login' (mengecualikan Guru, Tendik, Admin, OPS)
 let cachedLoginClassList = [];
 async function fetchUniqueClassesFromLogin() {
     if (cachedLoginClassList.length > 0) return cachedLoginClassList;
@@ -226,14 +269,13 @@ function parseRawTextToSimulatedQuestions(rawText, docTitle) {
 
     if (numberedBlocks.length >= 2) {
         numberedBlocks.slice(0, 10).forEach((block) => {
-            const optMatch = block.match(/A[\.\)]\s*(.+?)\s+B[\.\)]\s*(.+?)\s+C[\.\)]\s*(.+?)(?:\s+D[\.\)]\s*(.+?))?(?:Kunci\s*:\s*([A-D]))?$/i);
+            const optMatch = block.match(/A[\.\)]\s*(.+?)\s+B[\.\)]\s*(.+?)\s+C[\.\)]\s*(.+?)\s+D[\.\)]\s*(.+?)(?:Kunci\s*:\s*([A-D]))?$/i);
             if (optMatch) {
                 const qText = block.split(/A[\.\)]/i)[0].replace(/^[0-9]+[\.\)]\s*/, '').trim();
-                const opts = [optMatch[1].trim(), optMatch[2].trim(), optMatch[3].trim()];
-                if (optMatch[4]) opts.push(optMatch[4].trim());
+                const opts = [optMatch[1].trim(), optMatch[2].trim(), optMatch[3].trim(), optMatch[4].trim()];
                 const keyMap = { A: 0, B: 1, C: 2, D: 3 };
                 const ansIdx = optMatch[5] ? (keyMap[optMatch[5].toUpperCase()] || 0) : 0;
-                generated.push({ question: qText, options: opts, answerIndex: ansIdx });
+                generated.push({ question: qText, image: "", options: opts, answerIndex: ansIdx });
             }
         });
     }
@@ -243,7 +285,8 @@ function parseRawTextToSimulatedQuestions(rawText, docTitle) {
         if (sampleSentences.length === 0) {
             generated.push({
                 question: `Simulasi Tugas (${docTitle}): Apakah Anda sudah membaca dan memahami instruksi tugas yang diunggah guru?`,
-                options: ["Ya, sudah paham dan siap mengerjakan", "Belum membaca sama sekali", "Masih bingung sebagian"],
+                image: "",
+                options: ["Ya, sudah paham dan siap mengerjakan", "Belum membaca sama sekali", "Masih bingung sebagian", "Perlu penjelasan tambahan"],
                 answerIndex: 0
             });
         } else {
@@ -256,11 +299,12 @@ function parseRawTextToSimulatedQuestions(rawText, docTitle) {
                 const distractors = ["Pendidikan", "Sekolah", "Belajar", "Kegiatan", "Latihan", "Pengetahuan"]
                     .filter(d => d.toLowerCase() !== cleanTarget.toLowerCase())
                     .sort(() => Math.random() - 0.5)
-                    .slice(0, 2);
+                    .slice(0, 3);
 
                 const options = [cleanTarget, ...distractors].sort(() => Math.random() - 0.5);
                 generated.push({
                     question: `Soal Simulasi #${idx + 1} (Dari Dokumen): Lengkapi bagian rumpang berikut: "${maskedSentence}"`,
+                    image: "",
                     options: options,
                     answerIndex: options.indexOf(cleanTarget)
                 });
@@ -402,22 +446,61 @@ async function renderCreateTaskForm() {
             </div>
 
             <hr class="border-slate-700 my-1">
-            <p class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">2. Buat Soal atau Upload Word / PDF</p>
+            <p class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">2. Buat Soal (Foto / Teks / Word / PDF)</p>
 
             <div class="bg-slate-900/90 border border-dashed border-sky-500/60 p-3 rounded-xl">
                 <label class="block text-[10px] font-bold text-sky-300 mb-1">📄 Upload File Word (.docx) atau PDF (.pdf):</label>
                 <input type="file" id="taskFileUpload" accept=".docx,.pdf,.txt" onchange="handleTaskDocUpload(event)" class="w-full text-[11px] text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-sky-500 file:text-slate-950 hover:file:bg-sky-400 cursor-pointer">
-                <p id="uploadDocStatus" class="text-[10px] text-slate-400 mt-1">Otomatis diubah menjadi simulasi soal pilihan ganda untuk dijawab murid.</p>
+                <p id="uploadDocStatus" class="text-[10px] text-slate-400 mt-1">Otomatis diubah menjadi simulasi soal pilihan ganda A, B, C, D untuk dijawab murid.</p>
             </div>
 
-            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700 space-y-2">
-                <label class="block text-[10px] font-bold text-emerald-300">✍️ Atau Tambah Soal Manual:</label>
+            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700 space-y-2.5">
+                <label class="block text-[10px] font-bold text-emerald-300">✍️ Tambah Soal Manual (Teks & Foto + Pilihan A, B, C, D):</label>
                 <input type="text" id="manualQText" placeholder="Tulis pertanyaan soal..." class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input type="text" id="manualOptA" placeholder="Pilihan A (Jawaban Benar)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-emerald-600/60 text-white text-xs">
-                    <input type="text" id="manualOptB" placeholder="Pilihan B" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
-                    <input type="text" id="manualOptC" placeholder="Pilihan C" class="px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+
+                <!-- Input Foto Soal (Upload File atau Link URL / Google Drive) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-700/80">
+                    <div>
+                        <label class="block text-[10px] font-bold text-amber-300 mb-1">📷 Unggah Foto Soal (Opsional):</label>
+                        <input type="file" id="manualQImageFile" accept="image/*" class="w-full text-[10px] text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-400 file:text-slate-950 hover:file:bg-amber-300 cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-sky-300 mb-1">🔗 Atau Link Foto / Google Drive:</label>
+                        <input type="text" id="manualQImageUrl" placeholder="https://... (opsional)" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+                    </div>
                 </div>
+
+                <!-- Pilihan Jawaban A, B, C, D -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-6 h-6 rounded-lg bg-slate-700 text-yellow-300 font-extrabold text-xs flex items-center justify-center shrink-0">A</span>
+                        <input type="text" id="manualOptA" placeholder="Pilihan A *" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-6 h-6 rounded-lg bg-slate-700 text-yellow-300 font-extrabold text-xs flex items-center justify-center shrink-0">B</span>
+                        <input type="text" id="manualOptB" placeholder="Pilihan B *" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-6 h-6 rounded-lg bg-slate-700 text-yellow-300 font-extrabold text-xs flex items-center justify-center shrink-0">C</span>
+                        <input type="text" id="manualOptC" placeholder="Pilihan C *" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-6 h-6 rounded-lg bg-slate-700 text-yellow-300 font-extrabold text-xs flex items-center justify-center shrink-0">D</span>
+                        <input type="text" id="manualOptD" placeholder="Pilihan D *" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs">
+                    </div>
+                </div>
+
+                <!-- Pilihan Kunci Jawaban A / B / C / D -->
+                <div class="flex items-center justify-between gap-2 bg-emerald-950/50 border border-emerald-600/40 px-3 py-2 rounded-xl">
+                    <label for="manualCorrectKey" class="text-xs font-bold text-emerald-300">✅ Kunci Jawaban Benar:</label>
+                    <select id="manualCorrectKey" class="px-3 py-1.5 rounded-lg bg-slate-900 border border-emerald-500 text-yellow-300 font-extrabold text-xs focus:outline-none">
+                        <option value="0">Pilihan A</option>
+                        <option value="1">Pilihan B</option>
+                        <option value="2">Pilihan C</option>
+                        <option value="3">Pilihan D</option>
+                    </select>
+                </div>
+
                 <button type="button" onclick="addManualQuestionToDraft()" class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg text-xs">
                     + Tambahkan ke Daftar Soal
                 </button>
@@ -463,30 +546,52 @@ window.handleTaskDocUpload = async function(event) {
     }
 };
 
-window.addManualQuestionToDraft = function() {
+window.addManualQuestionToDraft = async function() {
     const q = document.getElementById('manualQText').value.trim();
     const a = document.getElementById('manualOptA').value.trim();
     const b = document.getElementById('manualOptB').value.trim();
     const c = document.getElementById('manualOptC').value.trim();
+    const d = document.getElementById('manualOptD').value.trim();
+    const keyIdx = parseInt(document.getElementById('manualCorrectKey').value, 10) || 0;
+    const imgFileInput = document.getElementById('manualQImageFile');
+    const imgUrlInput = document.getElementById('manualQImageUrl');
 
-    if (!q || !a || !b) {
-        alert("Isi minimal pertanyaan, Pilihan A (jawaban benar), dan Pilihan B.");
+    const hasPhoto = (imgFileInput && imgFileInput.files && imgFileInput.files[0]) || (imgUrlInput && imgUrlInput.value.trim());
+
+    if (!q && !hasPhoto) {
+        alert("Isi pertanyaan soal atau unggah foto soal terlebih dahulu.");
+        return;
+    }
+    if (!a || !b || !c || !d) {
+        alert("Harap lengkapi semua pilihan jawaban A, B, C, dan D.");
         return;
     }
 
-    const opts = c ? [a, b, c] : [a, b];
-    const shuffled = [...opts].sort(() => Math.random() - 0.5);
+    let finalImage = "";
+    if (imgFileInput && imgFileInput.files && imgFileInput.files[0]) {
+        finalImage = await compressKelasImageToBase64(imgFileInput.files[0]);
+    } else if (imgUrlInput && imgUrlInput.value.trim()) {
+        finalImage = formatKelasImageUrl(imgUrlInput.value.trim());
+    }
+
+    const opts = [a, b, c, d];
+    const questionText = q || "Perhatikan gambar di atas dengan saksama!";
 
     draftKelasQuestions.push({
-        question: q,
-        options: shuffled,
-        answerIndex: shuffled.indexOf(a)
+        question: questionText,
+        image: finalImage,
+        options: opts,
+        answerIndex: keyIdx
     });
 
     document.getElementById('manualQText').value = "";
     document.getElementById('manualOptA').value = "";
     document.getElementById('manualOptB').value = "";
     document.getElementById('manualOptC').value = "";
+    document.getElementById('manualOptD').value = "";
+    document.getElementById('manualCorrectKey').value = "0";
+    if (imgFileInput) imgFileInput.value = "";
+    if (imgUrlInput) imgUrlInput.value = "";
     updateDraftQuestionsPreview();
 };
 
@@ -497,8 +602,13 @@ function updateDraftQuestionsPreview() {
         box.innerHTML = "Belum ada soal ditambahkan (0 soal).";
         return;
     }
+    const letters = ['A', 'B', 'C', 'D'];
     box.innerHTML = `<div class="font-bold text-emerald-400 mb-1">Daftar Soal Siap Kirim (${draftKelasQuestions.length} Soal):</div>` +
-        draftKelasQuestions.map((item, idx) => `<div class="truncate text-[10px] text-slate-300">${idx + 1}. ${item.question}</div>`).join("");
+        draftKelasQuestions.map((item, idx) => {
+            const photoTag = item.image ? `<span class="text-amber-300 font-bold">[📷 Foto]</span> ` : "";
+            const keyLetter = letters[item.answerIndex] || 'A';
+            return `<div class="truncate text-[10px] text-slate-300">${idx + 1}. ${photoTag}${item.question} <span class="text-emerald-400 font-bold">(Kunci: ${keyLetter})</span></div>`;
+        }).join("");
 }
 
 // ==========================================
@@ -507,7 +617,7 @@ function updateDraftQuestionsPreview() {
 window.publishKelasTask = async function() {
     const judul = document.getElementById('taskJudulInput').value.trim();
     const kelas = document.getElementById('taskKelasInput').value.trim();
-    const keterangan = document.getElementById('taskKetInput').value.trim(); // Opsional
+    const keterangan = document.getElementById('taskKetInput').value.trim();
     const useCode = document.getElementById('useClassCodeCheckbox')?.checked || false;
     const kodeKelas = useCode ? (document.getElementById('taskKodeInput')?.value.trim() || "") : "";
     const rawTickets = parseInt(document.getElementById('taskRewardTicketsInput').value, 10) || 1;
@@ -537,16 +647,17 @@ window.publishKelasTask = async function() {
     }
 
     const taskId = 'TGS_' + Date.now();
+    const letters = ['A', 'B', 'C', 'D'];
     const taskPayload = {
         action: 'addTask',
         id: taskId,
         judul: judul,
-        kode: kodeKelas, // Kosong jika tidak pakai kode kelas
+        kode: kodeKelas,
         kelas: kelas,
         keterangan: keterangan,
         rewardTickets: rewardTickets,
         questions: draftKelasQuestions,
-        soalText: draftKelasQuestions.map((q, i) => `${i + 1}. ${q.question} [Kunci: ${q.options[q.answerIndex]}]`).join(" | "),
+        soalText: draftKelasQuestions.map((q, i) => `${i + 1}. ${q.question}${q.image ? ' [Foto]' : ''} [Kunci ${letters[q.answerIndex] || 'A'}: ${q.options[q.answerIndex]}]`).join(" | "),
         pembuat: playerCustomName || playerRole,
         createdAt: Date.now()
     };
@@ -613,7 +724,6 @@ async function openStudentTaskListModal(headerTitle) {
         const data = await res.json();
         const allTasks = (data.tasks || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-        // Guru / Tendik / Admin melihat SEMUA PR; Siswa hanya melihat PR kelasnya (atau "Semua Kelas")
         const taskList = allTasks.filter(t => {
             if (isStaff) return true;
             const targetKls = String(t.kelas || '').trim().toLowerCase();
@@ -818,19 +928,28 @@ function renderStudentQuizQuestion() {
 
     modalTitle.innerHTML = `📝 ${displayJudul} (${activeStudentQuiz.kelas || ''}) — Soal ${studentQuizStep + 1} dari ${total}`;
 
+    const imgSrc = formatKelasImageUrl(q.image || "");
+    const questionImgHtml = imgSrc
+        ? `<div class="w-full flex justify-center mb-3">
+               <img src="${imgSrc}" alt="Gambar Soal" onerror="this.style.display='none'"
+                    class="max-h-56 sm:max-h-64 w-auto rounded-xl border-2 border-slate-600 shadow-lg object-contain bg-slate-900 p-1.5" />
+           </div>`
+        : "";
+
     let optionsHtml = q.options.map((opt, idx) => `
         <button type="button" onclick="submitStudentQuizAnswer(${idx})" class="w-full text-left p-3.5 bg-slate-800 hover:bg-sky-900/70 border border-slate-600 hover:border-sky-400 rounded-2xl text-xs md:text-sm text-white font-semibold transition active:scale-95 flex items-center gap-3">
             <span class="w-7 h-7 rounded-xl bg-slate-700 text-yellow-300 font-extrabold text-xs flex items-center justify-center shrink-0">${String.fromCharCode(65 + idx)}</span>
-            <span>${opt}</span>
+            <div class="flex-1">${renderKelasOptionInner(opt)}</div>
         </button>
     `).join("");
 
     modalContent.innerHTML = `
         <div class="max-w-3xl mx-auto w-full text-left space-y-4 py-2">
             <div class="p-4 md:p-5 bg-slate-800/95 border border-slate-700 rounded-2xl text-sm md:text-base font-bold text-yellow-300 leading-relaxed">
-                ${q.question}
+                ${questionImgHtml}
+                <div>${q.question}</div>
             </div>
-            <div class="space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 ${optionsHtml}
             </div>
         </div>

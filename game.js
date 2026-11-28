@@ -93,12 +93,14 @@ function updatePointsDisplay() {
     const shopPoin = document.getElementById('shopPoinBalance');
     const modalTiket = document.getElementById('modalTiketDisplay');
     const shopTiket = document.getElementById('shopTiketBalance');
+    const tamanTiket = document.getElementById('taman-ticket-count');
 
     if (headerPoin) headerPoin.innerText = playerPoints;
     if (modalPoin) modalPoin.innerText = playerPoints;
     if (shopPoin) shopPoin.innerText = playerPoints;
     if (modalTiket) modalTiket.innerText = playerTickets;
     if (shopTiket) shopTiket.innerText = playerTickets;
+    if (tamanTiket) tamanTiket.innerText = playerTickets;
 }
 
 async function initPlayerPointsSync(sheetDefaultPoints, sheetDefaultTickets = 0) {
@@ -816,9 +818,11 @@ function setupGameEvents() {
         isCanvasListenerAdded = true;
         gameCanvasElem.addEventListener('click', (e) => {
             if (!isGameStarted) return;
+            const tamanOverlay = document.getElementById('tamanPlaygroundOverlay');
             const isAnyModalOpen = !document.getElementById('dialogModal')?.classList.contains('hidden') ||
                                    !document.getElementById('editCharModal')?.classList.contains('hidden') ||
-                                   !document.getElementById('onlinePlayersModal')?.classList.contains('hidden');
+                                   !document.getElementById('onlinePlayersModal')?.classList.contains('hidden') ||
+                                   (tamanOverlay && !tamanOverlay.classList.contains('hidden'));
             if (isAnyModalOpen) return;
 
             if (e.target.closest('#psAnalogStick') || e.target.closest('#btnInteract') || e.target.closest('#miniMapBtn')) return;
@@ -1008,6 +1012,7 @@ window.triggerInteraction = async function() {
     if (typeof setKelasModalFullscreen === 'function') setKelasModalFullscreen(false);
     if (currentWorldLocation === 3 && typeof handleKelasInteraction === 'function' && handleKelasInteraction(nearbyBuilding)) return;
     if (currentWorldLocation === 2 && typeof handlePantaiInteraction === 'function' && handlePantaiInteraction(nearbyBuilding)) return;
+    if (nearbyBuilding.customTamanAction && typeof openTamanModal === 'function') { openTamanModal(); return; }
     if (nearbyBuilding.targetUrl) { navigateToLocalHtml(nearbyBuilding.targetUrl); return; }
     if (nearbyBuilding.isPortal) { switchWorldLocation(nearbyBuilding.targetLocation); return; }
 
@@ -1411,6 +1416,7 @@ window.handleLogout = function() {
     if (typeof closeEditCharacterModal === 'function') closeEditCharacterModal();
     if (typeof closeOnlinePlayersModal === 'function') closeOnlinePlayersModal();
     if (typeof closeModal === 'function') closeModal();
+    if (typeof closeTamanModal === 'function') closeTamanModal();
     if (typeof closeKickConfirmModal === 'function') closeKickConfirmModal();
     if (typeof closeBuyConfirmModal === 'function') closeBuyConfirmModal();
     if (myPlayerRef) { myPlayerRef.remove(); myPlayerRef = null; }
